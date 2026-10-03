@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* Dirección: clínico-editorial. Papel cálido, tinta azul profunda, verde-azulado para evidencia, ámbar para "no hay evidencia". */
+:root {
+  --paper: #f7f5f0;
+  --paper-2: #efece4;
+  --ink: #15202b;
+  --ink-2: #3c4a58;
+  --ink-3: #6b7784;
+  --line: #d9d4c8;
+  --teal: #0f766e;
+  --teal-2: #14b8a6;
+  --teal-soft: #d9f1ee;
+  --amber: #b45309;
+  --amber-soft: #fdebd2;
+  --navy: #0b2545;
+  --navy-2: #13315c;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0e1419; --paper-2: #141c23; --ink: #eef2f5; --ink-2: #c3ccd5; --ink-3: #8b98a5;
+    --line: #26313b; --teal: #2dd4bf; --teal-2: #5eead4; --teal-soft: #0f2f2c;
+    --amber: #fbbf24; --amber-soft: #3a2a08; --navy: #e6edf5; --navy-2: #cfdbea;
+  }
+}
+@theme inline {
+  --color-paper: var(--paper); --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink); --color-ink-2: var(--ink-2); --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-teal: var(--teal); --color-teal-2: var(--teal-2); --color-teal-soft: var(--teal-soft);
+  --color-amber: var(--amber); --color-amber-soft: var(--amber-soft);
+  --color-navy: var(--navy); --color-navy-2: var(--navy-2);
+  --font-sans: ui-sans-serif, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { letter-spacing: -0.015em; }
+.serif { font-family: var(--font-serif); }
+.card { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.chip { display: inline-flex; align-items: center; gap: .4rem; padding: .25rem .6rem; border-radius: 999px; font-size: .78rem; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); }
+.evidence { border-left: 3px solid var(--teal); }
+.no-evidence { border-left: 3px solid var(--amber); background: var(--amber-soft); }
+.grid-bg { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 32px 32px; mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%); }
+@media (prefers-reduced-motion: no-preference) {
+  .pulse { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+  .flow-dash { stroke-dasharray: 6 6; animation: dash 1.6s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -24; } }
+}

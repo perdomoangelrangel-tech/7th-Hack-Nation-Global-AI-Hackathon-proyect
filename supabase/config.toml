@@ -1,0 +1,8 @@
+# Supabase CLI. `supabase link --project-ref <ref>` y `supabase db push` aplican las migraciones.
+project_id = "rare-atlas"
+
+[db]
+major_version = 17
+
+[db.migrations]
+enabled = true

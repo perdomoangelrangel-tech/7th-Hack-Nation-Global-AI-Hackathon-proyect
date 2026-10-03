@@ -1,0 +1,19 @@
+name: Ingesta diaria del grafo
+on:
+  schedule: [{ cron: "0 6 * * *" }]   # 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      only: { description: "Fuente (orphanet|ctgov|pubmed|clinvar|opentargets|hpo|orgs) o vacío para todas", required: false }
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run ingest -- ${{ inputs.only && format('--only={0}', inputs.only) || '' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}

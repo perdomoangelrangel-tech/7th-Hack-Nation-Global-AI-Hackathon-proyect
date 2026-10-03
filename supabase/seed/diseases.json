@@ -1,0 +1,47 @@
+[
+  {
+    "orpha": "ORPHA:33069",
+    "mondo": "MONDO:0011122",
+    "efo": "MONDO_0011122",
+    "name": "Dravet syndrome",
+    "name_es": "Síndrome de Dravet",
+    "genes": ["SCN1A"],
+    "search_terms": ["Dravet syndrome", "severe myoclonic epilepsy of infancy"]
+  },
+  {
+    "orpha": "ORPHA:778",
+    "mondo": "MONDO:0010726",
+    "efo": "MONDO_0010726",
+    "name": "Rett syndrome",
+    "name_es": "Síndrome de Rett",
+    "genes": ["MECP2"],
+    "search_terms": ["Rett syndrome"]
+  },
+  {
+    "orpha": "ORPHA:505652",
+    "mondo": "MONDO:0100039",
+    "efo": "MONDO_0100039",
+    "name": "CDKL5 deficiency disorder",
+    "name_es": "Trastorno por deficiencia de CDKL5",
+    "genes": ["CDKL5"],
+    "search_terms": ["CDKL5 deficiency disorder", "CDKL5"]
+  },
+  {
+    "orpha": "ORPHA:72",
+    "mondo": "MONDO:0007113",
+    "efo": "MONDO_0007113",
+    "name": "Angelman syndrome",
+    "name_es": "Síndrome de Angelman",
+    "genes": ["UBE3A"],
+    "search_terms": ["Angelman syndrome"]
+  },
+  {
+    "orpha": "ORPHA:228354",
+    "mondo": "MONDO:0008767",
+    "efo": "MONDO_0008767",
+    "name": "CLN2 disease (late infantile neuronal ceroid lipofuscinosis)",
+    "name_es": "Enfermedad CLN2 (lipofuscinosis ceroidea neuronal infantil tardía)",
+    "genes": ["TPP1"],
+    "search_terms": ["CLN2 disease", "neuronal ceroid lipofuscinosis 2", "Batten disease CLN2"]
+  }
+]
