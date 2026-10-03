@@ -83,6 +83,10 @@ describe("journey v2 · persona order", () => {
     const devon = buildJourney(g, STXBP1, "devon", "en")!;
     expect(devon.order[0]).toBe("people");
     expect(devon.next.steps[0].kind).toBe("community");
+    // QA-05: Devon on Dravet sees Dravet's own patient groups first.
+    const dravet = buildJourney(g, "disease:ORPHA:33069", "devon", "en")!;
+    expect(dravet.people.collaborators[0].kind).toBe("patient_org");
+    expect(dravet.summary.people.text).toMatch(/Dravet Syndrome/);
     expect(ORDER.osei.slice(0, 2)).toEqual(["connections", "people"]);
     const osei = buildJourney(g, STXBP1, "osei", "en")!;
     expect(osei.next.steps[0].kind).toBe("validate");

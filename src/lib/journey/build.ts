@@ -242,6 +242,9 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
   const cited = collaborators.filter((c) => c.cite.edges.length > 0);
   const people = [...cited.filter((c) => c.kind === "patient_org"), ...cited.filter((c) => c.kind === "investigator").slice(0, 4), ...cited.filter((c) => c.kind === "research_org").slice(0, 2), ...cited.filter((c) => c.kind === "sponsor").slice(0, 3)]
     .sort((a, b) => collabScore(b) - collabScore(a) || a.name.localeCompare(b.name));
+  // Patient mode: "is there a community for my exact diagnosis?" comes before any researcher or sponsor.
+  if (persona === "devon") people.sort((a, b) => Number(isOwnGroup(b)) - Number(isOwnGroup(a)));
+  function isOwnGroup(c: CollaboratorCard) { return c.kind === "patient_org" && c.diseases.some((x) => x.id === d); }
 
   /* ---------------- 4. What should we do together next? ---------------- */
   const steps: StepCard[] = [];
