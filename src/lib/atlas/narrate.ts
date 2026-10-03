@@ -103,9 +103,9 @@ export function buildFacts(j: Journey, l: Locale): { facts: Fact[]; coverage: Ev
       simple: es ? `${org} es un grupo que apoya a familias con ${j.disease.name}.` : `${org} is a group that supports families living with ${j.disease.name}.` });
   }
   for (const c of j.collaborators.filter((x) => !orgs.some((o) => o.from === x.id)).slice(0, 3)) push({ kind: "collaborator", status: "observed", nodes: [c.id, ...c.diseases], edges: c.edges.slice(0, 4), evidence_ids: evOf(c.edges.slice(0, 4)),
-    text: c.kind === "patient_org" ? (es ? `${c.name} es una organización de pacientes: ${c.why.toLowerCase()}.` : `${c.name} is a patient organization: ${c.why.toLowerCase()}.`)
+    text: c.kind === "patient_org" ? (es ? `${c.name} es una organización de pacientes: ${lcFirst(c.why)}.` : `${c.name} is a patient organization: ${lcFirst(c.why)}.`)
       : c.kind === "investigator" ? (es ? `${c.name}${c.institution ? `, de ${c.institution},` : ""} ${c.why.charAt(0).toLowerCase()}${c.why.slice(1)}.` : `${c.name}${c.institution ? ` at ${c.institution}` : ""} ${c.why.charAt(0).toLowerCase()}${c.why.slice(1)}.`)
-      : (es ? `${c.name}: ${c.why.toLowerCase()}.` : `${c.name}: ${c.why.toLowerCase()}.`) });
+      : (es ? `${c.name}: ${lcFirst(c.why)}.` : `${c.name}: ${lcFirst(c.why)}.`) });
 
   for (const s of j.steps) push({ kind: "step", status: s.evidence_edges.length ? "inferred" : "gap", nodes: s.nodes, edges: s.evidence_edges, evidence_ids: s.evidence_edges.length ? evOf(s.evidence_edges) : [coverage.id],
     text: `${s.title}. ${s.detail}` });
@@ -115,6 +115,8 @@ export function buildFacts(j: Journey, l: Locale): { facts: Fact[]; coverage: Ev
 
   return { facts, coverage };
 }
+
+const lcFirst = (s: string) => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
 
 /** La voz lee la primera oración de la definición de Orphanet; el panel muestra la completa. */
 function firstSentence(s: string) { const m = s.match(/^.+?[.!?](s|$)/); return (m ? m[0] : s).trim(); }
@@ -151,7 +153,11 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
   // Order: what the question asks about first, then the persona's priorities.
   const asked = opts.question ? questionKinds(opts.question) : [];
   const rank = (k: FactKind) => { const a = asked.indexOf(k); if (a >= 0) return a - 100; const i = persona.priorities.indexOf(k); return i < 0 ? 99 : i; };
-  const ordered = [...facts].sort((a, b) => rank(a.kind) - rank(b.kind));
+  // Researcher / Pharma want people working on the mechanism before patient organizations.
+  const orgLater = personaId === "osei" || personaId === "priya";
+  const isOrg = (f: Fact) => f.kind === "collaborator" && atlas().byId.get(f.nodes[0])?.type === "organization";
+  const score = (f: Fact) => rank(f.kind) + (orgLater && isOrg(f) ? 0.5 : 0);
+  const ordered = [...facts].sort((a, b) => score(a) - score(b));
 
   const task = l === "es"
     ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${persona.maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
@@ -164,7 +170,7 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
   });
 
   // Deterministic template: a quota per kind so it walks connection → asset → collaborator → step.
-  const QUOTA: Partial<Record<FactKind, number>> = { disease: 1, gene: 1, variant_effect: 1, neighbor: 1, pathway: 1, counterexample: 1, asset: 2, treatment: 1, collaborator: personaId === "devon" ? 2 : 1, step: 2, gap: 1 };
+  const QUOTA: Partial<Record<FactKind, number>> = { disease: 1, gene: 1, variant_effect: 1, neighbor: 1, pathway: 1, counterexample: 1, asset: 2, treatment: 1, collaborator: personaId === "devon" || asked.includes("collaborator") ? 2 : 1, step: 2, gap: 1 };
   const used = new Map<FactKind, number>();
   const template = ordered.filter((f) => { const n = used.get(f.kind) ?? 0; if (n >= (QUOTA[f.kind] ?? 1)) return false; used.set(f.kind, n + 1); return true; })
     .slice(0, persona.maxClaims)
