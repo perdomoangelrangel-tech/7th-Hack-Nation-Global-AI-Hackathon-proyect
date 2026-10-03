@@ -19,6 +19,7 @@ const W = { phenotype: 0.55, pathway: 0.35, gene: 0.1 } as const;
 const MIN_EDGE = 0.06;      // below this the connection is not drawn (simGIC scores are low in absolute value)
 const TOP_K = 3;            // max inferred neighbors per disease
 const MIN_ANCESTOR_IC = 0.25; // ancestors nearly every disease has carry no signal
+const LABEL_SLACK = 0.15;     // cluster naming: pathways this close to the most specific one compete on narrowness
 // Data-viz palette (the one place raw hex is allowed): logo blues first, then distinct accessible hues.
 const PALETTE = ["#3a86bf", "#0f766e", "#b45309", "#7c3aed", "#be185d", "#4d7c0f", "#0e7490", "#9a3412"];
 const ACTIVE = new Set(["RECRUITING", "NOT_YET_RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]);
@@ -250,6 +251,10 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   const groups = new Map<number, string[]>();
   for (const d of diseases) { const c = communities[d.id] ?? -1; groups.set(c, [...(groups.get(c) ?? []), d.id]); }
 
+  const pathwayGenes = new Map<string, number>();
+  for (const e of edges) if (e.relation === "participates_in") pathwayGenes.set(e.to, (pathwayGenes.get(e.to) ?? 0) + 1);
+  const genesIn = (pathway: string) => pathwayGenes.get(pathway) ?? 0;
+
   const clusters: Cluster[] = [...groups.values()]
     .map((m) => m.sort())
     .sort((a, b) => b.length - a.length || a[0].localeCompare(b[0]))
@@ -271,13 +276,22 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     const shared_phenotypes = [...phenCount].filter(([, n]) => n >= minShare)
       .map(([id, n]) => ({ id, name: termName.get(id) ?? id, ic: icOf.get(id) ?? 0, diseases: n, spec: (n / members.length - specificity(id, "phen")) * (icOf.get(id) ?? 0.5) }))
       .sort((a, b) => b.spec - a.spec || a.id.localeCompare(b.id)).slice(0, 8);
-    const pw = shared_pathways[0], ph = shared_phenotypes[0];
+    // Among near-best pathways (specificity within LABEL_SLACK of the best), name the cluster after the NARROWEST one —
+    // fewest atlas genes participate in it — so a broad umbrella pathway (e.g. "Neutrophil degranulation", which
+    // contains many lysosomal hydrolases) does not hide the mechanism (e.g. "Glycosphingolipid catabolism").
+    const best = shared_pathways[0];
+    const pw = best && best.spec > 0
+      ? shared_pathways.filter((x) => x.spec > 0 && x.spec >= best.spec - LABEL_SLACK)
+        .sort((a, b) => genesIn(a.id) - genesIn(b.id) || b.spec - a.spec || a.id.localeCompare(b.id))[0]
+      : best;
+    const ph = shared_phenotypes[0];
     const byPathway = !!pw && pw.spec > 0;
-    const label = byPathway ? pw.name : ph?.name ?? entities.get(members[0])?.name ?? "Cluster";
-    const label_basis = members.length === 1
-      ? `Only member (no other atlas disease is similar enough); named after its ${byPathway ? "most specific Reactome pathway" : ph ? `most informative phenotype (IC ${ph.ic})` : "name"}`
+    const only = members.length === 1 ? entities.get(members[0]) : undefined;
+    const label = only ? `${String(only.props.short_name ?? only.name)} (no close neighbor)` : byPathway ? pw.name : ph?.name ?? "Cluster";
+    const label_basis = only
+      ? "Only member: no other atlas disease passes the similarity threshold, so no shared mechanism is claimed"
       : byPathway
-      ? `Most specific shared Reactome pathway: ${pw.diseases} of ${members.length} member diseases participate in it vs ${Math.round(specificity(pw.id, "leaf") * 100)}% outside the cluster`
+      ? `Shared Reactome pathway: ${pw.diseases} of ${members.length} member diseases participate in it vs ${Math.round(specificity(pw.id, "leaf") * 100)}% outside the cluster${pw !== best ? ` (chosen over the broader "${best.name}", ${best.diseases} of ${members.length}, because fewer atlas genes take part in it: ${genesIn(pw.id)} vs ${genesIn(best.id)})` : ""}`
       : ph
         ? `Most informative shared phenotype (IC ${ph.ic}): present in ${ph.diseases} of ${members.length} member diseases${members.length > 1 ? "; no member-specific Reactome pathway" : ""}`
         : "Single disease without shared pathways or phenotypes";
@@ -346,15 +360,16 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
       why: `They share symptoms (phenotype similarity ${p.s.phenotype_score}) but no Reactome pathway: they likely need different therapeutic strategies.`,
     }));
   // (b) same gene, different mechanism: one gene causes both diseases but the variant effect differs (e.g. loss vs gain of function).
+  // Only when the variant effect of BOTH diseases was measured on that same gene (its primary causal gene in each).
   for (const p of pairs) {
-    if (!p.s.shared_genes.length) continue;
+    const va = variantEffect[p.a], vb = variantEffect[p.b];
+    if (!va || !vb || va.gene !== vb.gene || !p.s.shared_genes.includes(va.gene)) continue;
     const ea = effectClass(p.a), eb = effectClass(p.b);
     if (!ea || !eb || ea === eb) continue;
-    const va = variantEffect[p.a]!, vb = variantEffect[p.b]!;
     counterexamples.push({
-      a: p.a, b: p.b, kind: "same_gene_different_mechanism", gene: p.s.shared_genes[0], edges: [va.edge, vb.edge],
+      a: p.a, b: p.b, kind: "same_gene_different_mechanism", gene: va.gene, edges: [va.edge, vb.edge],
       shared_phenotypes: p.s.shared_phenotypes.slice(0, 4).map((x) => x.name),
-      why: `Same gene (${p.s.shared_genes.join(", ")}) but a different variant effect: ${entities.get(p.a)?.name} → ${va.call}; ${entities.get(p.b)?.name} → ${vb.call}. A therapy that restores the protein in one could worsen the other — the shared gene alone is not a shared mechanism.`,
+      why: `Same gene (${va.gene}) but a different variant effect: ${entities.get(p.a)?.name} → ${va.call}; ${entities.get(p.b)?.name} → ${vb.call}. A therapy that restores the protein in one could worsen the other — the shared gene alone is not a shared mechanism.`,
     });
   }
 

@@ -10,7 +10,7 @@ export function orgs(ctx: Ctx, d: SeedDisease) {
     if (!o.diseases.includes(d.orpha)) continue;
     const org = {
       type: "organization" as const, canonicalId: `ORG:${slug(o.name)}`, name: o.name,
-      props: { country: o.country, url: o.url, kind: o.kind },
+      props: { country: o.country, url: o.url, kind: o.kind, registry: o.registry },
     };
     ctx.batch.edge({
       from: org, to: { type: "disease", canonicalId: d.orpha, name: d.name },
