@@ -179,7 +179,8 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
   const reusable = neighbors.slice(0, 3).flatMap((n) => assetEdges(n.disease).map((e) => toAsset(e, false)))
     .filter((a) => a.kind !== "interventional_trial" && !ownIds.has(a.id) && a.status !== "WITHDRAWN")
     .filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i)
-    .sort((a, b) => rankAsset(a) - rankAsset(b));
+    .sort((a, b) => rankAsset(a) - rankAsset(b))
+    .slice(0, 6);
 
   const toTreatment = (e: Edge, dis: string): TreatmentCard => {
     const t = g.byId.get(e.from)!;
@@ -366,7 +367,7 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
     order: ORDER[persona],
     summary,
     connections: { neighbors, counterexamples, none: none_connections },
-    assets: { own: own.slice(0, 8), reusable: reusable.slice(0, 6), treatments: treatments.slice(0, 8), neighbor_approved: neighborApproved.slice(0, 4), none: none_assets },
+    assets: { own: own.slice(0, 8), reusable, treatments: treatments.slice(0, 8), neighbor_approved: neighborApproved.slice(0, 4), none: none_assets },
     people: { collaborators: people, none: none_people },
     next: { steps: thisWeek, later, none: none_next },
     gaps, unmet_need, coverage,
