@@ -1,41 +1,31 @@
 "use client";
 /**
- * Lienzo del grafo (canvas, d3-force). Se carga solo en el cliente (dynamic ssr:false desde AtlasApp).
- * - Enfermedades = estrellas con el color de su cluster; tamaño = centralidad.
- * - Aristas observadas sólidas; inferidas punteadas (nunca se confunden).
- * - Narración: los nodos citados se encienden, el resto se atenúa y viajan partículas por las aristas citadas.
- * - Las posiciones se conservan entre focos para que el mapa no "salte" (continuidad espacial).
+ * 2D graph canvas (d3-force) — the fallback for reduced motion, low power, no WebGL and small screens.
+ * Client only (dynamic ssr:false from AtlasApp). Same props contract as GraphCanvas3D.
+ * - Diseases = discs colored by mechanism cluster, size = centrality. Other entities: shape + color by type.
+ * - Edge style carries the evidence kind: observed solid · inferred dashed · extracted dotted · proposed ghost.
+ * - Narration: cited nodes light up, the rest dims, particles travel along cited edges.
+ * - Positions persist across focus changes so the map does not jump (spatial continuity).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D, { type ForceGraphMethods, type LinkObject, type NodeObject } from "react-force-graph-2d";
-import type { GLink, GNode, GraphView } from "@/lib/atlas/store";
+import type { GLink, GNode } from "@/lib/atlas/store";
 import { prefersReducedMotion } from "@/lib/motion";
-import { TYPE_COLOR } from "./colors";
+import { CANVAS, KIND_STYLE, TYPE_COLOR, hexA, kindOf } from "./colors";
+import { endId, trim, type GraphCanvasProps } from "./graphProps";
 
 type N = NodeObject<GNode>;
-
-/** Posiciones entre focos: viven fuera de React (un solo lienzo por página). */
-const positions = new Map<string, { x: number; y: number }>();
 type L = LinkObject<GNode, GLink>;
 
-interface Props {
-  view: GraphView | null;
-  highlightNodes: Set<string>;
-  highlightEdges: Set<string>;
-  selected: string | null;
-  clusterFilter: string | null;
-  /** Alto (px) que tapa la barra de narración: el encuadre centra por encima. */
-  bottomInset: number;
-  onNode: (n: GNode) => void;
-  onLink: (l: GLink) => void;
-}
+/** Positions between focuses live outside React (one canvas per page). */
+const positions = new Map<string, { x: number; y: number }>();
 
-export default function GraphCanvas({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, onNode, onLink }: Props) {
+export default function GraphCanvas({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, hiddenKinds, still, onNode, onLink }: GraphCanvasProps) {
   const fg = useRef<ForceGraphMethods<N, L> | undefined>(undefined);
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState<string | null>(null);
-  const reduced = useMemo(() => prefersReducedMotion(), []);
+  const reduced = useMemo(() => !!still || prefersReducedMotion(), [still]);
 
   useEffect(() => {
     const el = wrap.current; if (!el) return;
@@ -44,21 +34,17 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     return () => ro.disconnect();
   }, []);
 
-  // Datos con posiciones previas: los nodos que ya estaban no se teletransportan.
   const data = useMemo(() => {
     if (!view) return { nodes: [] as N[], links: [] as L[] };
-    const nodes: N[] = view.nodes.map((n) => {
+    const links: L[] = view.links.filter((l) => !hiddenKinds?.has(kindOf(l.kind))).map((l) => ({ ...l }));
+    const nodes: N[] = view.nodes.filter((n) => !(n.draft && hiddenKinds?.has("proposed"))).map((n) => {
       const p = positions.get(n.id);
       return { ...n, ...(p ? { x: p.x, y: p.y } : {}) };
     });
-    const links: L[] = view.links.map((l) => ({ ...l }));
     return { nodes, links };
-  }, [view]);
+  }, [view, hiddenKinds]);
 
-  /**
-   * Encuadre propio: zoom acotado (un solo nodo no llena la pantalla) y centrado en el área visible
-   * por encima de la barra de narración (bottomInset).
-   */
+  /** Bounded zoom (one node never fills the screen), centered above the narration bar. */
   const fitTo = useCallback((ids: Set<string> | null, ms: number) => {
     const g = fg.current; if (!g) return;
     const ns = data.nodes.filter((n) => (!ids || ids.has(n.id)) && Number.isFinite(n.x) && Number.isFinite(n.y));
@@ -80,11 +66,11 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     g.d3ReheatSimulation();
     const t = setTimeout(() => fitTo(null, reduced ? 0 : 900), reduced ? 50 : 1300);
     return () => clearTimeout(t);
-    // fitTo cambia con el tamaño; re-encuadrar solo cuando cambian los datos.
+    // Re-frame only when the data changes (fitTo changes with size).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, reduced]);
 
-  // Durante la narración: encuadrar lo que se está diciendo (y volver al conjunto al terminar).
+  // While narrating: frame what is being said (and go back to the whole when it ends).
   useEffect(() => {
     if (!data.nodes.length) return;
     fitTo(highlightNodes.size ? highlightNodes : null, reduced ? 0 : 800);
@@ -92,7 +78,6 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   }, [highlightNodes, reduced]);
 
   const narrating = highlightNodes.size > 0;
-  // Atenuar: durante la narración, todo lo no citado; con un cluster elegido, las enfermedades de otros clusters.
   const dimmed = useCallback((n: N) => {
     if (narrating) return !highlightNodes.has(n.id);
     return !!clusterFilter && n.type === "disease" && n.cluster !== clusterFilter;
@@ -104,42 +89,47 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     const isDisease = node.type === "disease";
     const lit = highlightNodes.has(node.id) || node.id === selected || node.id === hover;
     const dim = dimmed(node);
-    const color = isDisease ? node.color ?? "#e2e8f0" : TYPE_COLOR[node.type] ?? "#cbd5e1";
+    const color = isDisease ? node.color ?? CANVAS.fallbackDisease : TYPE_COLOR[node.type] ?? TYPE_COLOR.study;
     const r = node.size;
     const time = performance.now() / 1000;
-    ctx.globalAlpha = dim ? 0.18 : 1;
+    ctx.globalAlpha = dim ? CANVAS.dimAlpha : node.draft ? 0.45 : 1;
+    const shape = () => (node.draft ? ctx.stroke() : ctx.fill());
 
-    // Halo (estrella)
+    // Soft halo (diseases and lit nodes)
     if (isDisease || lit) {
-      const pulse = lit && !reduced ? 1 + 0.25 * Math.sin(time * 4) : 1;
-      const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * (isDisease ? 3.2 : 2.6) * pulse);
-      g.addColorStop(0, hexA(color, lit ? 0.55 : 0.35)); g.addColorStop(1, hexA(color, 0));
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.4 * pulse, 0, 2 * Math.PI); ctx.fill();
+      const pulse = lit && !reduced ? 1 + 0.2 * Math.sin(time * 4) : 1;
+      const g = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * (isDisease ? 2.6 : 2.2) * pulse);
+      g.addColorStop(0, hexA(color, lit ? 0.35 : 0.18)); g.addColorStop(1, hexA(color, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 2.8 * pulse, 0, 2 * Math.PI); ctx.fill();
     }
     ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 1.2 / scale;
+    if (node.draft) ctx.setLineDash([3 / scale, 3 / scale]);
     ctx.beginPath();
     switch (node.type) {
-      case "gene": roundRect(ctx, x - r, y - r, 2 * r, 2 * r, r * 0.35); ctx.fill(); break;
-      case "pathway": ctx.moveTo(x, y - r * 1.2); ctx.lineTo(x + r * 1.2, y); ctx.lineTo(x, y + r * 1.2); ctx.lineTo(x - r * 1.2, y); ctx.closePath(); ctx.fill(); break;
+      case "gene": roundRect(ctx, x - r, y - r, 2 * r, 2 * r, r * 0.35); shape(); break;
+      case "pathway": ctx.moveTo(x, y - r * 1.2); ctx.lineTo(x + r * 1.2, y); ctx.lineTo(x, y + r * 1.2); ctx.lineTo(x - r * 1.2, y); ctx.closePath(); shape(); break;
       case "organization": ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.lineWidth = 2 / scale; ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, r * 0.45, 0, 2 * Math.PI); ctx.fill(); break;
-      case "trial": ctx.moveTo(x, y - r * 1.15); ctx.lineTo(x + r, y + r * 0.8); ctx.lineTo(x - r, y + r * 0.8); ctx.closePath(); ctx.fill(); break;
-      case "investigator": ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.lineWidth = 1.6 / scale; ctx.stroke(); break;
-      default: ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+      case "trial": ctx.moveTo(x, y - r * 1.15); ctx.lineTo(x + r, y + r * 0.8); ctx.lineTo(x - r, y + r * 0.8); ctx.closePath(); shape(); break;
+      case "investigator": ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.lineWidth = 1.8 / scale; ctx.stroke(); break;
+      default: ctx.arc(x, y, r, 0, 2 * Math.PI); shape();
     }
-    if (node.focus) { ctx.beginPath(); ctx.arc(x, y, r + 3, 0, 2 * Math.PI); ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1.5 / scale; ctx.stroke(); }
+    ctx.setLineDash([]);
+    // White rim keeps overlapping discs readable on the light canvas.
+    if (isDisease && !node.draft) { ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 1.5 / scale; ctx.stroke(); }
+    if (node.focus || node.id === selected) { ctx.beginPath(); ctx.arc(x, y, r + 3.5, 0, 2 * Math.PI); ctx.strokeStyle = CANVAS.ink; ctx.lineWidth = 1.8 / scale; ctx.stroke(); }
+    if (node.bridge) { ctx.beginPath(); ctx.arc(x, y, r + 2, 0, 2 * Math.PI); ctx.strokeStyle = CANVAS.bridge; ctx.lineWidth = 1.4 / scale; ctx.setLineDash([2 / scale, 2 / scale]); ctx.stroke(); ctx.setLineDash([]); }
 
-    // Etiquetas: enfermedades siempre; el resto al acercar, al iluminar o al pasar el cursor.
-    const show = isDisease || lit || scale > 2.2;
-    if (show) {
-      const fs = Math.max(isDisease ? 12 : 10, 0) / scale;
+    // Labels: diseases always; the rest when zoomed in, lit or hovered.
+    if (isDisease || lit || scale > 2.2) {
+      const fs = (isDisease ? 12 : 10) / scale;
       ctx.font = `${isDisease ? 600 : 500} ${fs}px ui-sans-serif, system-ui, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "top";
       const label = trim(node.name, isDisease ? 28 : 34);
-      ctx.fillStyle = "rgba(6,12,24,.75)";
       const w = ctx.measureText(label).width;
-      ctx.fillRect(x - w / 2 - 3 / scale, y + r + 3 / scale, w + 6 / scale, fs + 4 / scale);
-      ctx.fillStyle = isDisease ? "#f8fafc" : "#e2e8f0";
-      ctx.fillText(label, x, y + r + 5 / scale);
+      ctx.fillStyle = CANVAS.labelBg;
+      ctx.beginPath(); roundRect(ctx, x - w / 2 - 4 / scale, y + r + 3 / scale, w + 8 / scale, fs + 5 / scale, 4 / scale); ctx.fill();
+      ctx.fillStyle = CANVAS.ink;
+      ctx.fillText(label, x, y + r + 5.5 / scale);
     }
     ctx.globalAlpha = 1;
   }, [highlightNodes, selected, hover, dimmed, reduced]);
@@ -148,11 +138,10 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     ctx.fillStyle = color; ctx.beginPath(); ctx.arc(node.x ?? 0, node.y ?? 0, node.size + 4, 0, 2 * Math.PI); ctx.fill();
   }, []);
 
-  const linkId = (l: L) => (l as GLink).id;
-  const endId = (v: unknown) => (typeof v === "object" && v ? String((v as N).id) : String(v));
+  const isLit = (l: L) => highlightEdges.has((l as GLink).id);
 
   return (
-    <div ref={wrap} className="absolute inset-0" aria-label="Knowledge graph" role="img">
+    <div ref={wrap} className="absolute inset-0" aria-label="Knowledge graph (2D)" role="img">
       <ForceGraph2D<GNode, GLink>
         ref={fg}
         width={size.w}
@@ -164,17 +153,19 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
         nodePointerAreaPaint={paintArea}
         nodeLabel={(n) => `${n.name}`}
         linkColor={(l) => {
-          const lit = highlightNodes.size ? highlightEdges.has(linkId(l)) : false;
-          const dim = narrating ? !lit : false;
-          if (l.kind === "inferred") return dim ? "rgba(255,255,255,.05)" : lit ? "rgba(253,224,71,.95)" : "rgba(253,224,71,.45)";
-          return dim ? "rgba(148,163,184,.05)" : lit ? "rgba(255,255,255,.9)" : "rgba(148,163,184,.28)";
+          const s = KIND_STYLE[kindOf(l.kind)];
+          const lit = isLit(l);
+          if (narrating && !lit) return hexA(s.color, 0.06);
+          if (lit) return CANVAS.ink;
+          if (l.bridge) return hexA(CANVAS.bridge, 0.85);
+          return hexA(s.color, s.opacity);
         }}
-        linkWidth={(l) => (highlightEdges.has(linkId(l)) ? 2.6 : l.kind === "inferred" ? 1.4 + 4 * l.confidence : 0.8)}
-        linkLineDash={(l) => (l.kind === "inferred" ? [5, 4] : null)}
-        linkDirectionalParticles={(l) => (reduced ? 0 : highlightEdges.has(linkId(l)) ? 4 : l.kind === "inferred" && !narrating ? 1 : 0)}
-        linkDirectionalParticleWidth={(l) => (highlightEdges.has(linkId(l)) ? 3.2 : 1.6)}
-        linkDirectionalParticleSpeed={(l) => (highlightEdges.has(linkId(l)) ? 0.012 : 0.004)}
-        linkDirectionalParticleColor={(l) => (l.kind === "inferred" ? "#fde047" : "#ffffff")}
+        linkWidth={(l) => (isLit(l) ? 2.6 : l.kind === "inferred" ? 1.2 + 3 * l.confidence : l.bridge ? 1.8 : 0.9)}
+        linkLineDash={(l) => KIND_STYLE[kindOf(l.kind)].dash}
+        linkDirectionalParticles={(l) => (reduced ? 0 : isLit(l) ? 4 : l.kind === "inferred" && !narrating ? 1 : 0)}
+        linkDirectionalParticleWidth={(l) => (isLit(l) ? 3.2 : 1.8)}
+        linkDirectionalParticleSpeed={(l) => (isLit(l) ? 0.012 : 0.004)}
+        linkDirectionalParticleColor={(l) => (isLit(l) ? CANVAS.ink : KIND_STYLE[kindOf(l.kind)].color)}
         linkHoverPrecision={6}
         onNodeHover={(n) => setHover(n ? String(n.id) : null)}
         onNodeClick={(n) => onNode(n as GNode)}
@@ -191,8 +182,3 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
-function hexA(hex: string, a: number) {
-  const h = hex.replace("#", ""); const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-}
-const trim = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
