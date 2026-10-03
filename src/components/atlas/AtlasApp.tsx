@@ -95,9 +95,12 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   useEffect(() => {
     if (!focus) return;
     const c = new AbortController();
-    fetch(`/api/proposals?d=${encodeURIComponent(focus)}`, { signal: c.signal })
+    const load = () => fetch(`/api/proposals?d=${encodeURIComponent(focus)}`, { signal: c.signal })
       .then((r) => (r.ok ? r.json() : [])).then((j) => setDrafts(parseDrafts(j))).catch(() => {});
-    return () => c.abort();
+    void load();
+    // The action lane fires `nexmed:proposal` after a draft is saved: show it right away.
+    window.addEventListener("nexmed:proposal", load);
+    return () => { c.abort(); window.removeEventListener("nexmed:proposal", load); };
   }, [focus]);
   const fullView = useMemo(() => (view && focus && view.focus === focus ? withDrafts(view, drafts) : view), [view, drafts, focus]);
   const presentKinds = useMemo(() => new Set((fullView?.links ?? []).map((l) => kindOf(l.kind))), [fullView]);
@@ -174,7 +177,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             {t.narrate_on_pick}
           </label>
           <p className="mt-auto text-[11px] text-ink-3 leading-relaxed">
-            {t.stats_line.replace("{d}", String(stats.diseases)).replace("{e}", stats.edges.toLocaleString()).replace("{v}", stats.evidence.toLocaleString()).replace("{s}", String(stats.sources))}
+            {t.stats_line.replace("{d}", String(stats.diseases)).replace("{e}", stats.edges.toLocaleString("en-US")).replace("{v}", stats.evidence.toLocaleString("en-US")).replace("{s}", String(stats.sources))}
           </p>
         </aside>
 
