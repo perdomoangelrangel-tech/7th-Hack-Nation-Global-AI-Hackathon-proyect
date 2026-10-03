@@ -94,3 +94,26 @@ describe("handleSpeak", () => {
     expect((await handleSpeak({ text: "b" }, boom as unknown as typeof fetch)).status).toBe(502);
   });
 });
+
+import { DEFAULT_AGENTS, agentIds, agentVariables } from "./agents";
+
+describe("agents", () => {
+  afterEach(() => { delete process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY; });
+
+  it("has an agent per mode and lets env override or disable one", () => {
+    expect(agentIds()).toEqual(DEFAULT_AGENTS);
+    process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY = "agent_0000000000000000000000000000";
+    expect(agentIds().maria).toBe("agent_0000000000000000000000000000");
+    process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY = "off";
+    expect(agentIds().maria).toBeNull();
+    process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY = "garbage";
+    expect(agentIds().maria).toBe(DEFAULT_AGENTS.maria);
+  });
+
+  it("always sends every dynamic variable the agent prompts reference", () => {
+    const v = agentVariables({ persona: "maria", locale: "en", disease: null });
+    expect(Object.keys(v).sort()).toEqual(["disease_id", "disease_name", "locale", "persona"]);
+    expect(v.disease_name).toBeTruthy();
+    expect(agentVariables({ persona: "osei", locale: "es", disease: "disease:ORPHA:1", diseaseName: "X" }).disease_name).toBe("X");
+  });
+});

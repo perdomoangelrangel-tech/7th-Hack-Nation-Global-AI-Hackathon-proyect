@@ -10,13 +10,13 @@
  * - Narration + "read answer aloud" → `eleven_multilingual_v2`: highest quality and natural prosody in
  *   EN and ES. Latency is hidden because useNarration prefetches the next claim while one plays, and
  *   /api/speak caches every sentence by hash.
- * - Live conversational agents → `eleven_flash_v2_5` (~75 ms): turn-taking needs low latency more than
+ * - Live conversational agents → `eleven_flash_v2` (English agents must use turbo/flash v2): turn-taking needs low latency more than
  *   studio polish. Configured on the ElevenLabs agents themselves (see AGENT_TTS_MODEL).
  */
 import type { PersonaId } from "../agents/profiles";
 
 export const TTS_MODEL = "eleven_multilingual_v2";
-export const AGENT_TTS_MODEL = "eleven_flash_v2_5";
+export const AGENT_TTS_MODEL = "eleven_flash_v2"; // ElevenLabs requires turbo/flash v2 for English agents
 
 export interface VoiceSettings {
   stability: number;          // 0..1 — higher = calmer, less variation

@@ -11,6 +11,7 @@ import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
 import { fetchSpeech, playUrl, speakBrowser, type VoiceProvider } from "@/lib/voice/client";
+import { VOICE_LIVE_EVENT } from "@/lib/voice/events";
 
 export type NarrationState = "idle" | "loading" | "playing" | "paused" | "done" | "error";
 
@@ -106,6 +107,11 @@ export function useNarration() {
   const prev = useCallback(() => jump(Math.max(0, index - 1)), [jump, index]);
 
   useEffect(() => () => { run.current++; halt(); }, [halt]);
+  // A live agent call takes the floor: stop narrating.
+  useEffect(() => {
+    window.addEventListener(VOICE_LIVE_EVENT, stop);
+    return () => window.removeEventListener(VOICE_LIVE_EVENT, stop);
+  }, [stop]);
 
   const current = narration && index >= 0 ? narration.claims[index] : null;
   return { state, narration, index, current, voice, start, stop, pause, resume, jump, next, prev };
