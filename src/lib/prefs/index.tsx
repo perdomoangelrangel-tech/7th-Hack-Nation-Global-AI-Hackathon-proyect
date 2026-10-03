@@ -23,7 +23,11 @@ const KEY = "nexmed.prefs.v1";
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, set] = useState<Prefs>(DEFAULT_PREFS);
   useEffect(() => {
-    try { const raw = localStorage.getItem(KEY); if (raw) set({ ...DEFAULT_PREFS, ...JSON.parse(raw) }); } catch { /* storage unavailable */ }
+    // Hydrate after mount (server renders defaults); deferred so it is not a synchronous setState in the effect.
+    const id = requestAnimationFrame(() => {
+      try { const raw = localStorage.getItem(KEY); if (raw) set({ ...DEFAULT_PREFS, ...JSON.parse(raw) }); } catch { /* storage unavailable */ }
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch { /* storage unavailable */ }

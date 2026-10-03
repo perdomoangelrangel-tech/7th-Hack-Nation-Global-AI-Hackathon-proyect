@@ -1,27 +1,30 @@
-# Nexmed · build workflow (brain + 6 lane agents)
+# Nexmed by Nedamex · build workflow (brain + 6 lane agents + user-verifier)
 
-The **brain** (orchestrator session) owns integration, GitHub, Vercel, env and QA. Six lane agents build in parallel, each on `feat/<lane>` in `/home/claude/wt/<lane>`, and coordinate through the shared log `/home/claude/nexmed-shared/BITACORA.md`.
+The **brain** (Claude Code session in the main checkout `nexmed/`) owns setup, integration, GitHub, Vercel, env and release. Six lane agents build in parallel, each in its own Claude Code session on `feat/<lane>` in the git worktree `../nexmed-<lane>`, and coordinate through the shared log `../nexmed-shared/BITACORA.md`. A seventh agent, the **user-verifier**, behaves like the real users (Devon, Maria, Dr. Osei, Priya), tests every merged build on localhost and on Vercel, and files bugs back to the lanes.
 
 ## 1. Timeline (CDMX, Sat 3 → Sun 4 Oct)
 
 | Slot | Goal |
 |---|---|
-| 17:00–17:30 | Foundation on `main` (done by brain): merged codebase, rename, logo palette, contracts, stubs |
-| 17:30–21:00 | **Wave 1** — six lanes in parallel, commit early and often |
-| 21:00–22:30 | Integration: merge data → ai → explorer → voice → action → brand; build; deploy to Vercel; connect keys |
-| 22:30–01:00 | **Wave 2** — QA, evidence audit, demo journey polish, README |
-| 01:00–06:30 | Videos + submission (humans) · hotfixes only |
+| 17:30–18:00 | Brain: verify foundation, push `main`, create worktrees + bitácora, Vercel project + env |
+| 18:00–21:30 | **Wave 1** — six lanes in parallel, commit early and often, PROGRESS every 30–45 min |
+| 19:30 → | Brain merges each lane as soon as it reports a green checkpoint (not only at the end) · user-verifier tests every merge |
+| 21:30–23:00 | Integration freeze: full merge, prod deploy, OpenAI + ElevenLabs keys connected, live tests |
+| 23:00–01:00 | **Wave 2** — fixes from the user-verifier, evidence audit, demo journey polish, README |
+| 01:00–06:30 | Videos + submission (humans) · hotfixes only, no deploys after 05:30 |
 
 ## 2. Lanes and path ownership (edit ONLY your paths)
 
-| Lane | Port | Owns |
+| Lane | Port · worktree | Owns |
 |---|---|---|
-| **data** | 3101 | `supabase/**` · `scripts/**` · `src/lib/atlas/source.ts` · `src/lib/atlas/analyze.ts` (new) · `src/lib/atlas/types.ts` · `data/atlas.json` · `src/lib/supabase/**` · `.github/workflows/**` · `docs/DATA_SOURCES.md` · `docs/ARCHITECTURE.md` |
-| **ai** | 3102 | `src/lib/ai/**` (new) · `src/lib/openai.ts` · `src/lib/agents/**` · `src/lib/atlas/narrate.ts` · `src/lib/verifier*` · `src/lib/graph.ts` · `src/app/api/{ask,narrate,explain,extract,reconcile,tools}/**` · `src/components/ai/**` (new: extraction/explain UI pieces the explorer mounts) |
-| **explorer** | 3103 | `src/app/atlas/**` · `src/components/atlas/**` except `JourneyPanel.tsx`, `NarrationBar.tsx`, `useNarration.ts` · `src/app/api/atlas/**` · `src/lib/atlas/store.ts` · `src/lib/i18n.ts` · `src/lib/prefs/**` · `src/lib/motion.ts` |
-| **voice** | 3104 | `src/components/voice/**` · `src/components/atlas/NarrationBar.tsx` · `src/components/atlas/useNarration.ts` · `src/lib/voice/**` (new) · `src/app/api/{speak,voice}/**` · ElevenLabs agents (MCP) |
-| **action** | 3105 | `src/components/atlas/JourneyPanel.tsx` · `src/components/cocreate/**` · `src/components/journey/**` (new) · `src/lib/journey/**` (new) · `src/app/api/{journey,proposals,match}/**` · `src/app/plan/**` (new, optional) |
-| **brand** | 3106 | `src/app/page.tsx` · `src/components/landing/**` (new) · `src/components/brand/**` (new) · `src/components/three/**` (new, shared 3D primitives) · `public/**` · `blender/**` (new) · `src/app/globals.css` · `src/app/layout.tsx` · `src/lib/site.ts` · `DESIGN.md` · old `src/components/FlowDiagram.tsx`, `VideoSlot.tsx` (delete or reuse) |
+| **data** | 3101 · `../nexmed-data` | `supabase/**` · `scripts/**` · `src/lib/atlas/source.ts` · `src/lib/atlas/analyze.ts` (new) · `src/lib/atlas/types.ts` · `data/atlas.json` · `src/lib/supabase/**` · `.github/workflows/**` · `docs/DATA_SOURCES.md` · `docs/ARCHITECTURE.md` |
+| **ai** | 3102 · `../nexmed-ai` | `src/lib/ai/**` (new) · `src/lib/openai.ts` · `src/lib/agents/**` · `src/lib/atlas/narrate.ts` · `src/lib/verifier*` · `src/lib/graph.ts` · `src/app/api/{ask,narrate,explain,extract,reconcile,tools}/**` · `src/components/ai/**` (new: extraction/explain UI pieces the explorer mounts) |
+| **explorer** | 3103 · `../nexmed-explorer` | `src/app/atlas/**` · `src/components/atlas/**` except `JourneyPanel.tsx`, `NarrationBar.tsx`, `useNarration.ts` · `src/app/api/atlas/**` · `src/lib/atlas/store.ts` · `src/lib/i18n.ts` · `src/lib/prefs/**` · `src/lib/motion.ts` |
+| **voice** | 3104 · `../nexmed-voice` | `src/components/voice/**` · `src/components/atlas/NarrationBar.tsx` · `src/components/atlas/useNarration.ts` · `src/lib/voice/**` (new) · `src/app/api/{speak,voice}/**` · ElevenLabs agents (MCP) |
+| **action** | 3105 · `../nexmed-action` | `src/components/atlas/JourneyPanel.tsx` · `src/components/cocreate/**` · `src/components/journey/**` (new) · `src/lib/journey/**` (new) · `src/app/api/{journey,proposals,match}/**` · `src/app/plan/**` (new, optional) |
+| **brand** | 3106 · `../nexmed-brand` | `src/app/page.tsx` · `src/components/landing/**` (new) · `src/components/brand/**` (new) · `src/components/three/**` (new, shared 3D primitives) · `public/**` · `blender/**` (new) · `src/app/globals.css` · `src/app/layout.tsx` · `src/lib/site.ts` · `DESIGN.md` · old `src/components/FlowDiagram.tsx`, `VideoSlot.tsx` (delete or reuse) |
+
+| **user-verifier** | 3000 (main) · reads only | writes only `docs/qa/**` and bitácora entries (`NEED(<lane>)` bug reports) |
 
 Brain only: `package.json`, `package-lock.json`, `next.config.ts`, `vercel.json`, `CLAUDE.md`, `AGENTS.md`, `docs/WORKFLOW.md`, `README.md`, `.env.example`.
 Need a dependency or a change in someone else's path? Append a `HANDOFF` entry to the bitácora. Pre-installed deps: react-force-graph-2d/3d, three, @react-three/fiber, @react-three/drei, three-spritetext, graphology, graphology-communities-louvain, openai, @elevenlabs/react, motion, zod, @supabase/supabase-js.
@@ -62,10 +65,10 @@ Need a dependency or a change in someone else's path? Append a `HANDOFF` entry t
 
 ## 4. Bitácora protocol
 
-Append only (never rewrite) to `/home/claude/nexmed-shared/BITACORA.md`:
+Append only (never rewrite) to `../nexmed-shared/BITACORA.md`:
 
 ```bash
-cat >> /home/claude/nexmed-shared/BITACORA.md <<'EOF'
+cat >> ../nexmed-shared/BITACORA.md <<'EOF'   # from any checkout (worktrees are siblings)
 
 ## 18:05 · explorer · PROGRESS
 - 3D graph renders from /api/atlas/graph; edge click opens evidence panel

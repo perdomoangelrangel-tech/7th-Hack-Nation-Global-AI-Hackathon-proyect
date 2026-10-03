@@ -1,6 +1,7 @@
 /** Brand + links. Videos accept YouTube (watch or embed), Vimeo or a direct .mp4 URL. */
 export const site = {
-  name: "Nexmed",
+  name: "Nexmed",            // product
+  company: "Nedamex",        // company behind the product (footer, legal, metadata, agent tags)
   logo: "/brand/nexmed-logo.png",
   tagline: "The rare disease atlas where every connection shows its source.",
   taglineShort: "Rare disease, connected. Every link sourced.",

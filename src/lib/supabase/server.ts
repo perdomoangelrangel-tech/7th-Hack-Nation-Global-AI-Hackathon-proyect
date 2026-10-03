@@ -1,17 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./config";
 
-/** Cliente de solo lectura con la clave pública. El grafo es público de lectura por RLS. */
+/** Read-only client with the public key. The graph is public-read by RLS. */
 export function publicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
 }
 
-/** Cliente con service role. Solo en el servidor y solo para escribir (conversaciones, citas). */
+/** Service-role client. Server only, optional (writes prefer security-definer RPCs callable with the public key). */
 export function adminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  if (!key) return null;
+  return createClient(SUPABASE_URL, key, { auth: { persistSession: false } });
 }
