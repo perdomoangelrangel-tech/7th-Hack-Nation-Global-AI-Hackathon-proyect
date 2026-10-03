@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_BYTES, communitiesTool, diseaseTool, gapsTool, matchPhenotypes, trialsTool, treatmentsTool } from "./tools";
-import { computeGaps, fmtList, isApproved, prevalenceLabel, shortName, trialPhases } from "./evidence";
+import { cleanAffiliation, computeGaps, fmtList, isApproved, prevalenceLabel, shortName, trialPhases } from "./evidence";
 import { station, testMap } from "./fixtures";
 
 describe("tool responses", () => {
@@ -50,6 +50,12 @@ describe("evidence helpers", () => {
     expect(trialPhases(station("U", { props: { phases: ["PHASE2", "PHASE3"] } }))).toBe("2/3");
     expect(prevalenceLabel([{ type: "Point prevalence", class: "Unknown" }, { type: "Prevalence at birth", class: "1-9 / 100 000", geographic: "Europe" }])).toBe("1-9 / 100 000 · Prevalence at birth · Europe");
     expect(prevalenceLabel("1-9 / 1 000 000")).toBe("1-9 / 1 000 000");
+  });
+  it("cleans PubMed affiliations: no e-mails, no street addresses", () => {
+    expect(cleanAffiliation("IRCCS Neuromed, Pozzilli, Italy. Electronic address: someone@example.org.")).toBe("IRCCS Neuromed");
+    expect(cleanAffiliation("Fundación Síndrome de Dravet, C/ Toledo, 46, Madrid, Spain")).toBe("Fundación Síndrome de Dravet");
+    expect(cleanAffiliation("Department of Chemistry, University of North Carolina at Chapel Hill, Chapel Hill, NC 27599, USA.")).toBe("Department of Chemistry, University of North Carolina at Chapel Hill");
+    expect(cleanAffiliation(null)).toBeNull();
   });
   it("short names and lists", () => {
     expect(shortName("CLN2 disease (late infantile neuronal ceroid lipofuscinosis)")).toBe("CLN2");

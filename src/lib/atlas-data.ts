@@ -10,7 +10,7 @@
  */
 import { publicClient } from "./supabase/server";
 import snapshotJson from "../data/snapshot.json";
-import { computeGaps, isRecruiting, isWeak, shortName, sortLiterature } from "./agents/evidence";
+import { cleanAffiliation, computeGaps, isRecruiting, isWeak, shortName, sortLiterature } from "./agents/evidence";
 
 const recruitingFirst = (list: Station[]) => [...list].sort((a, b) => Number(isRecruiting(b)) - Number(isRecruiting(a)));
 
@@ -77,6 +77,9 @@ interface Snapshot {
 }
 
 const snapshot = snapshotJson as unknown as Snapshot;
+
+/** Nodes the data lane retracted (no active relations). Never listed, detected or mapped. */
+const RETRACTED = new Set(["ORPHA:228354"]); // CLN8 disease: wrong seed code, superseded by ORPHA:228349 (CLN2)
 
 const TIMEOUT_MS = 4000;
 const CACHE_MS = 60_000;
@@ -152,7 +155,7 @@ function communityToStation(r: CommunityRow): Station {
     id: `rc:${r.id}`,
     name: r.name,
     canonical_id: r.orcid ? `ORCID:${r.orcid.replace(/^https?:\/\/orcid\.org\//, "")}` : r.source_ref ?? "",
-    props: { kind: "researcher", role: r.role, affiliation: r.affiliation, country: r.country, focus: r.focus, open_to_contact: r.open_to_contact, source: r.source },
+    props: { kind: "researcher", role: r.role, affiliation: cleanAffiliation(r.affiliation), country: r.country, focus: r.focus?.replace(/^(first|senior|last) author:\s*/i, "") ?? null, open_to_contact: r.open_to_contact, source: r.source },
     relation: "researches",
     confidence: null,
     edge_props: {},
@@ -189,7 +192,7 @@ async function loadLive(orpha: string): Promise<DiseaseMap | null> {
         ev().eq("to_id", id).eq("relation", "studies").eq("from_type", "trial").order("confidence", { ascending: false }).limit(80).abortSignal(signal),
         ev().eq("to_id", id).eq("relation", "studies").eq("from_type", "study").limit(60).abortSignal(signal),
         ev().eq("to_id", id).in("relation", ["supports", "researches"]).order("confidence", { ascending: false }).limit(30).abortSignal(signal),
-        db.from("research_community").select("id, name, affiliation, country, role, focus, orcid, open_to_contact, source, source_ref, created_at", { count: "exact" }).eq("disease_id", id).order("created_at", { ascending: false }).limit(40).abortSignal(signal),
+        db.from("research_community").select("id, name, affiliation, country, role, focus, orcid, open_to_contact, source, source_ref, created_at", { count: "exact" }).eq("disease_id", id).eq("public_profile", true).order("orcid", { ascending: true, nullsFirst: false }).order("name").limit(40).abortSignal(signal),
         db.from("entity_aliases").select("alias").eq("entity_id", id).abortSignal(signal),
       ]);
       for (const r of [genes, phenos, treats, trials, papers, orgs, community, aliases]) if (r.error) throw r.error;
@@ -231,6 +234,7 @@ function fromSnapshot(orpha: string): DiseaseMap | null {
 /** The full map for one disease (ORPHA code). Live graph first, snapshot second, null when unknown. */
 export async function getDiseaseMap(orpha: string): Promise<DiseaseMap | null> {
   const key = orpha.trim().toUpperCase().replace(/^ORPHA\s*:?\s*/, "ORPHA:");
+  if (RETRACTED.has(key)) return null;
   const hit = mapCache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
   const live = await loadLive(key);
@@ -255,7 +259,7 @@ export async function listDiseases(): Promise<DiseaseSummary[]> {
         if (error) throw error;
         // Only diseases that already have sourced relations (a disease node alone is not a map).
         const counts = await Promise.all((rows ?? []).map((r) => db.from("edges").select("id", { count: "exact", head: true }).eq("status", "active").or(`from_id.eq.${r.id},to_id.eq.${r.id}`).abortSignal(signal)));
-        const data = (rows ?? []).filter((_, i) => (counts[i].count ?? 0) > 0);
+        const data = (rows ?? []).filter((r, i) => (counts[i].count ?? 0) > 0 && !RETRACTED.has(r.canonical_id as string));
         const ids = data.map((r) => r.id as string);
         const al = ids.length ? await db.from("entity_aliases").select("entity_id, alias").in("entity_id", ids).abortSignal(signal) : { data: [], error: null };
         if (al.error) throw al.error;
@@ -269,7 +273,7 @@ export async function listDiseases(): Promise<DiseaseSummary[]> {
   }
   // Keep snapshot diseases too (the live graph may still be filling up).
   const seen = new Set(live.map((d) => d.orpha));
-  const merged = [...live, ...snapshot.diseases.filter((d) => !seen.has(d.orpha))];
+  const merged = [...live, ...snapshot.diseases.filter((d) => !seen.has(d.orpha))].filter((d) => !RETRACTED.has(d.orpha));
   if (live.length) listCache = { at: Date.now(), value: merged };
   return merged;
 }

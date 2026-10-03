@@ -123,3 +123,19 @@ export function prevalenceLabel(v: unknown): string | null {
   const p = (known[0] ?? null) as Record<string, unknown> | null;
   return p ? [str(p.class), str(p.type), str(p.geographic)].filter(Boolean).join(" · ") : null;
 }
+
+const INSTITUTION = /(Universit|Hospital|Institut|Foundation|Fundaci|Clinic|School|College|Cent(er|re)|Inc\b|Laborator|Health System|IRCCS|Hôpital)/i;
+
+/** PubMed affiliation → short institution line. Drops e-mail addresses, street addresses and initials in parentheses. */
+export function cleanAffiliation(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const first = raw.split(";")[0].replace(/\s*(Electronic address:|E-?mail:).*$/i, "").replace(/\S+@\S+/g, "").replace(/\s*\([^)]*\)?/g, "").trim();
+  const keep: string[] = [];
+  for (const part of first.split(",").map((x) => x.trim()).filter(Boolean)) {
+    if (/\d|^C\/|Suite|Drive|Street/i.test(part)) break;
+    keep.push(part);
+    if (INSTITUTION.test(part) || keep.length === 2) break;
+  }
+  const out = keep.join(", ").replace(/\.$/, "");
+  return out ? clip(out, 90) : null;
+}

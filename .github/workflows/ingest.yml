@@ -1,6 +1,6 @@
-name: Ingesta diaria del grafo
+name: Manual graph ingest (fallback)
+# Production refresh runs inside Supabase (Edge Function `ingest` + pg_cron). This job is manual only.
 on:
-  schedule: [{ cron: "0 6 * * *" }]   # 06:00 UTC
   workflow_dispatch:
     inputs:
       only: { description: "Fuente (orphanet|ctgov|pubmed|clinvar|opentargets|hpo|orgs) o vacío para todas", required: false }

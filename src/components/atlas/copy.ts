@@ -13,7 +13,7 @@ export interface AtlasCopy {
   legend: { title: string; gap: string; weak: string };
   map: { label: string; hint: string; more: (n: number) => string; empty: string; inGraph: (n: number) => string; showing: (a: number, b: number) => string; sources: (n: number) => string; back: string; close: string; open: string; select: string };
   status: { live: string; snapshot: (d: string) => string; prevalence: string };
-  props: Record<string, string> & { patientOrg: string; researchOrg: string };
+  props: Record<string, string> & { patientOrg: string; researchOrg: string; sites: string };
   ask: { title: string; placeholder: string; submit: string; examples: Record<Aud, string[]>; empty: string; loading: string; error: string; retry: string; tooShort: string; spoken: string; readAloud: string; stop: string; more: string; less: string; route: string; allSourced: (n: number) => string; someDropped: (k: number, d: number) => string; noEvidence: string; notSaid: string; next: string; about: (d: string) => string; meta: (mode: string, source: string, date: string) => string; pickDisease: string };
   voice: { title: (agent: string) => string; start: string; end: string; offline: string; offlineHint: string; connecting: string; listening: string; speaking: string; error: string; micDenied: string; you: string; agent: string; idle: string };
   tabs: { treatments: string; trials: string; community: string; gaps: string; label: string };
@@ -52,7 +52,7 @@ export const atlasCopy: { en: AtlasCopy; es: AtlasCopy } = {
       select: "Stations",
     },
     status: { live: "Live graph", snapshot: (d) => `Snapshot · ${d}`, prevalence: "Prevalence" },
-    props: { frequency: "Frequency", phase: "Phase", status: "Status", approved: "Approved", mechanism: "Mechanism", journal: "Journal", country: "Country", countries: "Countries", sponsor: "Sponsor", association: "Association", affiliation: "Affiliation", focus: "Focus", role: "Role", type: "Type", yes: "Yes", no: "No", patientOrg: "Patient organization", researchOrg: "Research foundation" },
+    props: { frequency: "Frequency", phase: "Phase", status: "Status", approved: "Approved", mechanism: "Mechanism", journal: "Journal", country: "Country", countries: "Countries", sponsor: "Sponsor", association: "Association", affiliation: "Affiliation", focus: "Focus", role: "Role", type: "Type", yes: "Yes", no: "No", patientOrg: "Patient organization", researchOrg: "Research foundation", sites: "Sites" },
     ask: {
       title: "Ask the atlas",
       placeholder: "Ask in your own words",
@@ -140,7 +140,7 @@ export const atlasCopy: { en: AtlasCopy; es: AtlasCopy } = {
       select: "Estaciones",
     },
     status: { live: "Grafo en vivo", snapshot: (d) => `Instantánea · ${d}`, prevalence: "Prevalencia" },
-    props: { frequency: "Frecuencia", phase: "Fase", status: "Estado", approved: "Aprobado", mechanism: "Mecanismo", journal: "Revista", country: "País", countries: "Países", sponsor: "Patrocinador", association: "Asociación", affiliation: "Afiliación", focus: "Enfoque", role: "Rol", type: "Tipo", yes: "Sí", no: "No", patientOrg: "Organización de pacientes", researchOrg: "Fundación de investigación" },
+    props: { frequency: "Frecuencia", phase: "Fase", status: "Estado", approved: "Aprobado", mechanism: "Mecanismo", journal: "Revista", country: "País", countries: "Países", sponsor: "Patrocinador", association: "Asociación", affiliation: "Afiliación", focus: "Enfoque", role: "Rol", type: "Tipo", yes: "Sí", no: "No", patientOrg: "Organización de pacientes", researchOrg: "Fundación de investigación", sites: "Sedes" },
     ask: {
       title: "Pregunta al atlas",
       placeholder: "Pregunta con tus palabras",

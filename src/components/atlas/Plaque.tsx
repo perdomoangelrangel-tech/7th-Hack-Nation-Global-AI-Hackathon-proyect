@@ -48,11 +48,11 @@ function facts(s: Station, line: LineKey, c: AtlasCopy): [string, string][] {
   if (line === "phenotypes") out.push([p.frequency, str(s.edge_props.frequency)]);
   if (line === "treatments") {
     const ph = treatmentPhase(s);
-    out.push([p.approved, isApproved(s) ? p.yes : p.no], [p.phase, ph != null ? String(ph) : null], [p.mechanism, mechanismOf(s)], [p.type, str(s.props.drug_type)]);
+    out.push([p.approved, isApproved(s) ? p.yes : p.no], [p.phase, ph != null ? String(ph) : null], [p.mechanism, mechanismOf(s)], [p.type, str(s.props.drug_type) ?? str(s.edge_props.intervention_type)?.toLowerCase() ?? null], ["NCT", strList(s.edge_props.nct_ids).join(", ") || null]);
   }
   if (line === "trials") {
     const cs = countriesOf(s);
-    out.push([p.status, str(s.props.status)?.replace(/_/g, " ") ?? null], [p.phase, trialPhases(s)], [p.countries, cs.length ? cs.slice(0, 8).join(", ") + (cs.length > 8 ? ` +${cs.length - 8}` : "") : null], [p.sponsor, str(s.props.sponsor)]);
+    out.push([p.status, str(s.props.status)?.replace(/_/g, " ") ?? null], [p.phase, trialPhases(s)], [p.countries, cs.length ? cs.slice(0, 8).join(", ") + (Math.max(cs.length, Number(s.props.countries_count) || 0) > 8 ? ` +${Math.max(cs.length, Number(s.props.countries_count) || 0) - 8}` : "") : null], [p.sites, s.props.sites_count != null ? String(s.props.sites_count) : null], [p.sponsor, str(s.props.sponsor)]);
   }
   if (line === "literature") out.push([p.journal, str(s.props.journal)], ["", strList(s.props.authors).slice(0, 3).join(", ") || null]);
   if (line === "community") {

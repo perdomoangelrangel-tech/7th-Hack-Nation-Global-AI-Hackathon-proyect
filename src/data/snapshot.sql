@@ -29,26 +29,29 @@ with d as (
       when 'genes' then jsonb_build_object('symbol', p->'symbol', 'locus', p->'locus')
       when 'treatments' then jsonb_build_object('drug_type', p->'drug_type', 'approved', p->'approved', 'mechanism', p->'mechanism')
       when 'trials' then jsonb_build_object('status', p->'status', 'phase', p->'phase', 'phases', p->'phases', 'sponsor', p->'sponsor', 'start_date', p->'start_date',
+          'countries_count', p->'countries_count', 'sites_count', p->'sites_count',
           'countries', (select jsonb_agg(c) from (select c from jsonb_array_elements(case when jsonb_typeof(p->'countries') = 'array' then p->'countries' else '[]'::jsonb end) c limit 12) x))
       when 'literature' then jsonb_build_object('journal', p->'journal', 'authors', (select jsonb_agg(a) from (select a from jsonb_array_elements(case when jsonb_typeof(p->'authors') = 'array' then p->'authors' else '[]'::jsonb end) a limit 3) y))
       when 'community' then jsonb_build_object('country', p->'country', 'url', p->'url', 'kind', p->'kind')
       else '{}'::jsonb end),
     'edge_props', jsonb_strip_nulls(jsonb_build_object('frequency', edge_props->'frequency', 'association_type', edge_props->'association_type',
       'phase', edge_props->'phase', 'status', edge_props->'status', 'stage', edge_props->'stage', 'approved_for_indication', edge_props->'approved_for_indication',
-      'investigational', edge_props->'investigational', 'mechanism', edge_props->'mechanism')),
+      'investigational', edge_props->'investigational', 'mechanism', edge_props->'mechanism', 'origin', edge_props->'origin',
+      'intervention_type', edge_props->'intervention_type', 'nct_ids', edge_props->'nct_ids')),
     'evidence', (select jsonb_agg(jsonb_build_object('id', e->'id', 'source', e->'source', 'external_id', e->'external_id', 'url', e->'url',
         'published_on', e->'published_on', 'retrieved_at', left(e->>'retrieved_at', 19) || 'Z', 'quote', left(e->>'quote', 100))) from (select e from jsonb_array_elements(evidence) e limit 2) z)
   ) j from r
   where rn <= case line when 'genes' then 12 when 'phenotypes' then 8 when 'treatments' then 6 when 'trials' then 6 when 'literature' then 5 else 8 end
 ), rc as (
   select jsonb_build_object('id', 'rc:' || c.id, 'name', c.name, 'canonical_id', coalesce('ORCID:' || c.orcid, c.source_ref, ''), 'relation', 'researches', 'confidence', null, 'weak', false,
-    'props', jsonb_strip_nulls(jsonb_build_object('kind', 'researcher', 'role', c.role, 'affiliation', c.affiliation, 'country', c.country, 'focus', c.focus, 'open_to_contact', c.open_to_contact, 'source', c.source)),
+    'props', jsonb_strip_nulls(jsonb_build_object('kind', 'researcher', 'role', c.role,
+      'affiliation', nullif(split_part(regexp_replace(coalesce(c.affiliation, ''), '\s*(Electronic address:|\S+@\S+).*$', ''), ';', 1), ''), 'country', c.country, 'focus', c.focus, 'open_to_contact', c.open_to_contact, 'source', c.source)),
     'edge_props', '{}'::jsonb,
     'evidence', jsonb_build_array(jsonb_build_object('id', 'rc:' || c.id, 'source', case when c.source = 'pubmed_author' then 'pubmed' else 'research_community' end,
       'external_id', coalesce(c.source_ref, 'ORCID:' || c.orcid, c.source),
       'url', case when c.source_ref ~ '^(PMID:)?[0-9]+$' then 'https://pubmed.ncbi.nlm.nih.gov/' || regexp_replace(c.source_ref, '^PMID:', '') || '/' when c.orcid is not null then 'https://orcid.org/' || c.orcid else '' end,
       'published_on', null, 'retrieved_at', c.created_at))
-  ) j, row_number() over (order by c.created_at desc) rn
+  ) j, row_number() over (order by (c.orcid is not null) desc, c.name) rn
   from research_community c, d where c.disease_id = d.id and c.public_profile
 )
 select jsonb_build_object(
@@ -65,7 +68,7 @@ select jsonb_build_object(
     'treatments', coalesce((select jsonb_agg(j order by rn) from st where line = 'treatments'), '[]'),
     'trials', coalesce((select jsonb_agg(j order by rn) from st where line = 'trials'), '[]'),
     'literature', coalesce((select jsonb_agg(j order by rn) from st where line = 'literature'), '[]'),
-    'community', coalesce((select jsonb_agg(j order by rn) from st where line = 'community'), '[]') || coalesce((select jsonb_agg(j order by rn) from rc where rn <= 4), '[]')),
+    'community', coalesce((select jsonb_agg(j order by rn) from st where line = 'community'), '[]') || coalesce((select jsonb_agg(j order by rn) from rc where rn <= 6), '[]')),
   'totals', jsonb_build_object(
     'genes', (select count(*) from s where line = 'genes'), 'phenotypes', (select count(*) from s where line = 'phenotypes'),
     'treatments', (select count(*) from s where line = 'treatments'), 'trials', (select count(*) from s where line = 'trials'),

@@ -116,6 +116,8 @@ const STATUS_TONE = (status: string) =>
   : status === "TERMINATED" || status === "WITHDRAWN" || status === "SUSPENDED" ? { dot: "var(--l-gene)", text: "text-t-gene" }
   : { dot: "var(--gap)", text: "text-ink-3" };
 
+const countryTotal = (s: Station) => Math.max(countriesOf(s).length, Number(s.props.countries_count) || 0);
+
 function Trials({ map, copy }: { map: DiseaseMap; copy: AtlasCopy }) {
   const t = [...map.lines.trials].sort((a, b) => Number(isRecruiting(b)) - Number(isRecruiting(a)));
   if (!t.length) return <Empty>{copy.trials.none}</Empty>;
@@ -149,7 +151,7 @@ function Trials({ map, copy }: { map: DiseaseMap; copy: AtlasCopy }) {
                     </span>
                   </td>
                   <td className="py-3 pr-4 font-mono text-xs text-ink-2">{trialPhases(s) ?? "—"}</td>
-                  <td className="py-3 pr-4 text-ink-2">{cs.length ? `${cs.slice(0, 3).join(", ")}${cs.length > 3 ? ` +${cs.length - 3}` : ""}` : "—"}</td>
+                  <td className="py-3 pr-4 text-ink-2">{cs.length ? `${cs.slice(0, 3).join(", ")}${countryTotal(s) > 3 ? ` +${countryTotal(s) - 3}` : ""}` : "—"}</td>
                   <td className="py-3">
                     {s.evidence[0]?.url ? (
                       <a href={s.evidence[0].url} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1 whitespace-nowrap font-mono text-xs text-t-trial underline-offset-2 hover:underline">
