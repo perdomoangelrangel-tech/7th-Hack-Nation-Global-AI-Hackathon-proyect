@@ -14,9 +14,10 @@ export const site = {
     team: process.env.NEXT_PUBLIC_VIDEO_TEAM ?? "",
   },
   elevenlabs: {
-    family: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY ?? "",
-    clinical: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_CLINICAL ?? "",
-    research: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_RESEARCH ?? "",
+    // Public agent ids (auth disabled, safe in the browser). Env vars override them.
+    family: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY || "agent_9301m41nb4xre85a4scph5fpbe2q",
+    clinical: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_CLINICAL || "agent_6001m41nbk5redqsx3hj321mb4my",
+    research: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_RESEARCH || "agent_2301m41nbtczeshvbyxaaknksgga",
   },
 };
 

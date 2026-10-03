@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const checks: Record<string, unknown> = {
-    supabase_env: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "missing",
+    supabase_env: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "default",
     openai_env: process.env.OPENAI_API_KEY ? "set" : "missing (demo mode)",
     elevenlabs_agents: {
       family: Boolean(process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_FAMILY),
