@@ -10,11 +10,14 @@
  * Without a key: a dictionary pass over atlas names + causal-cue sentences (mode "deterministic", not saved).
  */
 import { z } from "zod";
-import type { EntityType, Relation } from "../atlas/types";
+import type { EntityType } from "../atlas/types";
 import { structured, untrusted } from "./client";
 import { entityKeys, norm, reconcile, type Match } from "./reconcile";
 import type { Paper } from "./pubmed";
 import type { AtlasIndex } from "./types";
+import type { ExtractedClaim, ExtractedEntity, ExtractResult, MatchKind } from "./contract";
+
+export type { ExtractedClaim, ExtractedEntity, ExtractResult, MatchKind };
 
 export const EXTRACT_TYPES = ["gene", "variant", "phenotype", "disease", "pathway", "investigator", "treatment"] as const;
 export type ExtractType = (typeof EXTRACT_TYPES)[number];
@@ -39,20 +42,6 @@ const LlmExtraction = z.object({
   })),
 });
 
-export type MatchKind = "exact" | "alias" | "fuzzy" | "llm" | "new";
-export interface ExtractedEntity { mention: string; type: ExtractType; entity_id: string | null; canonical_id: string | null; label: string | null; match: MatchKind; confidence: number }
-export interface ExtractedClaim { subject: string; relation: Relation; object: string; polarity: "supports" | "contradicts"; quote: string; confidence: number; entity_ids: (string | null)[]; graphable: boolean }
-export interface ExtractResult {
-  source: { pmid?: string; url?: string; title?: string };
-  entities: ExtractedEntity[];
-  claims: ExtractedClaim[];
-  dropped: { text: string; reason: "mention_not_in_text" | "quote_not_in_text" | "wrong_entity_types" | "unknown_entity" }[];
-  saved: boolean;
-  save_note?: string;
-  extraction_id?: string;
-  mode: "openai" | "deterministic";
-  model?: string;
-}
 
 const squash = (s: string) => s.replace(/\s+/g, " ").trim();
 const contains = (hay: string, needle: string) => squash(hay).toLowerCase().includes(squash(needle).toLowerCase());

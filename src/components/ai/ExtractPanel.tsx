@@ -1,13 +1,13 @@
 "use client";
 /**
- * <ExtractPanel pmid locale? onExtracted? />
+ * <ExtractPanel pmid locale? onExtracted? apiBase? />
  * "Extract with OpenAI" on any PubMed evidence: entities reconciled to the atlas and claims with the exact
  * quote highlighted. Extracted claims are drawn dotted and always labeled "needs expert review".
  */
 import { useState } from "react";
-import type { ExtractResult } from "@/lib/ai/extract";
+import { apiUrl, type ExtractResult } from "@/lib/ai/contract";
 
-type Props = { pmid: string; locale?: "en" | "es"; onExtracted?: (r: ExtractResult) => void; className?: string };
+type Props = { pmid: string; locale?: "en" | "es"; onExtracted?: (r: ExtractResult) => void; className?: string; /** API origin when mounted outside the Next app. */ apiBase?: string };
 
 const T = {
   en: { cta: "Extract with OpenAI", again: "Extract again", loading: "Reading the abstract…", error: "Could not extract right now.", entities: "Entities", claims: "Claims from the paper", none: "Nothing extractable in this abstract.", review: "AI-extracted · needs expert review", contradicts: "evidence against", supports: "supports", inAtlas: "in the atlas", isNew: "not in the atlas", ai: "Extracted by OpenAI", tpl: "Dictionary pass from atlas names (no AI)", saved: "saved to the graph as dotted edges", dropped: "dropped (quote or name not in the paper)" },
@@ -15,14 +15,14 @@ const T = {
 };
 const REL: Record<string, string> = { causes: "causes", has_phenotype: "has sign", has_variant: "has variant", treats: "tested for", participates_in: "takes part in", researches: "researches" };
 
-export function ExtractPanel({ pmid, locale = "en", onExtracted, className = "" }: Props) {
+export function ExtractPanel({ pmid, locale = "en", onExtracted, className = "", apiBase }: Props) {
   const t = T[locale];
   const [state, setState] = useState<{ status: "idle" | "loading" | "error" } | { status: "done"; data: ExtractResult }>({ status: "idle" });
 
   async function run() {
     setState({ status: "loading" });
     try {
-      const r = await fetch("/api/extract", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pmid }) });
+      const r = await fetch(apiUrl(apiBase, "/api/extract"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pmid }) });
       if (!r.ok) throw new Error(String(r.status));
       const data = (await r.json()) as ExtractResult;
       setState({ status: "done", data });

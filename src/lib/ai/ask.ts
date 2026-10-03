@@ -5,12 +5,13 @@
  * outcome promises or personal data get a fixed safety notice (never model-written).
  */
 import type { PersonaId } from "../agents/profiles";
-import type { Evidence } from "../atlas/types";
 import { disclaimer } from "../verifier";
-import { diseaseFor, findDiseaseInText, type DiseaseResolution } from "./reconcile";
+import { diseaseFor, findDiseaseInText } from "./reconcile";
 import type { AtlasIndex, Locale } from "./types";
+import type { AskAnswer, AskClaim, SafetyFlag } from "./contract";
 
-export type SafetyFlag = "dose" | "prognosis" | "promise" | "personal_data";
+export type { AskAnswer, AskClaim, SafetyFlag };
+
 
 const FLAGS: [SafetyFlag, RegExp][] = [
   ["dose", /\b(doses?|dosage|dosing|how much .*(?:give|take)|mg\b|mg\/kg|dosis|cu[aá]ntos? mg|cu[aá]nto .*(?:doy|dar|tomar))/i],
@@ -31,24 +32,6 @@ export function safetyNotice(flags: SafetyFlag[], l: Locale): string | null {
     : "I can't give doses, predictions for one person, promises about outcomes or personal details about patients; that belongs with your care team. Here is what our sources do say.";
 }
 
-export interface AskClaim { text: string; evidence_ids: string[]; evidence: Evidence[]; status: string; nodes: string[]; edges: string[] }
-export interface AskAnswer {
-  question: string;
-  persona: PersonaId;
-  disease: string | null;
-  disease_name: string | null;
-  resolved_via: DiseaseResolution["via"] | { mention: string; entity_id: string; type: string; method: "focus"; matched_synonym: null } | null;
-  claims: AskClaim[];
-  dropped: { text: string; reason: string }[];
-  mode: "openai" | "deterministic";
-  model: string | null;
-  simple: boolean;
-  notice: string | null;
-  safety_flags: SafetyFlag[];
-  spoken: string;
-  verified: boolean;
-  disclaimer: string;
-}
 
 /** focus (entity id) wins; otherwise the strict resolver over the question text. */
 export function resolveQuestion(idx: AtlasIndex, question: string, focus?: string | null): { disease: string; via: AskAnswer["resolved_via"] } | null {
