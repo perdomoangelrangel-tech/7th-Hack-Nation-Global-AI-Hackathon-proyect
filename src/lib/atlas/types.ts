@@ -1,6 +1,7 @@
 /**
- * Formato del snapshot del grafo (data/atlas.json). Lo escribe la ingesta + el análisis
- * y lo leen la app y las herramientas del agente. Mismo modelo que supabase/migrations.
+ * Graph snapshot format (CONTRACT, docs/WORKFLOW.md §3.1). Produced by src/lib/atlas/source.ts (live Supabase)
+ * or data/atlas.json (bundled), read by the app and the agent tools. Same model as supabase/migrations.
+ * Changes are additive only and announced with a CONTRACT entry in the bitácora.
  */
 export type EntityType =
   | "disease" | "gene" | "phenotype" | "variant" | "trial" | "study" | "treatment"
@@ -12,18 +13,23 @@ export type Relation =
   | "has_variant"      // gene -> variant
   | "studies"          // trial|study -> disease
   | "treats"           // treatment -> disease
-  | "supports"         // organization -> disease (grupo de pacientes)
+  | "supports"         // organization -> disease (patient group)
   | "researches"       // organization|investigator -> disease
   | "participates_in"  // gene -> pathway (Reactome)
-  | "is_a"             // phenotype -> phenotype (jerarquía HPO)
-  | "similar_to";      // disease <-> disease (INFERIDA por el análisis, nunca observada)
+  | "is_a"             // phenotype -> phenotype (HPO hierarchy)
+  | "similar_to";      // disease <-> disease (INFERRED by the analysis, never observed)
 
 export type SourceId =
   | "orphanet" | "hpo" | "monarch" | "clinvar" | "ctgov" | "opentargets" | "reactome"
-  | "pubmed" | "nih_reporter" | "patient_orgs" | "atlas_analysis" | "openai_extraction";
+  | "pubmed" | "nih_reporter" | "patient_orgs" | "fda"
+  | "atlas_analysis"     // legacy id of nexmed_analysis in older snapshots
+  | "nexmed_analysis" | "openai_extraction" | "community";
 
-/** observed: lo afirma una fuente. inferred: lo calcula el análisis a partir de aristas observadas. extracted: lo extrajo un LLM de un texto citado. */
-export type EdgeKind = "observed" | "inferred" | "extracted";
+/**
+ * observed: a source states it (solid line). inferred: Nexmed analysis computed it from observed edges (dashed).
+ * extracted: OpenAI pulled it from a cited paper, needs expert review (dotted). proposed: community draft, never evidence (ghost).
+ */
+export type EdgeKind = "observed" | "inferred" | "extracted" | "proposed";
 
 export interface Evidence {
   id: string;
@@ -36,7 +42,7 @@ export interface Evidence {
 }
 
 export interface Entity {
-  id: string;                  // `${type}:${canonical_id}`, estable entre corridas
+  id: string;                  // `${type}:${canonical_id}`, stable across runs
   type: EntityType;
   canonical_id: string;
   name: string;
@@ -53,15 +59,15 @@ export interface Edge {
   confidence: number;          // 0..1
   confidence_basis: string;
   props: Record<string, unknown>;
-  evidence: Evidence[];        // >= 1 siempre; una arista sin evidencia no entra al snapshot
+  evidence: Evidence[];        // >= 1 for observed / inferred / extracted; an edge without evidence never enters the snapshot
 }
 
 export interface SourceInfo { id: SourceId; name: string; license: string; url: string; last_synced_at: string | null }
 
 export interface Cluster {
   id: string;
-  label: string;               // nombre del mecanismo compartido
-  label_basis: string;         // por qué se llama así (pathways / fenotipos dominantes)
+  label: string;               // name of the shared mechanism
+  label_basis: string;         // why it is called that (dominant pathway / phenotype, with counts)
   color: string;
   diseases: string[];          // Entity.id
   shared_pathways: { id: string; name: string; diseases: number }[];
@@ -69,24 +75,24 @@ export interface Cluster {
 }
 
 export interface SimilarityExplanation {
-  score: number;               // 0..1 combinado
+  score: number;               // 0..1 combined
   phenotype_score: number;
   pathway_score: number;
   variant_effect_match: boolean | null;
   shared_phenotypes: { id: string; name: string; ic: number }[];
   shared_pathways: { id: string; name: string }[];
   shared_genes: string[];
-  supporting_edges: string[];  // Edge.id de las aristas observadas que sostienen la inferencia
+  supporting_edges: string[];  // Edge.id of the observed edges behind the inference
 }
 
 export interface Bridge {
-  entity: string;              // investigator | organization | sponsor (Entity.id o "sponsor:<nombre>")
+  entity: string;              // investigator | organization | sponsor (Entity.id or "sponsor:<name>")
   name: string;
   kind: "investigator" | "organization" | "sponsor";
   diseases: string[];
   clusters: string[];
   cross_cluster: boolean;
-  edges: string[];             // Edge.id que lo conectan
+  edges: string[];             // Edge.id that connect it
 }
 
 export interface Gap {
@@ -103,12 +109,34 @@ export interface Analytics {
   clusters: Cluster[];
   disease_cluster: Record<string, string>;
   centrality: Record<string, number>;               // 0..100
-  /** Por enfermedad (Entity.id): el mismo gen puede actuar distinto en enfermedades distintas. */
+  /** Per disease (Entity.id): the same gene can act differently in different diseases. */
   variant_effect: Record<string, { gene: string; lof_fraction: number; missense_fraction: number; n: number; call: string; basis: string; edge: string }>;
-  similarity: Record<string, SimilarityExplanation>; // clave = Edge.id de similar_to
+  similarity: Record<string, SimilarityExplanation>; // key = Edge.id of the similar_to edge
   bridges: Bridge[];
   gaps: Gap[];
-  counterexamples: { a: string; b: string; why: string; shared_phenotypes: string[] }[];
+  counterexamples: Counterexample[];
+}
+
+export interface Counterexample {
+  a: string; b: string; why: string; shared_phenotypes: string[];
+  /** same_symptoms_different_mechanism (older snapshots omit it) | same_gene_different_mechanism */
+  kind?: "same_symptoms_different_mechanism" | "same_gene_different_mechanism";
+  gene?: string;               // shared gene symbol (same_gene_different_mechanism)
+  edges?: string[];            // the causes edges that carry each disease's variant effect
+}
+
+/** Community draft (Supabase `proposals_public`). Overlay data: never evidence, never mixed into edges[].evidence. */
+export interface Proposal {
+  id: string;
+  kind: "hypothesis" | "collaboration" | "evidence";
+  title: string;
+  body: string;
+  persona: string | null;
+  disease: string | null;      // Entity.id
+  entities: string[];          // Entity.id
+  edges: string[];             // Edge.id
+  status: "draft" | "under_review" | "accepted";
+  created_at: string;
 }
 
 export interface AtlasSnapshot {
@@ -118,4 +146,6 @@ export interface AtlasSnapshot {
   entities: Entity[];
   edges: Edge[];
   analytics: Analytics | null;
+  /** Community drafts (kind "proposed" overlay). Absent in the bundled file snapshot. */
+  proposals?: Proposal[];
 }

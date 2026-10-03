@@ -107,5 +107,421 @@
       "lipofuscinosis 2",
       "late infantile neuronal ceroid"
     ]
+  },
+  {
+    "slug": "kcnq2-dee",
+    "orpha": "ORPHA:439218",
+    "mondo": "MONDO:0013387",
+    "efo": "MONDO_0013387",
+    "name": "KCNQ2-related developmental and epileptic encephalopathy",
+    "name_es": "Encefalopatía epiléptica y del desarrollo asociada a KCNQ2",
+    "genes": [
+      "KCNQ2"
+    ],
+    "hgnc": {
+      "KCNQ2": "HGNC:6296"
+    },
+    "search_terms": [
+      "KCNQ2-related developmental and epileptic encephalopathy",
+      "KCNQ2-DEE"
+    ],
+    "trial_keywords": [
+      "kcnq2",
+      "kcnq2-related developmental and epileptic encephalopathy",
+      "kcnq2-dee"
+    ],
+    "opentargets_indexed": false,
+    "verified": "ORPHA:439218 preferred term from Orphadata; KCNQ2 HGNC:6296 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0013387 via Monarch Orphanet mapping, not indexed by Open Targets; checked 2026-10-03"
+  },
+  {
+    "slug": "kcnt1-emfs",
+    "orpha": "ORPHA:293181",
+    "mondo": "MONDO:0017385",
+    "efo": "MONDO_0017385",
+    "name": "Epilepsy of infancy with migrating focal seizures",
+    "name_es": "Epilepsia del lactante con crisis focales migratorias",
+    "genes": [
+      "KCNT1"
+    ],
+    "hgnc": {
+      "KCNT1": "HGNC:18865"
+    },
+    "search_terms": [
+      "Epilepsy of infancy with migrating focal seizures",
+      "EIMFS",
+      "Epilepsy with migrating focal seizure in infancy",
+      "MMPEI",
+      "MMPSI"
+    ],
+    "trial_keywords": [
+      "kcnt1",
+      "epilepsy of infancy with migrating focal seizures",
+      "eimfs",
+      "epilepsy with migrating focal seizure in infancy",
+      "mmpei"
+    ],
+    "verified": "ORPHA:293181 preferred term from Orphadata; KCNT1 HGNC:18865 via Orphadata: \"Disease-causing germline mutation(s) (gain of function) in\", HGNC cross-checked with genenames.org; MONDO:0017385 via Monarch Orphanet mapping, Open Targets name \"malignant migrating partial seizures of infancy\"; checked 2026-10-03"
+  },
+  {
+    "slug": "stxbp1-dee",
+    "orpha": "ORPHA:599373",
+    "mondo": "MONDO:0012812",
+    "efo": "MONDO_0012812",
+    "name": "STXBP1-related developmental and epileptic encephalopathy",
+    "name_es": "Encefalopatía epiléptica y del desarrollo asociada al gen STXBP1",
+    "genes": [
+      "STXBP1"
+    ],
+    "hgnc": {
+      "STXBP1": "HGNC:11444"
+    },
+    "search_terms": [
+      "STXBP1-related developmental and epileptic encephalopathy",
+      "STXBP1-related encephalopathy"
+    ],
+    "trial_keywords": [
+      "stxbp1",
+      "stxbp1-related developmental and epileptic encephalopathy",
+      "stxbp1-related encephalopathy"
+    ],
+    "verified": "ORPHA:599373 preferred term from Orphadata; STXBP1 HGNC:11444 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0012812 via Monarch Orphanet mapping, Open Targets name \"developmental and epileptic encephalopathy, 4\"; checked 2026-10-03"
+  },
+  {
+    "slug": "syngap1-dee",
+    "orpha": "ORPHA:544254",
+    "mondo": "MONDO:0012960",
+    "efo": "MONDO_0012960",
+    "name": "SYNGAP1-related developmental and epileptic encephalopathy",
+    "name_es": "Encefalopatía epiléptica y del desarrollo asociada a SYNGAP1",
+    "genes": [
+      "SYNGAP1"
+    ],
+    "hgnc": {
+      "SYNGAP1": "HGNC:11497"
+    },
+    "search_terms": [
+      "SYNGAP1-related developmental and epileptic encephalopathy",
+      "SYNGAP1-related DEE"
+    ],
+    "trial_keywords": [
+      "syngap1",
+      "syngap1-related developmental and epileptic encephalopathy",
+      "syngap1-related dee"
+    ],
+    "verified": "ORPHA:544254 preferred term from Orphadata; SYNGAP1 HGNC:11497 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0012960 via Monarch Orphanet mapping, Open Targets name \"intellectual disability, autosomal dominant 5\"; checked 2026-10-03"
+  },
+  {
+    "slug": "foxg1",
+    "orpha": "ORPHA:561854",
+    "mondo": "MONDO:0100040",
+    "efo": "MONDO_0100040",
+    "name": "FOXG1 syndrome",
+    "name_es": "Síndrome FOXG1",
+    "genes": [
+      "FOXG1"
+    ],
+    "hgnc": {
+      "FOXG1": "HGNC:3811"
+    },
+    "search_terms": [
+      "FOXG1 syndrome",
+      "FOXG1-related epileptic-dyskinetic encephalopathy"
+    ],
+    "trial_keywords": [
+      "foxg1",
+      "foxg1 syndrome",
+      "foxg1-related epileptic-dyskinetic encephalopathy"
+    ],
+    "verified": "ORPHA:561854 preferred term from Orphadata; FOXG1 HGNC:3811 via Monarch causal gene for MONDO:0100040 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0100040 via Monarch Orphanet mapping, Open Targets name \"FOXG1 disorder\"; checked 2026-10-03"
+  },
+  {
+    "slug": "cln3",
+    "orpha": "ORPHA:228346",
+    "mondo": "MONDO:0008767",
+    "efo": "MONDO_0008767",
+    "name": "CLN3 disease",
+    "name_es": "Enfermedad CLN3",
+    "genes": [
+      "CLN3"
+    ],
+    "hgnc": {
+      "CLN3": "HGNC:2074"
+    },
+    "search_terms": [
+      "CLN3 disease",
+      "Neuronal ceroid lipofuscinosis type 3"
+    ],
+    "trial_keywords": [
+      "cln3",
+      "cln3 disease",
+      "neuronal ceroid lipofuscinosis type 3"
+    ],
+    "verified": "ORPHA:228346 preferred term from Orphadata; CLN3 HGNC:2074 via Monarch causal gene for MONDO:0008767 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0008767 via Monarch Orphanet mapping, Open Targets name \"neuronal ceroid lipofuscinosis 3\"; checked 2026-10-03"
+  },
+  {
+    "slug": "cln8",
+    "orpha": "ORPHA:228354",
+    "mondo": "MONDO:0010830",
+    "efo": "MONDO_0010830",
+    "name": "CLN8 disease",
+    "name_es": "Enfermedad CLN8",
+    "genes": [
+      "CLN8"
+    ],
+    "hgnc": {
+      "CLN8": "HGNC:2079"
+    },
+    "search_terms": [
+      "CLN8 disease",
+      "NCL8",
+      "Neuronal ceroid lipofuscinosis type 8"
+    ],
+    "trial_keywords": [
+      "cln8",
+      "cln8 disease",
+      "ncl8",
+      "neuronal ceroid lipofuscinosis type 8"
+    ],
+    "verified": "ORPHA:228354 preferred term from Orphadata; CLN8 HGNC:2079 via Monarch causal gene for MONDO:0010830 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0010830 via Monarch Orphanet mapping, Open Targets name \"neuronal ceroid lipofuscinosis 8\"; checked 2026-10-03"
+  },
+  {
+    "slug": "pompe",
+    "orpha": "ORPHA:365",
+    "mondo": "MONDO:0009290",
+    "efo": "MONDO_0009290",
+    "name": "Glycogen storage disease due to acid maltase deficiency",
+    "name_es": "Enfermedad por almacenamiento de glucógeno por deficiencia de maltasa ácida",
+    "genes": [
+      "GAA"
+    ],
+    "hgnc": {
+      "GAA": "HGNC:4065"
+    },
+    "search_terms": [
+      "Glycogen storage disease due to acid maltase deficiency",
+      "Alpha-1,4-glucosidase acid deficiency",
+      "GSD due to acid maltase deficiency",
+      "GSD type 2",
+      "GSD type II"
+    ],
+    "trial_keywords": [
+      "gaa",
+      "glycogen storage disease due to acid maltase deficiency",
+      "alpha-1,4-glucosidase acid deficiency",
+      "gsd due to acid maltase deficiency",
+      "gsd type 2"
+    ],
+    "verified": "ORPHA:365 preferred term from Orphadata; GAA HGNC:4065 via Monarch causal gene for MONDO:0009290 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0009290 via Monarch Orphanet mapping, Open Targets name \"glycogen storage disease II\"; checked 2026-10-03"
+  },
+  {
+    "slug": "fabry",
+    "orpha": "ORPHA:324",
+    "mondo": "MONDO:0010526",
+    "efo": "MONDO_0010526",
+    "name": "Fabry disease",
+    "name_es": "Enfermedad de Fabry",
+    "genes": [
+      "GLA"
+    ],
+    "hgnc": {
+      "GLA": "HGNC:4296"
+    },
+    "search_terms": [
+      "Fabry disease",
+      "Alpha-galactosidase A deficiency",
+      "Anderson-Fabry disease",
+      "FD"
+    ],
+    "trial_keywords": [
+      "gla",
+      "fabry disease",
+      "alpha-galactosidase a deficiency",
+      "anderson-fabry disease",
+      "fd"
+    ],
+    "verified": "ORPHA:324 preferred term from Orphadata; GLA HGNC:4296 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0010526 via Monarch Orphanet mapping, Open Targets name \"Fabry disease\"; checked 2026-10-03"
+  },
+  {
+    "slug": "gaucher",
+    "orpha": "ORPHA:355",
+    "mondo": "MONDO:0018150",
+    "efo": "MONDO_0018150",
+    "name": "Gaucher disease",
+    "name_es": "Enfermedad de Gaucher",
+    "genes": [
+      "GBA1"
+    ],
+    "hgnc": {
+      "GBA1": "HGNC:4177"
+    },
+    "search_terms": [
+      "Gaucher disease",
+      "Acid beta-glucosidase deficiency",
+      "Glucocerebrosidase deficiency"
+    ],
+    "trial_keywords": [
+      "gba1",
+      "gaucher disease",
+      "acid beta-glucosidase deficiency",
+      "glucocerebrosidase deficiency"
+    ],
+    "verified": "ORPHA:355 preferred term from Orphadata; GBA1 HGNC:4177 via Monarch causal gene for MONDO:0018150 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0018150 via Monarch Orphanet mapping, Open Targets name \"Gaucher disease\"; checked 2026-10-03"
+  },
+  {
+    "slug": "npc",
+    "orpha": "ORPHA:646",
+    "mondo": "MONDO:0018982",
+    "efo": "MONDO_0018982",
+    "name": "Niemann-Pick disease type C",
+    "name_es": "Enfermedad de Niemann-Pick tipo C",
+    "genes": [
+      "NPC1"
+    ],
+    "hgnc": {
+      "NPC1": "HGNC:7897"
+    },
+    "search_terms": [
+      "Niemann-Pick disease type C"
+    ],
+    "trial_keywords": [
+      "npc1",
+      "niemann-pick disease type c"
+    ],
+    "verified": "ORPHA:646 preferred term from Orphadata; NPC1 HGNC:7897 via Monarch causal gene for MONDO:0018982 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0018982 via Monarch Orphanet mapping, Open Targets name \"Niemann-Pick disease type C\"; checked 2026-10-03"
+  },
+  {
+    "slug": "mps1",
+    "orpha": "ORPHA:579",
+    "mondo": "MONDO:0001586",
+    "efo": "MONDO_0001586",
+    "name": "Mucopolysaccharidosis type 1",
+    "name_es": "Mucopolisacaridosis tipo 1",
+    "genes": [
+      "IDUA"
+    ],
+    "hgnc": {
+      "IDUA": "HGNC:5391"
+    },
+    "search_terms": [
+      "Mucopolysaccharidosis type 1",
+      "Alpha-L-iduronidase deficiency",
+      "MPS1",
+      "MPSI",
+      "Mucopolysaccharidosis type I"
+    ],
+    "trial_keywords": [
+      "idua",
+      "mucopolysaccharidosis type 1",
+      "alpha-l-iduronidase deficiency",
+      "mps1",
+      "mpsi"
+    ],
+    "verified": "ORPHA:579 preferred term from Orphadata; IDUA HGNC:5391 via Monarch causal gene for MONDO:0001586 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0001586 via Monarch Orphanet mapping, Open Targets name \"mucopolysaccharidosis type 1\"; checked 2026-10-03"
+  },
+  {
+    "slug": "krabbe",
+    "orpha": "ORPHA:487",
+    "mondo": "MONDO:0009499",
+    "efo": "MONDO_0009499",
+    "name": "Krabbe disease",
+    "name_es": "Enfermedad de Krabbe",
+    "genes": [
+      "GALC"
+    ],
+    "hgnc": {
+      "GALC": "HGNC:4115"
+    },
+    "search_terms": [
+      "Krabbe disease",
+      "GALC deficiency",
+      "Galactocerebrosidase deficiency",
+      "Galactosylceramidase deficiency",
+      "Globoid cell leukodystrophy"
+    ],
+    "trial_keywords": [
+      "galc",
+      "krabbe disease",
+      "galc deficiency",
+      "galactocerebrosidase deficiency",
+      "galactosylceramidase deficiency"
+    ],
+    "verified": "ORPHA:487 preferred term from Orphadata; GALC HGNC:4115 via Monarch causal gene for MONDO:0009499 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0009499 via Monarch Orphanet mapping, Open Targets name \"Krabbe disease\"; checked 2026-10-03"
+  },
+  {
+    "slug": "mld",
+    "orpha": "ORPHA:512",
+    "mondo": "MONDO:0018868",
+    "efo": "MONDO_0018868",
+    "name": "Metachromatic leukodystrophy",
+    "name_es": "Leucodistrofia metacromática",
+    "genes": [
+      "ARSA"
+    ],
+    "hgnc": {
+      "ARSA": "HGNC:713"
+    },
+    "search_terms": [
+      "Metachromatic leukodystrophy",
+      "Arylsulfatase A deficiency",
+      "MLD"
+    ],
+    "trial_keywords": [
+      "arsa",
+      "metachromatic leukodystrophy",
+      "arylsulfatase a deficiency",
+      "mld"
+    ],
+    "verified": "ORPHA:512 preferred term from Orphadata; ARSA HGNC:713 via Monarch causal gene for MONDO:0018868 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0018868 via Monarch Orphanet mapping, Open Targets name \"metachromatic leukodystrophy\"; checked 2026-10-03"
+  },
+  {
+    "slug": "sma",
+    "orpha": "ORPHA:70",
+    "mondo": "MONDO:0019079",
+    "efo": "MONDO_0019079",
+    "name": "Proximal spinal muscular atrophy",
+    "name_es": "Atrofia muscular espinal proximal",
+    "genes": [
+      "SMN1"
+    ],
+    "hgnc": {
+      "SMN1": "HGNC:11117"
+    },
+    "search_terms": [
+      "Proximal spinal muscular atrophy",
+      "SMA",
+      "spinal muscular atrophy"
+    ],
+    "trial_keywords": [
+      "smn1",
+      "proximal spinal muscular atrophy",
+      "sma",
+      "spinal muscular atrophy"
+    ],
+    "verified": "ORPHA:70 preferred term from Orphadata; SMN1 HGNC:11117 via Monarch causal gene for MONDO:0019079 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0019079 via Monarch Orphanet mapping, Open Targets name \"proximal spinal muscular atrophy\"; checked 2026-10-03"
+  },
+  {
+    "slug": "duchenne",
+    "orpha": "ORPHA:98896",
+    "mondo": "MONDO:0010679",
+    "efo": "MONDO_0010679",
+    "name": "Duchenne muscular dystrophy",
+    "name_es": "Distrofia muscular de Duchenne",
+    "genes": [
+      "DMD"
+    ],
+    "hgnc": {
+      "DMD": "HGNC:2928"
+    },
+    "search_terms": [
+      "Duchenne muscular dystrophy",
+      "DMD",
+      "Severe dystrophinopathy, Duchenne type"
+    ],
+    "trial_keywords": [
+      "dmd",
+      "duchenne muscular dystrophy",
+      "severe dystrophinopathy, duchenne type"
+    ],
+    "verified": "ORPHA:98896 preferred term from Orphadata; DMD HGNC:2928 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0010679 via Monarch Orphanet mapping, Open Targets name \"Duchenne muscular dystrophy\"; checked 2026-10-03"
   }
 ]
