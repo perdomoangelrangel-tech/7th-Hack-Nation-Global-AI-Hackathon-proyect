@@ -1,20 +1,23 @@
 /**
- * Narración: convierte un camino del grafo en lenguaje claro, citando cada paso.
- *  1. buildFacts(): el recorrido se vuelve una lista de HECHOS numerados, cada uno con su evidencia,
- *     su estado (observado / inferido / hueco) y los nodos del grafo que hay que iluminar al decirlo.
- *  2. El modelo de OpenAI redacta para la persona elegida citando fact_ids (Structured Outputs).
- *  3. El verificador determinista borra toda frase cuyo fact_id no exista. Sin clave: plantilla.
+ * Narration: turns a disease's journey into plain language for one persona, citing every step.
+ *  1. buildFacts(): the journey becomes numbered FACTS, each with its evidence, its status
+ *     (observed / inferred / gap) and the graph nodes/edges to light up while it is read.
+ *  2. OpenAI drafts for the chosen persona citing fact_ids (Structured Outputs, src/lib/ai/client.ts).
+ *  3. The deterministic verifier drops every sentence with unknown fact_ids, doses or cure promises,
+ *     and hedges inferred wording. Without a key (or on failure): persona-ordered template.
  */
 import "server-only";
 import { atlas, journey, nameOf, type Journey, type Locale } from "./store";
 import type { Evidence } from "./types";
-import { PERSONAS, RULES, type FactKind, type PersonaId } from "../agents/profiles";
-import { structured, TEXT_MODEL } from "../openai";
-import { verify } from "../verifier";
+import { PERSONAS, type FactKind, type PersonaId } from "../agents/profiles";
+import { systemPrompt } from "../agents/prompts";
+import { structured, untrusted } from "../ai/client";
+import { DraftSchema, factsBlock, verifyDraft, type Fact as DraftFact, type FactStatus } from "../ai/draft";
+import { disclaimer } from "../verifier";
 
-export interface Fact { id: string; kind: FactKind; status: "observed" | "inferred" | "gap"; text: string; evidence_ids: string[]; nodes: string[]; edges: string[] }
-export interface NarratedClaim { text: string; fact_ids: string[]; status: Fact["status"]; evidence: Evidence[]; nodes: string[]; edges: string[] }
-export interface Narration { disease: string; persona: PersonaId; mode: "openai" | "template"; model: string | null; claims: NarratedClaim[]; dropped: { text: string; reason: string }[]; spoken: string; verified: boolean; facts: number }
+export type Fact = DraftFact & { kind: FactKind };
+export interface NarratedClaim { text: string; fact_ids: string[]; status: FactStatus; evidence_ids: string[]; evidence: Evidence[]; nodes: string[]; edges: string[] }
+export interface Narration { disease: string; persona: PersonaId; mode: "openai" | "deterministic"; model: string | null; simple: boolean; claims: NarratedClaim[]; dropped: { text: string; reason: string }[]; spoken: string; verified: boolean; facts: number; disclaimer: string }
 
 const evOf = (edgeIds: string[]) => edgeIds.flatMap((id) => atlas().edgeById.get(id)?.evidence.map((e) => e.id) ?? []);
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -90,7 +93,16 @@ export function buildFacts(j: Journey, l: Locale): { facts: Fact[]; coverage: Ev
   for (const t of j.assets.neighbor_approved.slice(0, 1)) push({ kind: "treatment", status: "inferred", nodes: [t.id, t.disease, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
     text: es ? `${t.name} está aprobado para ${t.disease_name}, una enfermedad vecina. Si tiene sentido para esta enfermedad es una pregunta para un experto, no una recomendación.` : `${t.name} is approved for ${t.disease_name}, a neighbor disease. Whether it makes sense here is a question for an expert, not a recommendation.` });
 
-  for (const c of j.collaborators.slice(0, 3)) push({ kind: "collaborator", status: "observed", nodes: [c.id, ...c.diseases], edges: c.edges.slice(0, 4), evidence_ids: evOf(c.edges.slice(0, 4)),
+  // Patient organizations for THIS diagnosis first (disease-specific before umbrella groups like NORD).
+  const orgs = (atlas().in.get(d) ?? []).filter((e) => e.relation === "supports" && e.kind !== "proposed")
+    .sort((a, b) => Number(a.props.kind === "umbrella") - Number(b.props.kind === "umbrella")).slice(0, 2);
+  for (const o of orgs) {
+    const org = byId.get(o.from)?.name ?? o.from;
+    push({ kind: "collaborator", status: "observed", nodes: [o.from, d], edges: [o.id], evidence_ids: o.evidence.map((e) => e.id),
+      text: es ? `${org} es una organización de pacientes para ${j.disease.name}.` : `${org} is a patient organization for ${j.disease.name}.`,
+      simple: es ? `${org} es un grupo que apoya a familias con ${j.disease.name}.` : `${org} is a group that supports families living with ${j.disease.name}.` });
+  }
+  for (const c of j.collaborators.filter((x) => !orgs.some((o) => o.from === x.id)).slice(0, 3)) push({ kind: "collaborator", status: "observed", nodes: [c.id, ...c.diseases], edges: c.edges.slice(0, 4), evidence_ids: evOf(c.edges.slice(0, 4)),
     text: c.kind === "patient_org" ? (es ? `${c.name} es una organización de pacientes: ${c.why.toLowerCase()}.` : `${c.name} is a patient organization: ${c.why.toLowerCase()}.`)
       : c.kind === "investigator" ? (es ? `${c.name}${c.institution ? `, de ${c.institution},` : ""} ${c.why.charAt(0).toLowerCase()}${c.why.slice(1)}.` : `${c.name}${c.institution ? ` at ${c.institution}` : ""} ${c.why.charAt(0).toLowerCase()}${c.why.slice(1)}.`)
       : (es ? `${c.name}: ${c.why.toLowerCase()}.` : `${c.name}: ${c.why.toLowerCase()}.`) });
@@ -117,55 +129,61 @@ function translateCall(call: string, l: Locale) {
     .replace("mezcla de variantes truncantes y de sentido erróneo → mecanismo no concluyente", "a mix of truncating and missense variants → mechanism is inconclusive");
 }
 
-const SCHEMA = {
-  type: "object", additionalProperties: false, required: ["claims"],
-  properties: {
-    claims: {
-      type: "array",
-      items: { type: "object", additionalProperties: false, required: ["text", "fact_ids"], properties: { text: { type: "string" }, fact_ids: { type: "array", items: { type: "string" } } } },
-    },
-  },
-};
+/** Which fact kinds a free-text question asks about (used to put those facts first). Pure keyword cues. */
+export function questionKinds(q: string): FactKind[] {
+  const s = q.toLowerCase();
+  const kinds: FactKind[] = [];
+  if (/\b(who|community|group|families|organi[sz]ation|contact|call|researchers?|scientists?|works? on|quién|comunidad|grupo|familias|organizaci|contactar|investigador)/.test(s)) kinds.push("collaborator");
+  if (/\b(mechanism|pathway|share|similar|related|neighbou?r|mecanismo|vía|comparte|parecid|relacionad)/.test(s)) kinds.push("neighbor", "pathway");
+  if (/\b(gene|variant|mutation|genetic|gen|variante|mutaci|genétic)/.test(s)) kinds.push("gene", "variant_effect");
+  if (/\b(trial|study|studies|registry|natural history|ensayo|estudio|registro|historia natural)/.test(s)) kinds.push("asset");
+  if (/\b(treat|drug|medicine|therapy|approved|tratamiento|fármaco|medicamento|terapia|aprobad)/.test(s)) kinds.push("treatment", "gap");
+  if (/\b(next|this week|what (?:can|should) (?:we|i) do|siguiente|esta semana|qué (?:podemos|puedo) hacer)/.test(s)) kinds.push("step");
+  if (/\b(counterexample|different|contraejemplo|distint)/.test(s)) kinds.push("counterexample");
+  return kinds;
+}
 
-export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale): Promise<Narration | null> {
+export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale, opts: { simple?: boolean; question?: string } = {}): Promise<Narration | null> {
   const j = journey(diseaseId, l); if (!j) return null;
   const persona = PERSONAS[personaId];
+  const simple = !!opts.simple;
   const { facts, coverage } = buildFacts(j, l);
-  const byFact = new Map(facts.map((f) => [f.id, f]));
+  // Order: what the question asks about first, then the persona's priorities.
+  const asked = opts.question ? questionKinds(opts.question) : [];
+  const rank = (k: FactKind) => { const a = asked.indexOf(k); if (a >= 0) return a - 100; const i = persona.priorities.indexOf(k); return i < 0 ? 99 : i; };
   const ordered = [...facts].sort((a, b) => rank(a.kind) - rank(b.kind));
-  function rank(k: FactKind) { const i = persona.priorities.indexOf(k); return i < 0 ? 99 : i; }
 
-  const label = (s: Fact["status"]) => (l === "es" ? { observed: "OBSERVADO", inferred: "INFERIDO", gap: "HUECO" } : { observed: "OBSERVED", inferred: "INFERRED", gap: "GAP" })[s];
-  const llm = await structured<{ claims: { text: string; fact_ids: string[] }[] }>({
-    name: "atlas_narration",
-    system: `${persona.tone[l]}\n\n${l === "es" ? `Narra el recorrido de ${j.disease.name} para ${persona.name} (${persona.role.es}) en un máximo de ${persona.maxClaims} afirmaciones, en el orden que más le sirva a esa persona. Termina con el siguiente paso concreto.` : `Narrate the journey for ${j.disease.name} to ${persona.name} (${persona.role.en}) in at most ${persona.maxClaims} claims, in the order most useful to that person. End with the concrete next step.`}\n\n${RULES[l]}`,
-    input: `FACTS:\n${ordered.map((f) => `[${f.id}] (${label(f.status)}, ${f.kind}) ${f.text}`).join("\n")}`,
-    schema: SCHEMA,
+  const task = l === "es"
+    ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${persona.maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
+    : `TASK: ${opts.question ? `answer the user's question about ${j.disease.name} using only the FACTS` : `narrate the journey for ${j.disease.name}`} for ${persona.name} in at most ${persona.maxClaims} claims, in the order most useful to them. End with the concrete next step if there is one.`;
+  const llm = await structured({
+    name: "nexmed_narration",
+    system: systemPrompt({ persona: personaId, locale: l, task, simple }),
+    input: [factsBlock(ordered, l), opts.question ? untrusted("question", opts.question, 1000) : ""].filter(Boolean).join("\n\n"),
+    schema: DraftSchema,
   });
 
-  // Plantilla sin modelo: cupo por tipo para que la narración recorra conexión -> activo -> colaborador -> paso.
-  const QUOTA: Partial<Record<FactKind, number>> = { disease: 1, gene: 1, variant_effect: 1, neighbor: 1, pathway: 1, counterexample: 1, asset: 2, treatment: 1, collaborator: 1, step: 2, gap: 1 };
+  // Deterministic template: a quota per kind so it walks connection → asset → collaborator → step.
+  const QUOTA: Partial<Record<FactKind, number>> = { disease: 1, gene: 1, variant_effect: 1, neighbor: 1, pathway: 1, counterexample: 1, asset: 2, treatment: 1, collaborator: personaId === "devon" ? 2 : 1, step: 2, gap: 1 };
   const used = new Map<FactKind, number>();
   const template = ordered.filter((f) => { const n = used.get(f.kind) ?? 0; if (n >= (QUOTA[f.kind] ?? 1)) return false; used.set(f.kind, n + 1); return true; })
     .slice(0, persona.maxClaims)
-    .sort((a, b) => Number(a.kind === "step") - Number(b.kind === "step")) // el siguiente paso siempre al final
-    .map((f) => ({ text: f.text, fact_ids: [f.id] }));
-  const raw = llm ? llm.claims.slice(0, persona.maxClaims + 1) : template;
+    .sort((a, b) => Number(a.kind === "step") - Number(b.kind === "step")) // the next step always last
+    .map((f) => ({ text: simple && f.simple ? f.simple : f.text, fact_ids: [f.id] }));
 
-  // Verificación: fact_ids desconocidos -> la afirmación se borra. Luego el verificador de evidencia de siempre.
-  const allowedEvidence = new Set([...facts.flatMap((f) => f.evidence_ids), coverage.id]);
-  const mapped = raw.map((c) => ({ text: c.text, evidence_ids: c.fact_ids.every((id) => byFact.has(id)) ? c.fact_ids.flatMap((id) => byFact.get(id)!.evidence_ids) : [] , fact_ids: c.fact_ids }));
-  const v = verify({ spoken: "", claims: mapped.map(({ text, evidence_ids }) => ({ text, evidence_ids })), next_steps: [] }, allowedEvidence, l);
+  const allowNames = [...new Set(facts.flatMap((f) => f.nodes).map((n) => atlas().byId.get(n)?.name).filter((x): x is string => !!x))];
+  let mode: Narration["mode"] = llm.mode;
+  let v = verifyDraft(llm.mode === "openai" ? llm.data.sentences.slice(0, persona.maxClaims + 1) : template, facts, l, { allowNames });
+  if (llm.mode === "openai" && !v.sentences.length) { v = verifyDraft(template, facts, l, { allowNames }); mode = "deterministic"; }
+
   const evidenceById = new Map([...atlas().evidenceById, [coverage.id, coverage]]);
-  const claims: NarratedClaim[] = v.claims.map((c) => {
-    const m = mapped.find((x) => x.text === c.text)!;
-    const fs = m.fact_ids.map((id) => byFact.get(id)!).filter(Boolean);
-    const status: Fact["status"] = fs.some((f) => f.status === "gap") ? "gap" : fs.some((f) => f.status === "inferred") ? "inferred" : "observed";
-    return {
-      text: c.text, fact_ids: m.fact_ids, status,
-      evidence: [...new Set(c.evidence_ids)].map((id) => evidenceById.get(id)).filter((e): e is Evidence => !!e).slice(0, 6),
-      nodes: [...new Set(fs.flatMap((f) => f.nodes))], edges: [...new Set(fs.flatMap((f) => f.edges))],
-    };
-  });
-  return { disease: diseaseId, persona: personaId, mode: llm ? "openai" : "template", model: llm ? TEXT_MODEL : null, claims, dropped: v.dropped, spoken: v.spoken, verified: v.verified, facts: facts.length };
+  const claims: NarratedClaim[] = v.sentences.map((s) => ({
+    text: s.text, fact_ids: s.fact_ids, status: s.status, evidence_ids: s.evidence_ids,
+    evidence: s.evidence_ids.map((id) => evidenceById.get(id)).filter((e): e is Evidence => !!e).slice(0, 6),
+    nodes: s.nodes, edges: s.edges,
+  }));
+  return {
+    disease: diseaseId, persona: personaId, mode, model: mode === "openai" && llm.mode === "openai" ? llm.model : null, simple,
+    claims, dropped: v.dropped, spoken: v.spoken, verified: v.verified, facts: facts.length, disclaimer: disclaimer(l),
+  };
 }
