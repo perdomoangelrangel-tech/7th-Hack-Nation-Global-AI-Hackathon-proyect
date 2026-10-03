@@ -40,15 +40,25 @@ function Session({ agentId, persona, locale, disease, diseaseName, copy, onState
     onError: () => onState("error", copy.error),
   });
 
+  // SDK functions are not referentially stable across renders: keep the latest in refs so the
+  // mount effect runs exactly once (a changing dep here used to end the call right after it connected).
+  const api = useRef({ startSession, endSession });
+  useEffect(() => { api.current = { startSession, endSession }; });
+  const vars = useRef(agentVariables({ persona, locale, disease, diseaseName }));
+
   // Start once on mount (the dock mounts us from the user's click, after mic permission).
+  // Deferred one tick: StrictMode's synchronous mount→unmount→mount then cancels the timer instead of
+  // calling endSession() on a pending start (which made the SDK hang up as soon as it connected).
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    startSession({ agentId, connectionType: "webrtc", dynamicVariables: agentVariables({ persona, locale, disease, diseaseName }) });
-    return () => { started.current = false; endSession(); }; // StrictMode remount starts a fresh session
-    // Disease changes go through sendContextualUpdate below, not a restart.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startSession, endSession, agentId]);
+    const timer = setTimeout(() => {
+      started.current = true;
+      api.current.startSession({ agentId, connectionType: "webrtc", dynamicVariables: vars.current });
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      if (started.current) { started.current = false; api.current.endSession(); }
+    };
+  }, [agentId]);
 
   // "disconnected" is also the status before the session starts: only report "ended" after we were live.
   const wasLive = useRef(false);
