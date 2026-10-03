@@ -37,7 +37,7 @@ export async function ingestOpenTargetsDrugs(g: GraphWriter, d: SeedDisease) {
   if (!res.disease) {
     // No es un error del pipeline: es un hueco de cobertura que la UI debe poder decir.
     await g.upsertEntity({ ...disease, props: { opentargets_indexed: false } });
-    console.warn(`    ⚠ Open Targets no indexa ${d.efo}; se registra como hueco de cobertura`);
+    console.warn(`    ⚠ Open Targets does not index ${d.efo}; recorded as a coverage gap`);
     return;
   }
   await g.upsertEntity({ ...disease, props: { opentargets_indexed: true, opentargets_id: d.efo } });
@@ -86,7 +86,7 @@ export async function ingestPathways(g: GraphWriter, symbols: string[]) {
         from: { type: "gene", canonicalId: `SYMBOL:${symbol}`, name: symbol },
         to: { type: "pathway", canonicalId: `REACT:${p.pathwayId}`, name: p.pathway, props: { top_level: p.topLevelTerm } },
         relation: "participates_in", confidence: 0.9, confidenceBasis: "reactome_curated",
-        evidence: [{ source: "reactome", externalId: p.pathwayId, url: `https://reactome.org/content/detail/${p.pathwayId}`, quote: `${symbol} participa en ${p.pathway}` }],
+        evidence: [{ source: "reactome", externalId: p.pathwayId, url: `https://reactome.org/content/detail/${p.pathwayId}`, quote: `${symbol} participates in ${p.pathway}` }],
       });
     }
     await sleep(150);

@@ -21,7 +21,7 @@ export async function ingestOrganizations(g: GraphWriter, orgs: SeedOrganization
         relation: o.kind === "research" ? "researches" : "supports",
         confidence: (o.kind === "umbrella" ? 0.5 : 0.9) * (alive ? 1 : 0.7), confidenceBasis: alive ? "curated_official_site" : "curated_site_unverified",
         props: { kind: o.kind },
-        evidence: [{ source: "patient_orgs", externalId: slug(o.name), url: o.url, publishedOn: today(), quote: `${o.name} · ${o.country} · ${alive ? "sitio verificado" : "sitio no verificado en la ingesta"} ${today()}` }],
+        evidence: [{ source: "patient_orgs", externalId: slug(o.name), url: o.url, publishedOn: today(), quote: `${o.name} · ${o.country} · ${alive ? "site verified" : "site not verified at ingest"} ${today()}` }],
       });
     }
   }
