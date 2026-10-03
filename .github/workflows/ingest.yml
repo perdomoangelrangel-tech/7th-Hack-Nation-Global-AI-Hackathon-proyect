@@ -1,19 +1,28 @@
-name: Ingesta diaria del grafo
+name: Ingest backfill (manual)
+# The daily refresh runs inside Supabase (Edge Function `ingest` + pg_cron, migration 0006).
+# This workflow triggers the same Edge Function on demand, one disease at a time (each call has a ~125 s budget).
+# Secret INGEST_KEY = public.app_secrets('ingest_key') (read it with the service role; never commit it).
 on:
-  schedule: [{ cron: "0 6 * * *" }]   # 06:00 UTC
   workflow_dispatch:
     inputs:
-      only: { description: "Fuente (orphanet|ctgov|pubmed|clinvar|opentargets|hpo|orgs) o vacío para todas", required: false }
+      step: { description: "all | orphanet | opentargets | ctgov | pubmed | community | clinvar | variants | reactome | reporter | orgs | hpo | approvals", required: false, default: "all" }
+      orpha: { description: "One disease (e.g. ORPHA:599373) or empty for every seed disease", required: false }
 jobs:
   ingest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - run: npm run ingest -- ${{ inputs.only && format('--only={0}', inputs.only) || '' }}
+      - name: Invoke Edge Function per disease
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+          INGEST_KEY: ${{ secrets.INGEST_KEY }}
+          STEP: ${{ inputs.step || 'all' }}
+          ORPHA: ${{ inputs.orpha }}
+        run: |
+          set -euo pipefail
+          URL="https://zuqwmvshkhniqebtxlks.supabase.co/functions/v1/ingest"
+          if [ -n "$ORPHA" ]; then targets="$ORPHA"; else targets=$(node -e 'console.log(require("./supabase/seed/diseases.json").map(d=>d.orpha).join(" "))'); fi
+          for o in $targets; do
+            echo "▶ $o ($STEP)"
+            curl -sS -m 170 -X POST "$URL" -H "content-type: application/json" -H "x-ingest-key: $INGEST_KEY" \
+              -d "{\"orpha\":\"$o\",\"step\":\"$STEP\"}" | head -c 600; echo
+          done
