@@ -145,3 +145,21 @@ describe("journey v2 · honest no-route", () => {
     expect(buildJourney(gi, "disease:ORPHA:999")).toBeNull();
   });
 });
+
+describe("co-creation prefill", async () => {
+  const { prefillDraft } = await import("./prefill");
+  const { ProposalInput } = await import("./proposals");
+  const j = buildJourney(g, STXBP1, "maria", "en")!;
+  it("prefills each kind from the journey, citing only real edges, and says it is a draft", () => {
+    for (const k of ["hypothesis", "collaboration", "evidence"] as const) {
+      const d = prefillDraft(k, j);
+      expect(d.body).toMatch(/draft/i);
+      for (const e of d.edges) expect(g.edgeById.has(e)).toBe(true);
+      expect(ProposalInput.safeParse({ ...d, disease: STXBP1, persona: "maria" }).success).toBe(true);
+    }
+    expect(prefillDraft("collaboration", j).title).toContain("KCNQ2 Cure Alliance");
+  });
+  it("rejects unknown kinds", () => {
+    expect(ProposalInput.safeParse({ kind: "cure", title: "abc", body: "x" }).success).toBe(false);
+  });
+});
