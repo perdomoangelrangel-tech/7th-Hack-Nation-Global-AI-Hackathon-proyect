@@ -3,7 +3,7 @@
  * checked (sources + counts), what evidence would change the answer, and the next question to test.
  */
 import { diseasesOf, nameOf, tr, type GraphIndex, type Locale } from "./graph";
-import { DISCLAIMER, type NoneFound } from "./build";
+import { DISCLAIMER, type JourneyV2, type NoneFound } from "./build";
 
 export interface NoRouteAnswer {
   version: 2;
@@ -42,3 +42,5 @@ export function noRouteForQuery(g: GraphIndex, query: string, l: Locale = "en"):
     disclaimer: DISCLAIMER[l],
   };
 }
+
+export const isNoRoute = (j: JourneyV2 | NoRouteAnswer | null): j is NoRouteAnswer => !!j && "kind" in j && j.kind === "no_route";

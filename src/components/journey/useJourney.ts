@@ -7,7 +7,7 @@ import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
 
 export type JourneyResult = JourneyV2 | NoRouteAnswer;
-export const isNoRoute = (j: JourneyResult | null): j is NoRouteAnswer => !!j && "kind" in j && j.kind === "no_route";
+export { isNoRoute } from "@/lib/journey/noroute";
 
 export function useJourney(disease: string | null, persona: PersonaId, locale: Locale) {
   const [state, setState] = useState<{ key: string; data: JourneyResult | null; error: boolean }>({ key: "", data: null, error: false });
