@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+/*
+  Nedamex · transit-map world (see DESIGN.md).
+  Enamel signage panel, near-black ink, one saturated line color per evidence type.
+  Components never hardcode colors: use these tokens (Tailwind: bg-canvas, text-ink, stroke-gene, …).
+*/
+:root {
+  --canvas: oklch(0.985 0.003 250);
+  --panel: oklch(0.958 0.006 250);
+  --panel-2: oklch(0.93 0.008 250);
+  --ink: oklch(0.21 0.025 265);
+  --ink-2: oklch(0.37 0.025 265);
+  --ink-3: oklch(0.49 0.02 265);
+  --rule: oklch(0.885 0.008 250);
+  --on-ink: oklch(0.985 0.003 250);
+
+  /* lines = evidence types */
+  --l-gene: oklch(0.6 0.21 32);
+  --l-pheno: oklch(0.84 0.165 88);
+  --l-treat: oklch(0.57 0.14 158);
+  --l-trial: oklch(0.49 0.17 262);
+  --l-comm: oklch(0.54 0.21 342);
+  --l-lit: oklch(0.45 0.02 265);
+  --gap: oklch(0.66 0.02 265);
+
+  /* text-safe darker variants of the lines (≥4.5:1 on canvas) */
+  --t-gene: oklch(0.5 0.19 32);
+  --t-treat: oklch(0.45 0.12 158);
+  --t-trial: oklch(0.45 0.17 262);
+  --t-comm: oklch(0.47 0.2 342);
+  --t-pheno: oklch(0.47 0.1 80);
+
+  --action: var(--ink);
+  --on-action: var(--on-ink);
+  --focus: var(--l-trial);
+
+  --radius: 10px;
+  --radius-lg: 18px;
+
+  /* motion */
+  --e-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --e-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --d-fast: 140ms;
+  --d-base: 240ms;
+  --d-slow: 420ms;
+  --d-focal: 700ms;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: oklch(0.17 0.018 265);
+    --panel: oklch(0.215 0.02 265);
+    --panel-2: oklch(0.255 0.022 265);
+    --ink: oklch(0.965 0.004 250);
+    --ink-2: oklch(0.84 0.01 255);
+    --ink-3: oklch(0.72 0.015 260);
+    --rule: oklch(0.32 0.02 265);
+    --on-ink: oklch(0.17 0.018 265);
+    --l-gene: oklch(0.68 0.19 32);
+    --l-pheno: oklch(0.86 0.15 88);
+    --l-treat: oklch(0.7 0.14 158);
+    --l-trial: oklch(0.68 0.15 262);
+    --l-comm: oklch(0.7 0.18 342);
+    --l-lit: oklch(0.75 0.02 265);
+    --gap: oklch(0.55 0.02 265);
+    --t-gene: oklch(0.75 0.16 32);
+    --t-treat: oklch(0.78 0.12 158);
+    --t-trial: oklch(0.78 0.12 262);
+    --t-comm: oklch(0.78 0.15 342);
+    --t-pheno: oklch(0.86 0.13 88);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas: oklch(0.17 0.018 265);
+  --panel: oklch(0.215 0.02 265);
+  --panel-2: oklch(0.255 0.022 265);
+  --ink: oklch(0.965 0.004 250);
+  --ink-2: oklch(0.84 0.01 255);
+  --ink-3: oklch(0.72 0.015 260);
+  --rule: oklch(0.32 0.02 265);
+  --on-ink: oklch(0.17 0.018 265);
+  --l-gene: oklch(0.68 0.19 32);
+  --l-pheno: oklch(0.86 0.15 88);
+  --l-treat: oklch(0.7 0.14 158);
+  --l-trial: oklch(0.68 0.15 262);
+  --l-comm: oklch(0.7 0.18 342);
+  --l-lit: oklch(0.75 0.02 265);
+  --gap: oklch(0.55 0.02 265);
+  --t-gene: oklch(0.75 0.16 32);
+  --t-treat: oklch(0.78 0.12 158);
+  --t-trial: oklch(0.78 0.12 262);
+  --t-comm: oklch(0.78 0.15 342);
+  --t-pheno: oklch(0.86 0.13 88);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-on-ink: var(--on-ink);
+  --color-gene: var(--l-gene);
+  --color-pheno: var(--l-pheno);
+  --color-treat: var(--l-treat);
+  --color-trial: var(--l-trial);
+  --color-comm: var(--l-comm);
+  --color-lit: var(--l-lit);
+  --color-gap: var(--gap);
+  --color-t-gene: var(--t-gene);
+  --color-t-treat: var(--t-treat);
+  --color-t-trial: var(--t-trial);
+  --color-t-comm: var(--t-comm);
+  --color-t-pheno: var(--t-pheno);
+  --color-action: var(--action);
+  --color-on-action: var(--on-action);
+  --font-display: var(--font-overpass), "Overpass", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-atkinson), "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-overpass-mono), "Overpass Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius-panel: var(--radius);
+  --radius-panel-lg: var(--radius-lg);
+}
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  caret-color: var(--l-trial);
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-weight: 800;
+  text-wrap: balance;
+}
+p { text-wrap: pretty; }
+.mono, code, kbd { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+::selection { background: var(--l-pheno); color: oklch(0.21 0.025 265); }
+:focus-visible { outline: 2.5px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+a { text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+
+/* scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 99px; border: 2px solid var(--canvas); }
+
+/* Route drawing helpers (SVG). Content is fully drawn by default; JS/scroll only enhances. */
+.route { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.route-gap { stroke: var(--gap); stroke-dasharray: 2 12; }
+.station { stroke: var(--ink); stroke-width: 2.5; }
+.station-gap { fill: var(--canvas); stroke: var(--gap); stroke-dasharray: 3 3; }
+
+/* Plaque: station label, signage style */
+.plaque { background: var(--canvas); border: 1px solid var(--rule); border-radius: 6px; }
+
+/* Signage button system */
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; min-height: 48px; padding: 0 1.25rem;
+  border-radius: 999px; font-family: var(--font-display); font-weight: 700; letter-spacing: -0.005em;
+  transition: transform var(--d-fast) var(--e-out), background-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out);
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--action); color: var(--on-action); }
+.btn-primary:hover { background: var(--ink-2); }
+.btn-ghost { border: 1.5px solid var(--ink); color: var(--ink); }
+.btn-ghost:hover { background: var(--panel); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .loading-bar { animation: loading 1.2s var(--e-inout) infinite; }
+  @keyframes loading { 0% { transform: scaleX(.1); transform-origin: left; } 50% { transform: scaleX(1); transform-origin: left; } 51% { transform-origin: right; } 100% { transform: scaleX(.1); transform-origin: right; } }
+}
