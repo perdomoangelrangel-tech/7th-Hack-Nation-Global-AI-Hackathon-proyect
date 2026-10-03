@@ -11,14 +11,23 @@
     "typecheck": "tsc --noEmit",
     "ingest": "tsx scripts/ingest/index.ts",
     "db:push": "supabase db push",
-    "setup": "bash scripts/setup.sh"
+    "setup": "bash scripts/setup.sh",
+    "analyze": "tsx scripts/analyze.ts && tsx scripts/name-clusters.ts",
+    "extract": "tsx scripts/extract.ts",
+    "data:refresh": "npm run ingest && npm run analyze"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "motion": "^14.0.0",
     "next": "16.3.8",
+    "openai": "^7.27.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-force-graph-2d": "^1.29.2",
+    "server-only": "^0.0.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

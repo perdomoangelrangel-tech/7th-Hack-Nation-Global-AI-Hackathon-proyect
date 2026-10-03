@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
-# Setup en una máquina nueva (VS Code). Uso: bash scripts/setup.sh
+# Setup en una máquina nueva. Uso: bash scripts/setup.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "▶ Node $(node -v) · npm $(npm -v)"
-[ -f .env ] || { cp .env.example .env; echo "▶ .env creado desde .env.example — rellena las claves"; }
+[ -f .env.local ] || { cp .env.example .env.local; echo "▶ .env.local creado desde .env.example — pega tu OPENAI_API_KEY (opcional)"; }
 npm install
 
-if command -v supabase >/dev/null 2>&1; then
-  echo "▶ Supabase CLI detectado. Para aplicar migraciones al proyecto remoto:"
-  echo "   supabase link --project-ref <ref> && supabase db push"
-else
-  echo "▶ Supabase CLI no instalado. Alternativa: pega supabase/migrations/*.sql en el SQL Editor del panel, en orden."
-fi
-
-echo "▶ Verificando tipos y lint"
-npx tsc --noEmit
+echo "▶ Verificando tipos, lint y tests"
+npm run typecheck
 npm run lint
-echo "✔ listo. Siguiente: npm run db:push (o SQL Editor) → npm run ingest → npm run dev"
+npm test
+echo "✔ listo. El grafo ya viene en data/atlas.json → npm run dev → http://localhost:3000/atlas"
+echo "  Para reconstruirlo desde las fuentes: npm run data:refresh (y npm run extract si tienes OPENAI_API_KEY)"

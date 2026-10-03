@@ -1,229 +1,90 @@
-# Arquitectura
+# Architecture
 
-> Reto 5 · AI Atlas for Rare Diseases (Buffalo Initiative × OpenAI) · Hack-Nation 7
->
-> Regla que gobierna todo el sistema: **la IA no sabe nada por sí misma. Solo puede decir lo que el grafo respalda con una fuente y una fecha.**
+The rule that governs the system: **the AI knows nothing on its own.** It can only say what the graph backs with a source and a date, and anything it says is checked by a deterministic verifier before anyone hears it.
 
-## 1. Qué construimos
-
-Un atlas con IA que conecta enfermedades raras, genes, síntomas, variantes, estudios, ensayos clínicos, tratamientos y grupos de pacientes en un **grafo de conocimiento con evidencia**, y lo expone a tres públicos a través de **agentes de voz con personalidad**:
-
-| Público | Agente | Qué obtiene |
-| --- | --- | --- |
-| Familias y pacientes (acceso gratuito) | Guía de familias | Explicación simple, síntomas a vigilar, tratamientos y manejo documentados, ensayos cercanos, grupos de apoyo |
-| Médicos y clínicas (B2B) | Analista clínico | Diagnóstico diferencial por fenotipo (HPO), variantes relevantes, guías y evidencia con citas |
-| Investigadores y farma (B2B) | Analista de investigación | Mapa de evidencia por enfermedad, huecos de investigación, comunidad de investigadores, ensayos y cohortes |
-
-## 2. Flujo que gobierna el producto
-
-Es el mismo flujo del documento base. Toda pregunta pasa por el grafo y por el verificador antes de convertirse en voz.
+## 1. Data flow
 
 ```mermaid
-flowchart TB
-  subgraph INGESTA["Ingesta diaria (scripts + cron)"]
-    S1[Orphanet / Orphadata] --> N
-    S2[HPO] --> N
-    S3[Monarch] --> N
-    S4[ClinVar] --> N
-    S5[ClinicalTrials.gov v2] --> N
-    S6[PubMed E-utilities] --> N
-    S7[Organizaciones de pacientes] --> N
-    N[Normalizador\n→ nodos + aristas + evidencia]
+flowchart TD
+  subgraph S["Sources (public APIs)"]
+    O[Orphanet: definition, genes, HPO phenotypes + frequency, prevalence]
+    MO[Monarch: causal genes / phenotypes when Orphanet has none]
+    H[HPO: ancestors, synonyms, ES names, annotation counts]
+    CV[ClinVar: P/LP variants, counts per disease by consequence, conflicts]
+    CT[ClinicalTrials.gov: trials + natural history + registries, stopped reasons]
+    OT[Open Targets: drug & clinical candidates per disease]
+    RE[Reactome via Open Targets: pathways per gene]
+    PM[PubMed: recent papers, senior authors]
+    NI[NIH RePORTER: funded projects, PIs, institutions]
+    PG[Patient groups: curated official sites, checked live]
   end
-
-  N --> G[(Grafo con evidencia\nSupabase Postgres + pgvector)]
-
-  U[Usuario pregunta\nvoz o texto] --> A[Agente de voz\nElevenLabs + LLM]
-  A -->|tool calls| T[Herramientas del agente\nsolo leen el grafo]
-  T --> G
-  G --> T
-  T --> A
-  A --> V{Verificador\n¿cada frase tiene fuente?}
-  V -->|sí| R[Respuesta con voz\ncitas + fecha + fuente]
-  V -->|no| NE[Dice: no hay evidencia]
-  R --> NX[Siguientes pasos\nensayo · tratamiento · grupo · resumen]
+  S --> I[scripts/ingest → FileGraph / SupabaseGraph]
+  I --> J[(data/atlas.json)]
+  X[scripts/extract.ts · OpenAI · quote-verified] --> J
+  J --> A[scripts/analyze.ts]
+  A --> J
+  J --> N[scripts/name-clusters.ts · OpenAI · optional]
+  N --> J
+  J --> APP[Next.js app: store → API → UI]
 ```
 
-### Dónde vive cada paso
+## 2. Data model
 
-| Paso del flujo | Dónde corre | Código |
-| --- | --- | --- |
-| Ingesta diaria | Script Node (local o GitHub Action programada) | `scripts/ingest/*` |
-| Grafo con evidencia | Supabase Postgres | `supabase/migrations/*` |
-| Usuario pregunta | Next.js (web) + ElevenLabs (voz) | `src/app/atlas`, `src/app/api/ask` |
-| Agente de voz | ElevenLabs Agents con herramientas HTTP → nuestra API | `src/lib/agents/*`, `src/app/api/tools/*` |
-| Herramientas del agente | Rutas API que solo ejecutan consultas de lectura | `src/app/api/tools/*` |
-| Verificador | Función pura que compara cada afirmación con las evidencias devueltas | `src/lib/verifier.ts` |
-| Respuesta y siguientes pasos | Next.js: tarjetas con citas, botones de acción | `src/components/*` |
+`src/lib/atlas/types.ts` (snapshot) mirrors `supabase/migrations` (Postgres).
 
-## 3. Componentes
+- **Entity** `{ id: "<type>:<canonical_id>", type, canonical_id, name, props, aliases[] }` — types: `disease, gene, variant, phenotype, pathway, trial, study, treatment, organization, investigator`. Canonical ids: `ORPHA:`, `SYMBOL:`, `HP:`, `REACT:R-HSA-`, `NCT…`, `PMID:`, `CHEMBL…`, `NIH:<profile_id>`, `ORG:<slug>`.
+- **Edge** `{ id, from, to, relation, kind, confidence, confidence_basis, props, evidence[] }` — relations: `causes, has_phenotype, has_variant, studies, treats, supports, researches, participates_in, is_a, similar_to`. `kind ∈ observed | inferred | extracted` and is part of the edge id, so an inferred or extracted edge can never overwrite an observed one.
+- **Evidence** `{ id, source, external_id, url, quote, published_on, retrieved_at }`. An edge with zero evidence is never written (and a Postgres trigger enforces the same in the scale path).
+- **Analytics** `{ clusters, disease_cluster, centrality, variant_effect, similarity, bridges, gaps, counterexamples, method }`.
 
-```mermaid
-flowchart LR
-  subgraph Cliente
-    W[Web Next.js\nVercel]
-    VZ[Widget de voz\nElevenLabs]
-  end
-  subgraph API["API Next.js (Vercel Functions)"]
-    ASK[/api/ask\nchat con citas/]
-    TOOLS[/api/tools/*\nherramientas del agente/]
-    HEALTH[/api/health/]
-  end
-  subgraph Datos["Supabase"]
-    PG[(Postgres\ngrafo + evidencia)]
-    VEC[(pgvector\nbúsqueda semántica)]
-    AUTH[Auth + RLS]
-    ST[Storage\naudios y resúmenes]
-  end
-  subgraph Modelos
-    LLM[OpenAI / Claude\nextracción y redacción]
-    EL[ElevenLabs\nvoz y personalidad]
-  end
-  subgraph Fuentes["Fuentes abiertas"]
-    F[Orphanet · HPO · Monarch · ClinVar\nClinicalTrials.gov · PubMed]
-  end
-  ING[scripts/ingest\ncron] --> F
-  ING --> LLM
-  ING --> PG
-  W --> ASK --> PG
-  ASK --> VEC
-  ASK --> LLM
-  VZ --> EL --> TOOLS --> PG
-  W --> AUTH
-  ASK --> ST
-```
+Confidence bases are explicit strings (`hpo_frequency`, `clinical_stage`, `clinvar_significance`, `nih_funded_project`, `senior_author_name_match`, `curated_site_unverified`, `atlas_similarity_v1`, `llm_extraction_quote_verified`, …) and are shown in the UI next to the number.
 
-## 4. Modelo de datos: grafo de propiedades sobre Postgres
+## 3. Analytics (`scripts/analyze.ts`)
 
-Elegimos **Postgres como grafo** (tablas `entities`, `edges`, `evidence`) en vez de una base de grafos dedicada. Razones: Supabase ya lo da con auth, RLS, realtime y vector; una consulta de 2 o 3 saltos se resuelve con CTE recursivas; y el equipo lo conoce. Si el grafo pasa de decenas de millones de aristas, se migra a Neo4j/Memgraph manteniendo el mismo contrato de API.
+1. **Information content** per HPO term and ancestor: `IC = −ln(n/N)/ln(N)` with `n` = diseases annotated in HPO, `N` = all diseases under *Phenotypic abnormality*. Ancestors with IC < 0.25 are ignored.
+2. **Disease profile**: weights `confidence(frequency) × IC` over direct terms and their ancestors (upward closure).
+3. **Phenotype similarity**: simGIC = Σ min / Σ max over the two profiles.
+4. **Pathway similarity**: 0.7 · Jaccard(leaf Reactome pathways of causal genes) + 0.3 · Jaccard(top-level terms).
+5. **Variant effect** per disease from ClinVar counts (`<gene>[gene] AND P/LP AND "<trait>"[dis]` by molecular consequence); Orphanet's own "loss/gain of function" wording wins when present.
+6. **Score** `0.55·phen + 0.35·path + 0.10·sharedGene`; top-3 per disease with score ≥ 0.06 → `similar_to` (inferred) with explanation and supporting edge ids.
+7. **Clusters**: Louvain (resolution 1, fixed seed) on the weighted similarity graph; named by the most cluster-specific Reactome pathway (or phenotype), then optionally in plain language by OpenAI.
+8. **Centrality**: weighted degree, 0–100. **Bridges**: investigators/organizations/sponsors linked to ≥2 diseases (flag: cross-cluster). **Gaps** with "what would change it". **Counterexamples**: phenotype similarity ≥ median but zero shared pathway across clusters.
 
-```mermaid
-erDiagram
-  SOURCES ||--o{ EVIDENCE : respalda
-  ENTITIES ||--o{ EDGES : origen
-  ENTITIES ||--o{ EDGES : destino
-  EDGES ||--o{ EVIDENCE : "tiene ≥1"
-  ENTITIES ||--o{ ENTITY_ALIASES : nombres
-  ENTITIES ||--o{ EMBEDDINGS : vector
-  CONVERSATIONS ||--o{ MESSAGES : contiene
-  MESSAGES ||--o{ MESSAGE_CITATIONS : cita
-  EVIDENCE ||--o{ MESSAGE_CITATIONS : usada_en
-  ORGANIZATIONS ||--o{ MEMBERSHIPS : tiene
-  PROFILES ||--o{ MEMBERSHIPS : pertenece
-  PROFILES ||--o{ CONVERSATIONS : abre
-  ENTITIES ||--o{ FOLLOWS : seguida_por
-  PROFILES ||--o{ FOLLOWS : sigue
-
-  SOURCES {
-    text id PK "orphanet, hpo, monarch, clinvar, ctgov, pubmed, patient_orgs"
-    text name
-    text license
-    text base_url
-    timestamptz last_synced_at
-  }
-  ENTITIES {
-    uuid id PK
-    text type "disease | gene | phenotype | variant | trial | study | treatment | organization"
-    text canonical_id "ORPHA:33069, HGNC:10585, HP:0001250, NCT…, PMID…"
-    text name
-    jsonb props
-  }
-  EDGES {
-    uuid id PK
-    uuid from_id FK
-    uuid to_id FK
-    text relation "causes | has_phenotype | studies | treats | supports | has_variant | …"
-    numeric confidence "0..1"
-    text status "active | retracted | pending"
-  }
-  EVIDENCE {
-    uuid id PK
-    uuid edge_id FK
-    text source_id FK
-    text external_id "PMID, NCT, ORPHA…"
-    text url
-    text quote
-    date published_on
-    timestamptz retrieved_at
-  }
-```
-
-Reglas duras del modelo:
-
-1. **Una arista sin evidencia no existe.** Trigger en Postgres: no se puede insertar una `edge` activa sin al menos una fila en `evidence`.
-2. **Toda evidencia tiene `retrieved_at`.** La fecha de consulta sale en cada respuesta.
-3. **Las entidades se identifican por su ID canónico externo** (ORPHA, HGNC, HP, NCT, PMID). Así la ingesta es idempotente: correrla dos veces no duplica nada.
-4. **Los datos de usuarios viven aparte** (`profiles`, `conversations`, `messages`) con RLS. El grafo es público de lectura; el historial es privado.
-
-## 5. Contrato de la API y de las herramientas del agente
-
-Todas devuelven JSON con `data` y `evidence[]`. Ninguna devuelve texto libre sin citas.
-
-| Herramienta | Entrada | Salida |
-| --- | --- | --- |
-| `GET /api/tools/disease` | `q` (nombre u ORPHA) | ficha de la enfermedad, genes, fenotipos, prevalencia + evidencias |
-| `GET /api/tools/phenotype-match` | `hpo[]` | enfermedades candidatas ordenadas por coincidencia + evidencias |
-| `GET /api/tools/trials` | `disease`, `country?`, `status?` | ensayos activos con sitios + evidencia (NCT) |
-| `GET /api/tools/treatments` | `disease` | tratamientos y manejo documentados + evidencia (PMID / guía) |
-| `GET /api/tools/literature` | `disease`, `gene?` | artículos recientes + PMID |
-| `GET /api/tools/communities` | `disease` | organizaciones de pacientes y comunidad de investigadores |
-| `GET /api/tools/gaps` | `disease` | relaciones con poca o ninguna evidencia (huecos de investigación) |
-| `POST /api/ask` | `question`, `audience`, `conversation_id?` | respuesta redactada por el LLM **solo** con las evidencias recuperadas, ya verificada |
-
-## 6. Verificador
+## 4. Narration and verification
 
 ```mermaid
 sequenceDiagram
-  participant U as Usuario
-  participant A as Agente (LLM)
-  participant T as Herramientas
-  participant G as Grafo
-  participant V as Verificador
-  U->>A: pregunta
-  A->>T: tool calls
-  T->>G: SELECT con evidencia
-  G-->>T: filas + evidence[]
-  T-->>A: datos + evidence_ids
-  A->>V: borrador con afirmaciones [claim → evidence_id]
-  V->>V: cada claim apunta a una evidence_id devuelta en este turno
-  alt todas respaldadas
-    V-->>U: respuesta con citas, fecha de consulta y aviso "no es consejo médico"
-  else alguna sin respaldo
-    V->>A: reescribe o elimina la frase
-    A-->>U: "No hay evidencia en nuestras fuentes para X"
-  end
+  participant UI as /atlas
+  participant API as /api/narrate
+  participant S as store.journey
+  participant F as buildFacts
+  participant M as OpenAI (Responses + Structured Outputs)
+  participant V as verifier
+  UI->>API: disease, persona, locale
+  API->>S: journey (connections, assets, people, steps, gaps, coverage)
+  S->>F: journey
+  F-->>API: FACTS [f1..fn] each {status, text, evidence_ids, nodes, edges}
+  API->>M: persona tone + rules + FACTS
+  M-->>API: claims [{text, fact_ids}]
+  API->>V: fact_ids → evidence_ids; unknown → deleted
+  V-->>UI: verified claims + evidence + nodes/edges to light
+  UI->>UI: per claim: /api/speak (persona voice) · light nodes · show citations
 ```
 
-Implementación: el LLM debe responder en JSON `{claims:[{text, evidence_ids[]}]}`. El verificador rechaza cualquier `claim` cuyo `evidence_ids` esté vacío o no coincida con las evidencias del turno. Es determinista: no usa otro LLM para verificar.
+Without a key the same facts are narrated by a template with per-kind quotas (connection → asset → collaborator → step). Facts marked *inferred* must be voiced as hypotheses; *gap* facts are backed by a synthetic `coverage:` evidence record listing what was searched.
 
-## 7. Agentes con personalidad
+## 5. UI
 
-Ver `docs/AGENTS.md`. Resumen: los tres agentes comparten las mismas herramientas; cambian el tono, el nivel técnico y los siguientes pasos que proponen. Ninguno tiene conocimiento en el prompt; solo instrucciones de comportamiento.
+- `src/components/atlas/GraphCanvas.tsx` — canvas (react-force-graph-2d / d3-force). Diseases are stars colored by cluster (size = centrality); dashed gold = inferred; spoken nodes glow, everything else dims, particles travel along cited edges; custom fit keeps the spoken subgraph above the narration bar; node positions persist across focus changes; gentle gravity keeps disconnected clusters on screen; respects `prefers-reduced-motion`.
+- `JourneyPanel` (the three questions + next steps), `EdgeInspector` (source, type, confidence, contradictions), `NarrationBar` (captions, citations, progress), `SearchBox` (combobox with visible synonym resolution), `useNarration` (OpenAI voice with prefetch; browser voice with minimum read time and hang protection).
+- Motion uses `motion/react` with shared tokens (`src/lib/motion.ts`); all UI strings in `src/lib/i18n.ts` (EN/ES).
 
-## 8. Escalado
+## 6. Scale path
 
-| Dimensión | Hoy (hackathon) | Después |
-| --- | --- | --- |
-| Enfermedades | 5 demo (ver `supabase/seed/diseases.json`) | 5,000+ monogénicas corriendo la misma ingesta por ORPHA code |
-| Ingesta | Script manual `npm run ingest` | GitHub Action diaria + cola en Postgres (`ingest_jobs` con `FOR UPDATE SKIP LOCKED`) |
-| Consultas | SQL directo | Vistas materializadas por enfermedad + caché de respuestas frecuentes |
-| Grafo | Postgres | Postgres hasta ~10M aristas; luego Neo4j con el mismo contrato de herramientas |
-| Modelos | Un LLM por petición | Modelo pequeño para extracción, grande solo para redacción; respuestas cacheadas |
-| Idiomas | ES / EN | ElevenLabs cubre 100+ idiomas; la evidencia conserva su idioma original |
-| Clientes | Un tenant | `organizations` + RLS por organización ya en el esquema |
+- Seed → Orphadata classification; each source module is independent and idempotent.
+- `--target=supabase` writes into Postgres with RLS (`0001_graph.sql`, `0002_users.sql`, `0003_mechanisms.sql`).
+- Pairwise similarity becomes candidate generation through shared pathway/phenotype postings before scoring.
 
-## 9. Decisiones y trade-offs
+## 7. Deliberate non-goals
 
-| Decisión | Alternativa | Por qué así |
-| --- | --- | --- |
-| Postgres como grafo | Neo4j | Una sola plataforma, RLS, vector y realtime incluidos; suficiente para millones de aristas |
-| Verificador determinista | "LLM que revisa al LLM" | Reproducible, barato, y no puede alucinar la verificación |
-| Agentes con herramientas, sin conocimiento en el prompt | RAG clásico con chunks | Cada dato llega estructurado con su evidencia; la cita es exacta, no aproximada |
-| Ingesta idempotente por ID canónico | Scraping libre | Rerunnable, auditable, y escala a cualquier enfermedad sin tocar código |
-| Next.js en Vercel + Supabase | Backend propio | Cero infraestructura que mantener en 24 h; escala sin cambios |
-
-## 10. Lo que no hacemos (a propósito)
-
-- No damos consejo médico. Cada respuesta lleva aviso y deriva a un especialista.
-- No inferimos relaciones que no estén en una fuente. Un hueco es un hueco.
-- No vendemos datos de pacientes. El contacto para ensayos es siempre con consentimiento explícito.
+No diagnosis, no dosing, no ranking of treatments for a patient, no storage of patient data in the demo, no relation without a source.

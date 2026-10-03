@@ -1,37 +1,41 @@
 import Link from "next/link";
 import { site } from "@/lib/site";
+import { journey, stats } from "@/lib/atlas/store";
 import { FlowDiagram } from "@/components/FlowDiagram";
 import { VideoSlot } from "@/components/VideoSlot";
 
-const SOURCES = ["Orphanet", "HPO", "Monarch", "ClinVar", "ClinicalTrials.gov", "Open Targets", "PubMed"];
+const MARIA = "disease:ORPHA:599373";
+const SOURCES = ["Orphanet", "HPO", "Monarch", "ClinVar", "ClinicalTrials.gov", "Open Targets", "Reactome", "PubMed", "NIH RePORTER", "Patient groups"];
 
-const AUDIENCES = [
-  { title: "Familias", who: "pacientes y cuidadores · gratis", desc: "Una guía cálida que explica la enfermedad, los tratamientos documentados, los ensayos cercanos y los grupos de apoyo.", agent: "Guía de familias", tone: "teal" },
-  { title: "Clínicas", who: "médicos y genetistas · B2B", desc: "Un analista que ordena diferenciales por fenotipo (HPO), variantes relevantes y literatura, con códigos y citas.", agent: "Analista clínico", tone: "navy" },
-  { title: "Investigación", who: "fundaciones, farma, CROs · B2B", desc: "Un analista que muestra el mapa de evidencia, los huecos de investigación y la comunidad que ya trabaja en cada enfermedad.", agent: "Analista de investigación", tone: "navy" },
-];
-
-const NUMBERS = [
-  { n: "4.7 años", t: "tarda en promedio un diagnóstico confirmado", s: "EURORDIS, 10,453 pacientes" },
-  { n: "95%", t: "de las enfermedades raras no tiene tratamiento aprobado", s: "Buffalo Initiative" },
-  { n: "300M+", t: "personas viven con una enfermedad rara", s: "Rare Diseases International" },
+const PERSONAS = [
+  { name: "Maria", role: "Patient organization leader", need: "Which communities share our mechanism, what can we reuse, and who do we call this week?" },
+  { name: "Devon", role: "Newly diagnosed caregiver", need: "Is there a group for my child's exact diagnosis — and if not, the closest one?" },
+  { name: "Priya", role: "Biotech / pharma scout", need: "Which disease clusters could my mechanism treat, with active advocacy and assets?" },
+  { name: "Dr. Osei", role: "Clinician-scientist", need: "Who works on my mechanism under a different gene name?" },
 ];
 
 export default function Home() {
+  const s = stats();
+  const j = journey(MARIA, "en");
+  const lead = j?.shares[0];
+  const shared = j?.assets.own.find((a) => a.shared_with.length);
+  const bridge = j?.collaborators.find((c) => c.kind === "investigator" && c.diseases.length > 1);
+  const atlasHref = `/atlas?d=${encodeURIComponent(MARIA)}&p=maria`;
+
   return (
     <main>
-      {/* Nav */}
       <header className="sticky top-0 z-20 backdrop-blur bg-paper/80 border-b border-line">
         <div className="mx-auto max-w-6xl px-5 h-14 flex items-center justify-between">
-          <span className="font-semibold tracking-tight">
-            <span className="inline-block w-5 h-5 rounded-md border border-dashed border-ink-3 align-[-3px] mr-2" aria-hidden title="logo pendiente" />
+          <span className="font-semibold tracking-tight flex items-center gap-2">
+            <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden><circle cx="9" cy="10" r="3" fill="var(--teal)" /><circle cx="23" cy="8" r="2.2" fill="#8b7cf6" /><circle cx="20" cy="23" r="3.4" fill="#d97706" /><path d="M9 10 23 8M9 10l11 13M23 8l-3 15" stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="2 2" /></svg>
             {site.name}
           </span>
           <nav className="flex items-center gap-5 text-sm text-ink-2">
-            <a href="#flujo" className="hover:text-ink">Cómo funciona</a>
-            <a href="#videos" className="hover:text-ink">Videos</a>
+            <a href="#journey" className="hover:text-ink hidden sm:inline">Journey</a>
+            <a href="#evidence" className="hover:text-ink hidden sm:inline">Evidence</a>
+            <a href="#moonshot" className="hover:text-ink hidden sm:inline">10×</a>
             <a href={site.github} className="hover:text-ink" target="_blank" rel="noreferrer">GitHub</a>
-            <Link href="/atlas" className="rounded-full bg-navy text-paper px-4 py-1.5 font-medium">Abrir el atlas</Link>
+            <Link href="/atlas" className="rounded-full bg-navy text-paper px-4 py-1.5 font-medium">Open the atlas</Link>
           </nav>
         </div>
       </header>
@@ -40,93 +44,123 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-5 pt-16 pb-12 grid lg:grid-cols-[1.1fr_.9fr] gap-10 items-center">
         <div>
           <p className="chip mb-5">{site.challenge}</p>
-          <h1 className="serif text-5xl md:text-6xl leading-[1.05] text-navy">
-            Cada respuesta rara, <br /><span className="text-teal">con su fuente.</span>
-          </h1>
+          <h1 className="serif text-5xl md:text-6xl leading-[1.05] text-navy">From an isolated diagnosis <br /><span className="text-teal">to a shared path.</span></h1>
           <p className="mt-6 text-lg text-ink-2 max-w-xl">
-            Un atlas que conecta enfermedades, genes, síntomas, tratamientos, ensayos y comunidades en un grafo
-            construido solo con bases de datos verificadas. Agentes de voz con personalidad lo explican a cada público.
-            Si no hay evidencia, lo dicen.
+            Search a rare disease. The atlas follows it to a disrupted mechanism, a related disease, the community already working on it, a reusable asset and a concrete next step — and a voice walks you through it, citing the source of every sentence.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/atlas" className="rounded-full bg-teal text-white px-6 py-3 font-medium">Probar el atlas</Link>
-            <a href="#videos" className="rounded-full border border-line px-6 py-3 font-medium hover:bg-paper-2">Ver el demo</a>
+            <Link href={atlasHref} className="rounded-full bg-teal text-white px-6 py-3 font-medium">Follow Maria’s case →</Link>
+            <Link href="/atlas" className="rounded-full border border-line px-6 py-3 font-medium hover:bg-paper-2">Search any disease</Link>
           </div>
-          <ul className="mt-8 flex flex-wrap gap-2" aria-label="Fuentes de datos">
-            {SOURCES.map((s) => <li key={s} className="chip"><span className="w-1.5 h-1.5 rounded-full bg-teal" aria-hidden />{s}</li>)}
+          <ul className="mt-8 flex flex-wrap gap-2" aria-label="Data sources">
+            {SOURCES.map((x) => <li key={x} className="chip"><span className="w-1.5 h-1.5 rounded-full bg-teal" aria-hidden />{x}</li>)}
           </ul>
         </div>
 
-        {/* Ilustración: respuesta con evidencia vs sin evidencia */}
-        <div className="card p-5 space-y-3" aria-label="Ejemplo de respuesta">
-          <p className="text-xs uppercase tracking-widest text-ink-3">Guía de familias · ejemplo</p>
-          <p className="text-sm text-ink-2 italic">&ldquo;¿Qué tratamientos hay para el síndrome de Rett?&rdquo;</p>
-          <div className="evidence pl-3 py-1">
-            <p className="text-sm">Trofinetide aparece como tratamiento aprobado para el síndrome de Rett.</p>
-            <p className="text-xs text-ink-3 mt-1">Open Targets · CHEMBL · consultado hoy</p>
+        {/* Lo que el atlas encontró para STXBP1 (en vivo desde el grafo) */}
+        {j && (
+          <div className="card p-5 space-y-3" aria-label="What the atlas found for STXBP1">
+            <p className="text-xs uppercase tracking-widest text-ink-3">Live from the graph · {j.disease.name}</p>
+            {lead && (
+              <div className="pl-3 py-1 border-l-[3px] border-dashed border-amber">
+                <p className="text-sm"><b>Connection (inferred):</b> shares {lead.explanation.shared_phenotypes.slice(0, 3).map((p) => p.name.toLowerCase()).join(", ")} with {lead.name}{lead.explanation.shared_pathways[0] ? ` and the ${lead.explanation.shared_pathways[0].name} pathway` : ""}.</p>
+                <p className="text-xs text-ink-3 mt-1">Orphanet · HPO · Reactome · similarity {lead.score.toFixed(2)}</p>
+              </div>
+            )}
+            {shared && (
+              <div className="evidence pl-3 py-1">
+                <p className="text-sm"><b>Existing asset:</b> “{shared.title}” already includes {shared.shared_with.join(", ")}.</p>
+                <p className="text-xs text-ink-3 mt-1">ClinicalTrials.gov · {shared.status.toLowerCase()}</p>
+              </div>
+            )}
+            {bridge && (
+              <div className="evidence pl-3 py-1">
+                <p className="text-sm"><b>Collaborator:</b> {bridge.name}{bridge.institution ? ` (${bridge.institution.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())})` : ""} — {bridge.why.charAt(0).toLowerCase() + bridge.why.slice(1)}.</p>
+                <p className="text-xs text-ink-3 mt-1">NIH RePORTER · PubMed</p>
+              </div>
+            )}
+            {j.gaps.find((g) => g.kind === "no_approved_treatment") && (
+              <div className="no-evidence pl-3 py-2 rounded-r-md">
+                <p className="text-sm">{j.gaps.find((g) => g.kind === "no_approved_treatment")!.detail}</p>
+              </div>
+            )}
+            <p className="text-xs text-ink-3">Sourced information, not a diagnosis. Inferred links are hypotheses for experts to test.</p>
           </div>
-          <div className="evidence pl-3 py-1">
-            <p className="text-sm">Hay 6 ensayos activos reclutando en 4 países.</p>
-            <p className="text-xs text-ink-3 mt-1">ClinicalTrials.gov · NCT… · consultado hoy</p>
-          </div>
-          <div className="no-evidence pl-3 py-2 rounded-r-md">
-            <p className="text-sm">No hay evidencia en nuestras fuentes sobre dietas que curen la enfermedad, así que no lo incluyo.</p>
-          </div>
-          <p className="text-xs text-ink-3">Esto es información con fuentes, no un diagnóstico. Llévalo a tu médico o a un centro experto.</p>
-        </div>
+        )}
       </section>
 
-      {/* Problema en números */}
+      {/* El grafo en números */}
       <section className="border-y border-line bg-paper-2">
-        <div className="mx-auto max-w-6xl px-5 py-10 grid md:grid-cols-3 gap-8">
-          {NUMBERS.map((x) => (
-            <div key={x.n}>
-              <p className="serif text-4xl text-navy">{x.n}</p>
-              <p className="text-ink-2 mt-1">{x.t}</p>
-              <p className="text-xs text-ink-3 mt-1">{x.s}</p>
-            </div>
+        <div className="mx-auto max-w-6xl px-5 py-10 grid grid-cols-2 md:grid-cols-5 gap-8">
+          {[
+            [s.diseases, "monogenic diseases (first cluster slice)"], [s.edges.toLocaleString(), "edges, none without evidence"], [s.evidence.toLocaleString(), "evidence records with source + date"],
+            [s.clusters, "mechanism clusters found by the graph"], [s.inferred, "inferred links, always labelled as such"],
+          ].map(([n, t]) => (
+            <div key={String(t)}><p className="serif text-4xl text-navy">{n}</p><p className="text-ink-2 mt-1 text-sm">{t}</p></div>
           ))}
         </div>
       </section>
 
-      {/* Flujo */}
-      <section id="flujo" className="mx-auto max-w-6xl px-5 py-16">
-        <h2 className="serif text-3xl text-navy">Ninguna respuesta llega sin pasar por el verificador</h2>
-        <p className="mt-3 text-ink-2 max-w-2xl">La IA no tiene conocimiento propio. Solo puede decir lo que el grafo respalda con una fuente y una fecha; un verificador determinista elimina cualquier frase sin cita antes de convertirla en voz.</p>
+      {/* Personas */}
+      <section id="journey" className="mx-auto max-w-6xl px-5 py-16">
+        <h2 className="serif text-3xl text-navy">Four people, one graph, four voices</h2>
+        <p className="mt-3 text-ink-2 max-w-2xl">Each persona hears the same evidence in a different order and tone — Maria gets strategy, Devon gets gentleness, Priya gets mechanisms, Dr. Osei gets skepticism.</p>
+        <div className="mt-8 grid md:grid-cols-4 gap-5">
+          {PERSONAS.map((p) => (
+            <Link key={p.name} href={`/atlas?d=${encodeURIComponent(MARIA)}&p=${p.name === "Dr. Osei" ? "osei" : p.name.toLowerCase()}`} className="card p-5 hover:border-teal transition-colors">
+              <p className="text-xs uppercase tracking-widest text-ink-3">{p.role}</p>
+              <h3 className="mt-2 text-xl font-semibold">{p.name}</h3>
+              <p className="mt-2 text-ink-2 text-sm">“{p.need}”</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Evidencia */}
+      <section id="evidence" className="mx-auto max-w-6xl px-5 pb-16">
+        <h2 className="serif text-3xl text-navy">No sentence reaches the voice without a source</h2>
+        <p className="mt-3 text-ink-2 max-w-2xl">Every edge is <b>observed</b> (a source states it), <b>inferred</b> (computed by the atlas from observed edges, dashed in the map) or <b>extracted</b> (pulled by OpenAI from a cited abstract, with a verbatim quote checked against the text). The model writes only from numbered facts; a deterministic verifier deletes any sentence that cites a fact that does not exist.</p>
         <div className="card mt-8 p-4 md:p-8"><FlowDiagram /></div>
       </section>
 
-      {/* Públicos */}
-      <section className="mx-auto max-w-6xl px-5 pb-16">
-        <h2 className="serif text-3xl text-navy">Tres públicos, tres voces, un mismo grafo</h2>
-        <div className="mt-8 grid md:grid-cols-3 gap-5">
-          {AUDIENCES.map((a) => (
-            <article key={a.title} className="card p-6">
-              <p className="text-xs uppercase tracking-widest text-ink-3">{a.who}</p>
-              <h3 className="mt-2 text-xl font-semibold">{a.title}</h3>
-              <p className="mt-2 text-ink-2 text-sm">{a.desc}</p>
-              <p className="mt-4 chip"><span className={`w-2 h-2 rounded-full ${a.tone === "teal" ? "bg-teal" : "bg-navy"}`} aria-hidden />{a.agent}</p>
-            </article>
-          ))}
+      {/* 10x */}
+      <section id="moonshot" className="border-t border-line bg-paper-2">
+        <div className="mx-auto max-w-6xl px-5 py-16">
+          <h2 className="serif text-3xl text-navy">The 10× milestone: a trial-ready, shared natural-history cohort</h2>
+          <p className="mt-3 text-ink-2 max-w-3xl">For a disease with no approved treatment, a natural-history cohort with agreed outcome measures is the gate to any trial. Today a patient group builds it alone. The atlas shortens the steps that are about <i>finding</i>; the steps that are about <i>doing</i> still take real time. The numbers below are our working assumptions, to be validated with patient groups.</p>
+          <div className="mt-8 overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead><tr className="text-left text-ink-3 border-b border-line"><th className="py-2 pr-4 font-medium">Step</th><th className="py-2 pr-4 font-medium">Alone (assumption)</th><th className="py-2 pr-4 font-medium">With the atlas</th><th className="py-2 font-medium">What makes it faster</th></tr></thead>
+              <tbody className="align-top">
+                {[
+                  ["Find communities with the same mechanism", "months of cold outreach", "minutes", "phenotype + pathway clustering across gene names"],
+                  ["Find an existing cohort or registry to join", "months; often missed", "minutes", "ClinicalTrials.gov assets mapped onto the cluster (e.g. a registry already spanning 4 of these diseases)"],
+                  ["Find the researchers already bridging communities", "conferences, luck", "minutes", "NIH RePORTER + PubMed bridges"],
+                  ["Agree outcome measures & eligibility", "1–2 years from scratch", "months: adapt, don’t invent", "reusable designs + explicit list of what differs"],
+                  ["Enroll enough patients", "limited by one community", "pooled across the cluster", "shared protocol across communities"],
+                ].map((r) => <tr key={r[0]} className="border-b border-line"><td className="py-3 pr-4 font-medium">{r[0]}</td><td className="py-3 pr-4 text-ink-2">{r[1]}</td><td className="py-3 pr-4 text-teal font-medium">{r[2]}</td><td className="py-3 text-ink-2">{r[3]}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-sm text-ink-3 max-w-3xl">What must be validated next: that clustered diseases really share endpoints (expert review of each inferred link), that eligibility can be widened, and that the bridging researchers agree. The atlas lists each of these as an explicit open question instead of hiding it.</p>
         </div>
       </section>
 
       {/* Videos */}
-      <section id="videos" className="border-t border-line bg-paper-2">
-        <div className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="serif text-3xl text-navy">Videos de la entrega</h2>
-          <p className="mt-2 text-ink-2">Las URLs se configuran en <code className="text-xs">NEXT_PUBLIC_VIDEO_*</code>; mientras tanto se muestran los espacios.</p>
-          <div className="mt-8 grid md:grid-cols-3 gap-5">
-            <VideoSlot index={1} title="Demo" purpose="El producto funcionando de principio a fin" url={site.videos.demo} />
-            <VideoSlot index={2} title="Técnico" purpose="Grafo, verificador, agentes y cómo escala" url={site.videos.tech} />
-            <VideoSlot index={3} title="Equipo" purpose="Quiénes somos y por qué este problema" url={site.videos.team} />
-          </div>
+      <section id="videos" className="mx-auto max-w-6xl px-5 py-16">
+        <h2 className="serif text-3xl text-navy">Submission videos</h2>
+        <div className="mt-8 grid md:grid-cols-3 gap-5">
+          <VideoSlot index={1} title="1-minute walkthrough" purpose="Maria: from STXBP1 to a shared cohort and a next step" url={site.videos.demo} />
+          <VideoSlot index={2} title="Technical" purpose="Graph, clustering, verifier, OpenAI and how it scales" url={site.videos.tech} />
+          <VideoSlot index={3} title="Team" purpose="Who we are and why this problem" url={site.videos.team} />
         </div>
       </section>
 
-      <footer className="mx-auto max-w-6xl px-5 py-10 text-sm text-ink-3 flex flex-wrap gap-4 justify-between">
-        <p>{site.name} · {site.challenge}</p>
-        <p>Información con fuentes, no consejo médico. Nunca vendemos datos de pacientes.</p>
+      <footer className="border-t border-line">
+        <div className="mx-auto max-w-6xl px-5 py-10 text-sm text-ink-3 flex flex-wrap gap-4 justify-between">
+          <p>{site.name} · {site.challenge}</p>
+          <p>Sourced information, not medical advice. We never sell patient data.</p>
+        </div>
       </footer>
     </main>
   );
