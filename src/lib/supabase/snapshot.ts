@@ -22,12 +22,21 @@ interface EvidenceRow { id: string; edge_id: string; source_id: SourceId; extern
 interface ExtractionRow { id: string; pmid: string; model: string; payload: { claims?: ExtractedClaim[] } & Row; created_at: string }
 interface ExtractedClaim { subject?: string; relation?: string; object?: string; polarity?: string; quote?: string; confidence?: number; entity_ids?: (string | null)[] }
 
+export interface SnapshotRows {
+  entities: EntityRow[]; aliases: { entity_id: string; alias: string; lang: string }[] | null; edges: EdgeRow[]; evidence: EvidenceRow[];
+  sources: { id: SourceId; name: string; license: string; base_url: string; last_synced_at: string | null }[] | null;
+  proposals: (Proposal & Row)[] | null; extractions: ExtractionRow[] | null;
+}
+
 export interface FetchStats { ms: number; requests: number; rows: Record<string, number>; dropped_edges_without_evidence: number; extracted_edges: number; proposals: number }
 
-/** Every row of a table/view, read in parallel pages ordered by `order`. Returns null when the relation does not exist. */
-async function readAll<T>(db: SupabaseClient, table: string, columns: string, order: string, stats: { requests: number }, filter?: (q: any) => any): Promise<T[] | null> { // eslint-disable-line @typescript-eslint/no-explicit-any
+/**
+ * Every row of a table/view, read in parallel pages. `order` must be a UNIQUE key (composite allowed) or pages
+ * can skip / repeat rows. Returns null when the relation does not exist (pre-0011 schema).
+ */
+async function readAll<T>(db: SupabaseClient, table: string, columns: string, order: string[], stats: { requests: number }, filter?: (q: any) => any): Promise<T[] | null> { // eslint-disable-line @typescript-eslint/no-explicit-any
   const signal = AbortSignal.timeout(TIMEOUT_MS);
-  let head = db.from(table).select(order, { count: "exact", head: true });
+  let head = db.from(table).select(order[0], { count: "exact", head: true });
   if (filter) head = filter(head);
   const { count, error } = await head.abortSignal(signal);
   stats.requests++;
@@ -37,7 +46,9 @@ async function readAll<T>(db: SupabaseClient, table: string, columns: string, or
   }
   const pages = Math.ceil((count ?? 0) / PAGE);
   const results = await Promise.all(Array.from({ length: pages }, async (_, i) => {
-    let q = db.from(table).select(columns).order(order, { ascending: true }).range(i * PAGE, i * PAGE + PAGE - 1);
+    let q = db.from(table).select(columns);
+    for (const col of order) q = q.order(col, { ascending: true });
+    q = q.range(i * PAGE, i * PAGE + PAGE - 1);
     if (filter) q = filter(q);
     const { data, error: e } = await q.abortSignal(signal);
     stats.requests++;
@@ -53,15 +64,29 @@ export async function fetchSnapshot(db: SupabaseClient): Promise<{ snapshot: Atl
   const st = { requests: 0 };
   const active = (q: any) => q.eq("status", "active"); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [entityRows, aliasRows, edgeRows, evidenceRows, sourceRows, proposalRows, extractionRows] = await Promise.all([
-    readAll<EntityRow>(db, "entities", "id,type,canonical_id,name,props", "id", st),
-    readAll<{ entity_id: string; alias: string; lang: string }>(db, "entity_aliases", "entity_id,alias,lang", "entity_id", st),
-    readAll<EdgeRow>(db, "edges", "*", "id", st, active),
-    readAll<EvidenceRow>(db, "evidence", "id,edge_id,source_id,external_id,url,quote,published_on,retrieved_at", "id", st),
-    readAll<{ id: SourceId; name: string; license: string; base_url: string; last_synced_at: string | null }>(db, "sources", "id,name,license,base_url,last_synced_at", "id", st),
-    readAll<Proposal & Row>(db, "proposals_public", "id,kind,title,body,persona,disease,entities,edges,status,created_at", "created_at", st),
-    readAll<ExtractionRow>(db, "extractions", "id,pmid,model,payload,created_at", "created_at", st),
+    readAll<EntityRow>(db, "entities", "id,type,canonical_id,name,props", ["id"], st),
+    readAll<{ entity_id: string; alias: string; lang: string }>(db, "entity_aliases", "entity_id,alias,lang", ["entity_id", "alias", "lang"], st),
+    readAll<EdgeRow>(db, "edges", "*", ["id"], st, active),
+    readAll<EvidenceRow>(db, "evidence", "id,edge_id,source_id,external_id,url,quote,published_on,retrieved_at", ["id"], st),
+    readAll<{ id: SourceId; name: string; license: string; base_url: string; last_synced_at: string | null }>(db, "sources", "id,name,license,base_url,last_synced_at", ["id"], st),
+    readAll<Proposal & Row>(db, "proposals_public", "id,kind,title,body,persona,disease,entities,edges,status,created_at", ["created_at", "id"], st),
+    readAll<ExtractionRow>(db, "extractions", "id,pmid,model,payload,created_at", ["created_at", "id"], st),
   ]);
   if (!entityRows || !edgeRows || !evidenceRows) throw new Error("graph tables missing");
+  const { snapshot, dropped, extracted } = rowsToSnapshot({ entities: entityRows, aliases: aliasRows, edges: edgeRows, evidence: evidenceRows, sources: sourceRows, proposals: proposalRows, extractions: extractionRows });
+  return {
+    snapshot,
+    stats: {
+      ms: Date.now() - t0, requests: st.requests,
+      rows: { entities: entityRows.length, aliases: aliasRows?.length ?? 0, edges: edgeRows.length, evidence: evidenceRows.length, proposals: snapshot.proposals?.length ?? 0, extractions: extractionRows?.length ?? 0 },
+      dropped_edges_without_evidence: dropped, extracted_edges: extracted, proposals: snapshot.proposals?.length ?? 0,
+    },
+  };
+}
+
+/** Pure mapping from table rows to the AtlasSnapshot contract (unit-tested in snapshot.test.ts). */
+export function rowsToSnapshot(rows: SnapshotRows): { snapshot: AtlasSnapshot; dropped: number; extracted: number } {
+  const { entities: entityRows, aliases: aliasRows, edges: edgeRows, evidence: evidenceRows, sources: sourceRows, proposals: proposalRows, extractions: extractionRows } = rows;
 
   /* Entities -------------------------------------------------------- */
   const idOf = new Map<string, string>(); // uuid -> `${type}:${canonical_id}`
@@ -120,21 +145,14 @@ export async function fetchSnapshot(db: SupabaseClient): Promise<{ snapshot: Atl
 
   const sources: AtlasSnapshot["sources"] = {};
   for (const s of sourceRows ?? []) sources[s.id] = { id: s.id, name: s.name, license: s.license, url: s.base_url, last_synced_at: s.last_synced_at } satisfies SourceInfo;
-  const generated_at = [...evidenceRows.map((v) => v.retrieved_at)].sort().at(-1) ?? new Date().toISOString();
+  const generated_at = evidenceRows.map((v) => v.retrieved_at).sort().at(-1) ?? new Date(0).toISOString();
 
   const proposals: Proposal[] = (proposalRows ?? []).map((p) => ({
     id: String(p.id), kind: p.kind, title: p.title, body: p.body, persona: p.persona ?? null, disease: p.disease ?? null,
     entities: p.entities ?? [], edges: p.edges ?? [], status: p.status, created_at: p.created_at,
   }));
 
-  return {
-    snapshot: { version: 1, generated_at, sources, entities, edges, analytics: null, proposals },
-    stats: {
-      ms: Date.now() - t0, requests: st.requests,
-      rows: { entities: entityRows.length, aliases: aliasRows?.length ?? 0, edges: edgeRows.length, evidence: evidenceRows.length, proposals: proposals.length, extractions: extractionRows?.length ?? 0 },
-      dropped_edges_without_evidence: dropped, extracted_edges: extracted, proposals: proposals.length,
-    },
-  };
+  return { snapshot: { version: 1, generated_at, sources, entities, edges, analytics: null, proposals }, dropped, extracted };
 }
 
 /** Fills props the explorer relies on that the Edge Function does not always write (parity with data/atlas.json). */

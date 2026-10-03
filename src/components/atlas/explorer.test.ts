@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import { externalUrl } from "./links";
+import { parseDrafts, withDrafts } from "./proposals";
+import { KIND_STYLE, kindOf } from "./colors";
+import type { GraphView } from "@/lib/atlas/store";
+
+describe("externalUrl", () => {
+  it("links known identifiers to their registries", () => {
+    expect(externalUrl("PMID:31234567")).toBe("https://pubmed.ncbi.nlm.nih.gov/31234567/");
+    expect(externalUrl("NCT01234567")).toBe("https://clinicaltrials.gov/study/NCT01234567");
+    expect(externalUrl("ORPHA:599373")).toBe("https://www.orpha.net/en/disease/detail/599373");
+    expect(externalUrl("HP:0001250")).toBe("https://hpo.jax.org/browse/term/HP:0001250");
+    expect(externalUrl("10.1038/s41586-020-2308-7")).toBe("https://doi.org/10.1038/s41586-020-2308-7");
+    expect(externalUrl("R-HSA-112310")).toBe("https://reactome.org/content/detail/R-HSA-112310");
+  });
+  it("prefers the stored source URL and never invents one for unknown ids", () => {
+    expect(externalUrl("PMID:1", "https://example.org/x")).toBe("https://example.org/x");
+    expect(externalUrl("similarity_v1")).toBeNull();
+  });
+});
+
+describe("edge kinds", () => {
+  it("maps unknown kinds to observed and gives every kind a distinct line style", () => {
+    expect(kindOf(undefined)).toBe("observed");
+    expect(kindOf("extracted")).toBe("extracted");
+    const dashes = Object.values(KIND_STYLE).map((s) => JSON.stringify(s.dash));
+    expect(new Set(dashes).size).toBe(4);
+    expect(KIND_STYLE.observed.dash).toBeNull();
+  });
+});
+
+describe("proposals layer", () => {
+  const view: GraphView = { focus: "disease:A", nodes: [{ id: "disease:A", type: "disease", name: "A", cluster: null, color: null, size: 8 }, { id: "gene:X", type: "gene", name: "X", cluster: null, color: null, size: 4 }], links: [], clusters: [] };
+  it("parses arrays or {proposals} and skips malformed rows", () => {
+    expect(parseDrafts({ proposals: [{ id: "1", title: "t", entities: ["gene:X", 3] }, { title: "no id" }] })).toEqual([{ id: "1", kind: "hypothesis", title: "t", body: undefined, persona: undefined, created_at: undefined, entities: ["gene:X"] }]);
+    expect(parseDrafts(null)).toEqual([]);
+  });
+  it("adds ghost nodes linked with kind 'proposed', never evidence", () => {
+    const v = withDrafts(view, parseDrafts([{ id: "p1", title: "Shared endpoint?", entities: ["gene:X", "gene:missing"] }, { id: "p2", title: "Talk", entities: [] }]));
+    expect(v.nodes.filter((n) => n.draft)).toHaveLength(2);
+    expect(v.links.every((l) => l.kind === "proposed")).toBe(true);
+    expect(v.links.map((l) => l.target)).toEqual(["gene:X", "disease:A"]);
+  });
+});

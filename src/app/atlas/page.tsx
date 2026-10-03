@@ -19,10 +19,12 @@ export default async function AtlasPage({ searchParams }: { searchParams: Promis
   const initialDisease = d && atlas().byId.get(d)?.type === "disease" ? d : null;
   const p = one("p");
   const initialPersona: PersonaId = p && p in PERSONAS ? (p as PersonaId) : "maria";
+  const e = one("e");
+  const initialEdge = e && atlas().edgeById.has(e) ? e : null;
   const initialLocale: Locale = one("l") === "es" ? "es" : "en";
   const personas: Record<Locale, PersonaOption[]> = {
-    en: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.en })),
-    es: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.es })),
+    en: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.en, mode: x.mode.en })),
+    es: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.es, mode: x.mode.es })),
   };
-  return <AtlasApp initialDisease={initialDisease} initialPersona={initialPersona} initialLocale={initialLocale} personas={personas} stats={stats()} maria={MARIA} />;
+  return <AtlasApp initialDisease={initialDisease} initialPersona={initialPersona} initialLocale={initialLocale} initialEdge={initialEdge} personas={personas} stats={stats()} maria={MARIA} />;
 }
