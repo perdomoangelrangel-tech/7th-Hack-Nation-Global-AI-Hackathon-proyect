@@ -1,28 +1,55 @@
-/** HPO (JAX): enriquece cada fenotipo ya en el grafo con definición, sinónimos y padre (is_a). */
-import { createClient } from "@supabase/supabase-js";
-import { Graph, getJSON, sleep } from "../graph";
+/**
+ * HPO (JAX): enriquece cada fenotipo ya en el grafo con definición, nombre en español, sinónimos,
+ * ancestros y especificidad. La especificidad sale de cuántas enfermedades anota HPO con el término:
+ * "convulsión" la tienen miles (poco informativa); un signo raro, pocas (muy informativa).
+ * Los ancestros permiten comparar fenotipos a distinta granularidad (similitud semántica tipo Resnik):
+ * "convulsión tónico-clónica generalizada" y "convulsión" comparten el ancestro "convulsión".
+ */
+import { type GraphWriter, getJSON, sleep } from "../graph";
 
-const BASE = "https://ontology.jax.org/api/hp/terms";
+const TERMS = "https://ontology.jax.org/api/hp/terms";
+const ANNOT = "https://ontology.jax.org/api/network/annotation";
+const ROOT = "HP:0000118"; // Phenotypic abnormality
+// Ancestros demasiado generales no aportan señal (y casi todas las enfermedades los comparten).
+const STOP = new Set(["HP:0000001", "HP:0000118"]);
 
-export async function ingestHPO(g: Graph) {
-  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { data: terms } = await db.from("entities").select("id, canonical_id, name, props").eq("type", "phenotype");
-  for (const t of terms ?? []) {
-    if (t.props?.definition) continue; // ya enriquecido
-    const info = await getJSON<any>(`${BASE}/${t.canonical_id}`).catch(() => null);
-    if (!info) continue;
-    await g.upsertEntity({ type: "phenotype", canonicalId: t.canonical_id, name: info.name ?? t.name, props: { definition: info.definition, synonyms: info.synonyms ?? [] } });
-    for (const s of info.synonyms ?? []) await g.addAlias(t.id, s);
-    const parents = await getJSON<any>(`${BASE}/${t.canonical_id}/parents`).catch(() => []);
-    for (const p of (parents ?? []).slice(0, 3)) {
-      await g.upsertEdge({
-        from: { type: "phenotype", canonicalId: t.canonical_id, name: info.name ?? t.name },
-        to: { type: "phenotype", canonicalId: p.id, name: p.name },
-        relation: "is_a", confidence: 1, confidenceBasis: "ontology",
-        evidence: [{ source: "hpo", externalId: t.canonical_id, url: `https://hpo.jax.org/browse/term/${t.canonical_id}`, quote: "HPO is_a relation" }],
-      });
-    }
-    await sleep(120);
+type Json = any;
+
+const annotCache = new Map<string, number | null>();
+async function annotated(id: string) {
+  if (annotCache.has(id)) return annotCache.get(id)!;
+  const ann = await getJSON<Json>(`${ANNOT}/${id}`).catch(() => null);
+  const n = ann?.diseases?.length ?? null;
+  annotCache.set(id, n);
+  await sleep(60);
+  return n;
+}
+const es = (t: Json) => (t?.translations ?? []).find((x: Json) => x.language === "ES")?.name as string | undefined;
+
+export async function ingestHPO(g: GraphWriter) {
+  const totalDiseases = (await annotated(ROOT)) ?? 0;
+  const terms = await g.listEntities("phenotype");
+  let n = 0;
+  for (const t of terms) {
+    if (t.props?.ancestors && t.props?.annotated_diseases) continue; // ya enriquecido
+    const [info, ancestors] = await Promise.all([
+      getJSON<Json>(`${TERMS}/${t.canonical_id}`).catch(() => null),
+      getJSON<Json[]>(`${TERMS}/${t.canonical_id}/ancestors`).catch(() => []),
+    ]);
+    const anc = [];
+    for (const a of (ancestors ?? []).filter((x) => !STOP.has(x.id))) anc.push({ id: a.id, name: a.name, name_es: es(a), n: await annotated(a.id) });
+    const id = await g.upsertEntity({
+      type: "phenotype", canonicalId: t.canonical_id, name: info?.name ?? t.name,
+      props: {
+        name_es: es(info), definition: info?.definition ?? "", synonyms: (info?.synonyms ?? []).slice(0, 8),
+        annotated_diseases: await annotated(t.canonical_id), hpo_total_diseases: totalDiseases || null,
+        ancestors: anc, hpo_url: `https://hpo.jax.org/browse/term/${t.canonical_id}`,
+      },
+    });
+    for (const s of (info?.synonyms ?? []).slice(0, 8)) await g.addAlias(id, s);
+    if (es(info)) await g.addAlias(id, es(info)!, "es");
+    if (++n % 25 === 0) console.log(`    hpo ${n}/${terms.length} (${annotCache.size} términos con conteo)`);
+    await sleep(80);
   }
   await g.markSynced("hpo");
 }
