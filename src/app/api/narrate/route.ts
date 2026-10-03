@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { narrate } from "@/lib/atlas/narrate";
+import { loadAtlas } from "@/lib/atlas/store";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  await loadAtlas();
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const n = await narrate(parsed.data.disease, parsed.data.persona, parsed.data.locale);

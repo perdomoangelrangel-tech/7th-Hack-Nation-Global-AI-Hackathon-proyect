@@ -96,16 +96,17 @@ create policy "own profile"   on profiles for all using ((select auth.uid()) = i
 create policy "own follows"   on follows  for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "own consents"  on trial_contact_consents for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
+-- Conversaciones anónimas (user_id null) solo las escribe/lee el service role desde /api/ask.
 create policy "own conversations" on conversations for all
-  using (user_id is null or (select auth.uid()) = user_id)
-  with check (user_id is null or (select auth.uid()) = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create policy "own messages" on messages for all
-  using (exists (select 1 from conversations c where c.id = conversation_id and (c.user_id is null or c.user_id = (select auth.uid()))));
+  using (exists (select 1 from conversations c where c.id = conversation_id and c.user_id = (select auth.uid())));
 
 create policy "own citations" on message_citations for select
   using (exists (select 1 from messages m join conversations c on c.id = m.conversation_id
-                 where m.id = message_id and (c.user_id is null or c.user_id = (select auth.uid()))));
+                 where m.id = message_id and c.user_id = (select auth.uid())));
 
 create policy "member reads org" on organizations for select
   using (exists (select 1 from memberships m where m.org_id = id and m.user_id = (select auth.uid())));

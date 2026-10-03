@@ -6,6 +6,7 @@ import "server-only";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AtlasSnapshot, Edge, Entity, EntityType, Evidence, SimilarityExplanation } from "./types";
+import { loadFromSupabase } from "./source";
 
 export type Locale = "en" | "es";
 
@@ -18,11 +19,11 @@ interface Index {
   evidenceById: Map<string, Evidence>;
 }
 
-let cache: Index | null = null;
+let cache: (Index & { source: "file" | "supabase" }) | null = null;
+let loadedAt = 0;
+const TTL_MS = 5 * 60_000;
 
-export function atlas(): Index {
-  if (cache) return cache;
-  const snap = JSON.parse(readFileSync(join(process.cwd(), "data", "atlas.json"), "utf8")) as AtlasSnapshot;
+function buildIndex(snap: AtlasSnapshot, source: "file" | "supabase") {
   const byId = new Map(snap.entities.map((e) => [e.id, e]));
   const edgeById = new Map(snap.edges.map((e) => [e.id, e]));
   const out = new Map<string, Edge[]>(); const inn = new Map<string, Edge[]>();
@@ -32,9 +33,32 @@ export function atlas(): Index {
     inn.set(e.to, [...(inn.get(e.to) ?? []), e]);
     for (const ev of e.evidence) evidenceById.set(ev.id, ev);
   }
-  cache = { snap, byId, edgeById, out, in: inn, evidenceById };
+  return { snap, byId, edgeById, out, in: inn, evidenceById, source };
+}
+
+/**
+ * Synchronous accessor used by every view. Returns the last loaded graph; if nothing was loaded yet,
+ * falls back to the bundled snapshot (data/atlas.json) so the app always renders, even offline.
+ */
+export function atlas(): Index {
+  if (cache) return cache;
+  const snap = JSON.parse(readFileSync(join(process.cwd(), "data", "atlas.json"), "utf8")) as AtlasSnapshot;
+  cache = buildIndex(snap, "file");
   return cache;
 }
+
+/**
+ * Call once at the top of every server entry point (route handler / page) BEFORE using atlas().
+ * Loads the live graph from Supabase (see ./source.ts) with a 5-minute cache; falls back to the file.
+ */
+export async function loadAtlas(): Promise<Index> {
+  if (cache?.source === "supabase" && Date.now() - loadedAt < TTL_MS) return cache;
+  const live = await loadFromSupabase().catch((e) => { console.error("[atlas] supabase load failed:", (e as Error).message); return null; });
+  if (live && live.entities.length) { cache = buildIndex(live, "supabase"); loadedAt = Date.now(); return cache; }
+  return atlas();
+}
+
+export const atlasSource = () => (cache ? cache.source : "file");
 
 /** Nombre para mostrar y para la voz: corto si existe ("STXBP1-DEE"), en el idioma pedido. */
 export const nameOf = (e: Entity | undefined, l: Locale) => {

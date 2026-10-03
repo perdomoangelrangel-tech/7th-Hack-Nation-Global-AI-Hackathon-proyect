@@ -1,0 +1,16 @@
+[
+  {
+    "orpha": "ORPHA:505652",
+    "treatment_id": "CHEMBL1568698",
+    "treatment_name": "Ganaxolone",
+    "trade_name": "Ztalmy",
+    "agency": "FDA",
+    "date": "2022-03",
+    "published_on": "2022-03-18",
+    "indication": "Seizures associated with cyclin-dependent kinase-like 5 (CDKL5) deficiency disorder (CDD) in patients 2 years of age and older",
+    "external_id": "FDA:ztalmy-2022",
+    "url": "https://www.fda.gov/drugs/news-events-human-drugs/fda-approves-drug-treatment-seizures-associated-rare-disease-patients-two-years-age-and-older",
+    "quote": "FDA approves drug for treatment of seizures associated with rare disease in patients two years of age and older",
+    "verified": "FDA page headline, date 03/18/2022, brand Ztalmy and indication checked on 2026-10-03; CHEMBL1568698 = GANAXOLONE via Open Targets search"
+  }
+]

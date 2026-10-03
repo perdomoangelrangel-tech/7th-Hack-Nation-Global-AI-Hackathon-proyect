@@ -10,11 +10,13 @@
  * ElevenLabs las llama como Server Tools con el header x-atlas-key.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { loadAtlas } from "@/lib/atlas/store";
 import { diseaseProfile, trialsFor, treatmentsFor, literatureFor, communitiesFor, gapsFor, phenotypeMatch } from "@/lib/graph";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ tool: string }> }) {
+  await loadAtlas();
   const { tool } = await ctx.params;
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const sp = req.nextUrl.searchParams;

@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { site } from "@/lib/site";
+import { PrefsProvider } from "@/lib/prefs";
 
 export const metadata: Metadata = {
-  title: `${site.name} · Atlas de enfermedades raras con evidencia`,
-  description: "Grafo de conocimiento con evidencia y agentes de voz que nunca inventan. Reto 5, Hack-Nation 7.",
+  title: `${site.name} · AI atlas for rare diseases`,
+  description: "Evidence knowledge graph for rare diseases: shared mechanisms, reusable assets, collaborators and a next step — every edge with its source. Hack-Nation 7 · Challenge 5.",
   openGraph: { title: site.name, description: site.tagline, type: "website" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body className="min-h-dvh antialiased">{children}</body>
+    <html lang="en">
+      <body className="min-h-dvh antialiased"><PrefsProvider>{children}</PrefsProvider></body>
     </html>
   );
 }

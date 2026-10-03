@@ -5,6 +5,7 @@
  */
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
@@ -17,6 +18,8 @@ import { EdgeInspector } from "./EdgeInspector";
 import { NarrationBar } from "./NarrationBar";
 import { useNarration } from "./useNarration";
 import { TYPE_COLOR } from "./colors";
+import { VoiceDock } from "@/components/voice/VoiceDock";
+import { CoCreate } from "@/components/cocreate/CoCreate";
 
 const GraphCanvas = dynamic(() => import("./GraphCanvas"), { ssr: false, loading: () => <div className="absolute inset-0 grid place-items-center text-slate-400 text-sm">…</div> });
 
@@ -106,9 +109,9 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, person
       {/* Barra superior */}
       <header className="shrink-0 border-b border-line bg-paper/90 backdrop-blur z-30">
         <div className="flex items-center gap-3 px-4 h-16">
-          <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Atlas home">
-            <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden><circle cx="9" cy="10" r="3" fill="var(--teal)" /><circle cx="23" cy="8" r="2.2" fill="#c4b5fd" /><circle cx="20" cy="23" r="3.4" fill="#fbbf24" /><path d="M9 10 23 8M9 10l11 13M23 8l-3 15" stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="2 2" /></svg>
-            <span className="font-semibold tracking-tight hidden sm:inline">Atlas</span>
+          <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Nexmed home">
+            <Image src="/brand/nexmed-logo-192.png" alt="" width={30} height={30} priority />
+            <span className="font-semibold tracking-tight hidden sm:inline">Nexmed</span>
           </Link>
           <div className="flex-1 max-w-2xl"><SearchBox t={t} locale={locale} onPick={onPick} autoFocus={!initialDisease} /></div>
           <div className="hidden md:flex items-center gap-1" role="radiogroup" aria-label={t.viewing_as}>
@@ -194,6 +197,9 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, person
 
         {/* Panel derecho: el recorrido */}
         <aside className="relative border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh]">
+          {/* Cross-lane mount points (voice lane, action lane). Keep them. */}
+          <VoiceDock persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
+          <CoCreate persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
           <AnimatePresence mode="wait">
             {shownJourney ? (
               <motion.div key={shownJourney.disease.id + locale} className="lg:h-full" initial={{ opacity: 0, x: reduce ? 0 : motionTokens.distance.md }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={springs.gentle}>

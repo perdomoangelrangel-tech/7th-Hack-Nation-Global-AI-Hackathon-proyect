@@ -2,9 +2,9 @@
 -- Grafo de conocimiento con evidencia. Postgres como grafo de propiedades.
 -- Regla: una arista activa sin evidencia no existe (trigger al final).
 
-create extension if not exists "pgcrypto";
-create extension if not exists vector;
-create extension if not exists pg_trgm;
+create extension if not exists "pgcrypto" with schema extensions;
+create extension if not exists vector with schema extensions;
+create extension if not exists pg_trgm with schema extensions;
 
 -- -------------------------------------------------------------------
 -- Fuentes
@@ -34,7 +34,7 @@ create table if not exists entities (
   updated_at    timestamptz not null default now(),
   unique (type, canonical_id)
 );
-create index if not exists entities_name_trgm on entities using gin (name gin_trgm_ops);
+create index if not exists entities_name_trgm on entities using gin (name extensions.gin_trgm_ops);
 create index if not exists entities_props_gin on entities using gin (props);
 
 create table if not exists entity_aliases (
@@ -43,7 +43,7 @@ create table if not exists entity_aliases (
   lang      text not null default 'en',
   primary key (entity_id, alias, lang)
 );
-create index if not exists entity_aliases_trgm on entity_aliases using gin (alias gin_trgm_ops);
+create index if not exists entity_aliases_trgm on entity_aliases using gin (alias extensions.gin_trgm_ops);
 
 -- -------------------------------------------------------------------
 -- Aristas (relaciones)
@@ -96,7 +96,7 @@ create index if not exists evidence_source on evidence (source_id, external_id);
 
 -- Trigger: al insertar evidencia la arista pasa a active.
 create or replace function activate_edge_on_evidence() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   update edges set status = 'active', updated_at = now()
    where id = new.edge_id and status = 'pending';
@@ -108,7 +108,7 @@ create trigger trg_activate_edge after insert on evidence
 
 -- Trigger: nadie puede poner una arista en active sin evidencia.
 create or replace function guard_edge_active() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   if new.status = 'active' and not exists (select 1 from evidence e where e.edge_id = new.id) then
     raise exception 'edge % cannot be active without evidence', new.id;
@@ -124,11 +124,11 @@ create trigger trg_guard_edge_active before update of status on edges
 -- -------------------------------------------------------------------
 create table if not exists embeddings (
   entity_id  uuid primary key references entities(id) on delete cascade,
-  embedding  vector(1536) not null,
+  embedding  extensions.vector(1536) not null,
   model      text not null,
   updated_at timestamptz not null default now()
 );
-create index if not exists embeddings_hnsw on embeddings using hnsw (embedding vector_cosine_ops);
+create index if not exists embeddings_hnsw on embeddings using hnsw (embedding extensions.vector_cosine_ops);
 
 -- -------------------------------------------------------------------
 -- Cola de ingesta (escala: FOR UPDATE SKIP LOCKED)
@@ -151,7 +151,7 @@ create index if not exists ingest_jobs_pending on ingest_jobs (created_at) where
 -- -------------------------------------------------------------------
 -- Vista de lectura para las herramientas del agente: arista + evidencia
 -- -------------------------------------------------------------------
-create or replace view edge_evidence as
+create or replace view edge_evidence with (security_invoker = true) as
 select
   e.id            as edge_id,
   e.relation,
@@ -177,7 +177,7 @@ group by e.id, f.id, t.id;
 -- -------------------------------------------------------------------
 -- Huecos de investigación: relaciones con poca evidencia
 -- -------------------------------------------------------------------
-create or replace view research_gaps as
+create or replace view research_gaps with (security_invoker = true) as
 select edge_id, relation, from_name, to_name, confidence, jsonb_array_length(evidence) as evidence_count
 from edge_evidence
 where jsonb_array_length(evidence) <= 1 or confidence < 0.4;

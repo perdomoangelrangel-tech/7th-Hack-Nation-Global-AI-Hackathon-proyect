@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { narrate } from "@/lib/atlas/narrate";
-import { search } from "@/lib/atlas/store";
+import { loadAtlas, search } from "@/lib/atlas/store";
 import { adminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -19,6 +19,7 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  await loadAtlas();
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { question, persona, locale } = parsed.data;

@@ -8,6 +8,8 @@ export type FactKind = "disease" | "gene" | "variant_effect" | "neighbor" | "pat
 export interface Persona {
   id: PersonaId;
   name: string;
+  /** UI mode label shown in the persona selector (Patient · Family & patient group · Researcher · Pharma). */
+  mode: { en: string; es: string };
   role: { en: string; es: string };
   /** Qué quiere oír primero: orden de los hechos en la narración. */
   priorities: FactKind[];
@@ -18,19 +20,8 @@ export interface Persona {
 }
 
 export const PERSONAS: Record<PersonaId, Persona> = {
-  maria: {
-    id: "maria", name: "Maria", role: { en: "Patient organization leader", es: "Líder de organización de pacientes" },
-    priorities: ["disease", "neighbor", "pathway", "asset", "collaborator", "step", "counterexample", "gap"],
-    tone: {
-      en: "You speak to a patient-group leader who organizes research with no scientific training. Be clear, warm and strategic: what connects her disease to others, what already exists, who to call, what to do this week. Say plainly what is inferred and must be checked by an expert.",
-      es: "Hablas con una líder de un grupo de pacientes que organiza investigación sin formación científica. Sé clara, cálida y estratégica: qué conecta su enfermedad con otras, qué existe ya, a quién llamar, qué hacer esta semana. Di claramente qué es inferido y debe revisarlo un experto.",
-    },
-    voice: "marin",
-    voiceInstructions: { en: "Warm, steady and confident, like a trusted advisor. Medium pace, short pauses between ideas.", es: "Cálida, firme y segura, como una asesora de confianza. Ritmo medio, pausas cortas entre ideas. Español neutro." },
-    maxClaims: 7,
-  },
   devon: {
-    id: "devon", name: "Devon", role: { en: "Newly diagnosed caregiver", es: "Cuidador con diagnóstico reciente" },
+    id: "devon", name: "Devon", mode: { en: "Patient", es: "Paciente" }, role: { en: "Newly diagnosed patient / caregiver", es: "Paciente o cuidador con diagnóstico reciente" },
     priorities: ["disease", "collaborator", "neighbor", "asset", "treatment", "step", "gap"],
     tone: {
       en: "You speak to a parent days after a diagnosis, at 2 a.m., with no medical background. Acknowledge how hard this is in one short phrase, then explain with no jargon (explain any term you must use). First: is there a community for this exact diagnosis. If something is unknown, say so gently and say what could change it.",
@@ -40,19 +31,19 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     voiceInstructions: { en: "Gentle, calm and kind. Slow pace, soft tone, as if speaking to someone who is tired and worried.", es: "Suave, calmada y amable. Ritmo lento, tono cálido, como hablando con alguien cansado y preocupado. Español neutro." },
     maxClaims: 6,
   },
-  priya: {
-    id: "priya", name: "Priya", role: { en: "Biotech / pharma scout", es: "Exploradora biotech / farma" },
-    priorities: ["pathway", "variant_effect", "neighbor", "treatment", "asset", "collaborator", "gap", "counterexample"],
+  maria: {
+    id: "maria", name: "Maria", mode: { en: "Family & patient group", es: "Familia y grupo de pacientes" }, role: { en: "Patient organization leader", es: "Líder de organización de pacientes" },
+    priorities: ["disease", "neighbor", "pathway", "asset", "collaborator", "step", "counterexample", "gap"],
     tone: {
-      en: "You speak to a biotech scout evaluating where a therapeutic mechanism could apply. Be concise and analytical: mechanism, variant effect (loss vs. other), cluster neighbors, clinical-stage assets, unmet need, active patient advocacy. Use identifiers when useful.",
-      es: "Hablas con una exploradora de biotech que evalúa dónde podría aplicarse un mecanismo terapéutico. Sé concisa y analítica: mecanismo, efecto de variante (pérdida u otro), vecinas del cluster, activos en fase clínica, necesidad no cubierta, grupos de pacientes activos. Usa identificadores cuando ayuden.",
+      en: "You speak to a patient-group leader who organizes research with no scientific training. Be clear, warm and strategic: what connects her disease to others, what already exists, who to call, what to do this week. Say plainly what is inferred and must be checked by an expert.",
+      es: "Hablas con una líder de un grupo de pacientes que organiza investigación sin formación científica. Sé clara, cálida y estratégica: qué conecta su enfermedad con otras, qué existe ya, a quién llamar, qué hacer esta semana. Di claramente qué es inferido y debe revisarlo un experto.",
     },
-    voice: "cedar",
-    voiceInstructions: { en: "Crisp, professional, efficient. Medium-fast pace, like a briefing.", es: "Nítida, profesional, eficiente. Ritmo medio-rápido, como un informe ejecutivo. Español neutro." },
+    voice: "marin",
+    voiceInstructions: { en: "Warm, steady and confident, like a trusted advisor. Medium pace, short pauses between ideas.", es: "Cálida, firme y segura, como una asesora de confianza. Ritmo medio, pausas cortas entre ideas. Español neutro." },
     maxClaims: 7,
   },
   osei: {
-    id: "osei", name: "Dr. Osei", role: { en: "Academic researcher / clinician-scientist", es: "Investigador académico / clínico-científico" },
+    id: "osei", name: "Dr. Osei", mode: { en: "Researcher", es: "Investigador" }, role: { en: "Academic researcher / clinician-scientist", es: "Investigador académico / clínico-científico" },
     priorities: ["gene", "variant_effect", "pathway", "neighbor", "counterexample", "collaborator", "asset", "step"],
     tone: {
       en: "You speak to a clinician-scientist who works on one gene. Be precise and skeptical: shared mechanism across gene names, the evidence behind each link, counterexamples, and which colleagues already work on the neighbor disease. Distinguish observation from inference explicitly.",
@@ -60,6 +51,17 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     },
     voice: "ash",
     voiceInstructions: { en: "Measured, precise, academic. Neutral tone, medium pace.", es: "Mesurado, preciso, académico. Tono neutro, ritmo medio. Español neutro." },
+    maxClaims: 7,
+  },
+  priya: {
+    id: "priya", name: "Priya", mode: { en: "Pharma", es: "Farma" }, role: { en: "Biotech / pharma scout", es: "Exploradora biotech / farma" },
+    priorities: ["pathway", "variant_effect", "neighbor", "treatment", "asset", "collaborator", "gap", "counterexample"],
+    tone: {
+      en: "You speak to a biotech scout evaluating where a therapeutic mechanism could apply. Be concise and analytical: mechanism, variant effect (loss vs. other), cluster neighbors, clinical-stage assets, unmet need, active patient advocacy. Use identifiers when useful.",
+      es: "Hablas con una exploradora de biotech que evalúa dónde podría aplicarse un mecanismo terapéutico. Sé concisa y analítica: mecanismo, efecto de variante (pérdida u otro), vecinas del cluster, activos en fase clínica, necesidad no cubierta, grupos de pacientes activos. Usa identificadores cuando ayuden.",
+    },
+    voice: "cedar",
+    voiceInstructions: { en: "Crisp, professional, efficient. Medium-fast pace, like a briefing.", es: "Nítida, profesional, eficiente. Ritmo medio-rápido, como un informe ejecutivo. Español neutro." },
     maxClaims: 7,
   },
 };

@@ -8,11 +8,12 @@
  *   GET /api/atlas/stats                     tamaño del grafo
  */
 import { NextRequest, NextResponse } from "next/server";
-import { constellation, diseaseList, edgeDetail, graphView, journey, search, stats, type Locale } from "@/lib/atlas/store";
+import { loadAtlas, constellation, diseaseList, edgeDetail, graphView, journey, search, stats, type Locale } from "@/lib/atlas/store";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ view: string }> }) {
+  await loadAtlas();
   const { view } = await ctx.params;
   const sp = req.nextUrl.searchParams;
   const l: Locale = sp.get("l") === "es" ? "es" : "en";

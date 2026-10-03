@@ -1,30 +1,33 @@
 @import "tailwindcss";
 
-/* Dirección: clínico-editorial. Papel cálido, tinta azul profunda, verde-azulado para evidencia, ámbar para "no hay evidencia". */
+/* Nexmed palette — taken from the logo (cyanotype blue #3A86BF on white).
+   Brand blues carry meaning: solid = sourced evidence. Amber is reserved for "no evidence / gap". */
 :root {
-  --paper: #f7f5f0;
-  --paper-2: #efece4;
-  --ink: #15202b;
-  --ink-2: #3c4a58;
-  --ink-3: #6b7784;
-  --line: #d9d4c8;
-  --teal: #0f766e;
-  --teal-2: #14b8a6;
-  --teal-soft: #d9f1ee;
-  --amber: #b45309;
+  --brand: #3a86bf;        /* logo blue */
+  --brand-deep: #1f5f94;   /* hover / pressed, text-safe on white (AA) */
+  --brand-ink: #0e2c47;    /* headings, dark surfaces */
+  --brand-soft: #e4f0f9;   /* tinted panels */
+  --brand-mist: #f3f8fc;   /* page wash */
+  --paper: #ffffff;
+  --paper-2: #f3f8fc;
+  --ink: #0e2c47;
+  --ink-2: #33506b;
+  --ink-3: #5f7a92;
+  --line: #d3e3f0;
+  --teal: #1f5f94;         /* legacy alias: primary action = brand-deep */
+  --teal-2: #3a86bf;
+  --teal-soft: #e4f0f9;
+  --amber: #b45309;        /* gap / no evidence */
   --amber-soft: #fdebd2;
-  --navy: #0b2545;
-  --navy-2: #13315c;
+  --navy: #0e2c47;
+  --navy-2: #163d61;
   --radius: 14px;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #0e1419; --paper-2: #141c23; --ink: #eef2f5; --ink-2: #c3ccd5; --ink-3: #8b98a5;
-    --line: #26313b; --teal: #2dd4bf; --teal-2: #5eead4; --teal-soft: #0f2f2c;
-    --amber: #fbbf24; --amber-soft: #3a2a08; --navy: #e6edf5; --navy-2: #cfdbea;
-  }
-}
+/* Light only by design: medical context, calm and bright. No dark theme. */
+:root { color-scheme: light; }
+[data-contrast="high"] { --ink: #061a2c; --ink-2: #102f4b; --ink-3: #23445f; --line: #8fb3cf; --brand-deep: #0f4a7a; }
 @theme inline {
+  --color-brand: var(--brand); --color-brand-deep: var(--brand-deep); --color-brand-ink: var(--brand-ink); --color-brand-soft: var(--brand-soft); --color-brand-mist: var(--brand-mist);
   --color-paper: var(--paper); --color-paper-2: var(--paper-2);
   --color-ink: var(--ink); --color-ink-2: var(--ink-2); --color-ink-3: var(--ink-3);
   --color-line: var(--line);

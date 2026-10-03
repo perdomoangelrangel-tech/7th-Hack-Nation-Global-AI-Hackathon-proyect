@@ -1,11 +1,111 @@
 [
-  {"orpha":"ORPHA:599373","mondo":"MONDO:0012812","efo":"MONDO_0012812","omim":"OMIM:612164","clinvar_disease":"Developmental and epileptic encephalopathy, 4","name":"STXBP1-related developmental and epileptic encephalopathy","short_name":"STXBP1-DEE","name_es":"Encefalopatía epiléptica y del desarrollo asociada a STXBP1","short_name_es":"STXBP1-DEE","genes":["STXBP1"],"search_terms":["STXBP1","STXBP1 encephalopathy","STXBP1-related disorder"]},
-  {"orpha":"ORPHA:33069","mondo":"MONDO:0011794","efo":"MONDO_0100135","omim":"OMIM:607208","clinvar_disease":"Severe myoclonic epilepsy in infancy","name":"Dravet syndrome","short_name":"Dravet syndrome","name_es":"Síndrome de Dravet","short_name_es":"Síndrome de Dravet","genes":["SCN1A"],"search_terms":["Dravet syndrome","severe myoclonic epilepsy of infancy","SMEI"]},
-  {"orpha":"ORPHA:439218","mondo":"MONDO:0013387","efo":"MONDO_0013387","omim":"OMIM:613720","clinvar_disease":"Developmental and epileptic encephalopathy, 7","name":"KCNQ2-related developmental and epileptic encephalopathy","short_name":"KCNQ2-DEE","name_es":"Encefalopatía epiléptica y del desarrollo asociada a KCNQ2","short_name_es":"KCNQ2-DEE","genes":["KCNQ2"],"search_terms":["KCNQ2 encephalopathy","KCNQ2-DEE","KCNQ2"]},
-  {"orpha":"ORPHA:505652","mondo":"MONDO:0010396","efo":"MONDO_0010396","omim":"OMIM:300672","clinvar_disease":"Developmental and epileptic encephalopathy, 2","name":"CDKL5 deficiency disorder","short_name":"CDKL5 deficiency","name_es":"Trastorno por deficiencia de CDKL5","short_name_es":"Deficiencia de CDKL5","genes":["CDKL5"],"search_terms":["CDKL5 deficiency disorder","CDKL5","CDD"]},
-  {"orpha":"ORPHA:778","mondo":"MONDO:0010726","efo":"MONDO_0010726","omim":"OMIM:312750","clinvar_disease":"Rett syndrome","name":"Rett syndrome","short_name":"Rett syndrome","name_es":"Síndrome de Rett","short_name_es":"Síndrome de Rett","genes":["MECP2"],"search_terms":["Rett syndrome"]},
-  {"orpha":"ORPHA:561854","mondo":"MONDO:0100040","efo":"MONDO_0100040","omim":"OMIM:613454","clinvar_disease":"FOXG1 disorder","name":"FOXG1 syndrome","short_name":"FOXG1 syndrome","name_es":"Síndrome FOXG1","short_name_es":"Síndrome FOXG1","genes":["FOXG1"],"search_terms":["FOXG1 syndrome","FOXG1"]},
-  {"orpha":"ORPHA:72","mondo":"MONDO:0007113","efo":"MONDO_0007113","omim":"OMIM:105830","clinvar_disease":"Angelman syndrome","name":"Angelman syndrome","short_name":"Angelman syndrome","name_es":"Síndrome de Angelman","short_name_es":"Síndrome de Angelman","genes":["UBE3A"],"search_terms":["Angelman syndrome"]},
-  {"orpha":"ORPHA:228349","mondo":"MONDO:0008769","efo":"MONDO_0008769","omim":"OMIM:204500","clinvar_disease":"Neuronal ceroid lipofuscinosis 2","name":"CLN2 disease","short_name":"CLN2 disease","name_es":"Enfermedad CLN2 (lipofuscinosis ceroidea neuronal tipo 2)","short_name_es":"Enfermedad CLN2","genes":["TPP1"],"search_terms":["CLN2 disease","neuronal ceroid lipofuscinosis 2","Batten disease CLN2"]},
-  {"orpha":"ORPHA:228346","mondo":"MONDO:0008767","efo":"MONDO_0008767","omim":"OMIM:204200","clinvar_disease":"Neuronal ceroid lipofuscinosis 3","name":"CLN3 disease","short_name":"CLN3 disease","name_es":"Enfermedad CLN3 (lipofuscinosis ceroidea neuronal tipo 3)","short_name_es":"Enfermedad CLN3","genes":["CLN3"],"search_terms":["CLN3 disease","juvenile Batten disease","neuronal ceroid lipofuscinosis 3"]}
+  {
+    "slug": "dravet",
+    "orpha": "ORPHA:33069",
+    "mondo": "MONDO:0100135",
+    "efo": "MONDO_0100135",
+    "name": "Dravet syndrome",
+    "name_es": "Síndrome de Dravet",
+    "genes": [
+      "SCN1A"
+    ],
+    "search_terms": [
+      "Dravet syndrome",
+      "severe myoclonic epilepsy of infancy"
+    ],
+    "hgnc": {
+      "SCN1A": "HGNC:10585"
+    },
+    "trial_keywords": [
+      "dravet",
+      "severe myoclonic epilepsy"
+    ]
+  },
+  {
+    "slug": "rett",
+    "orpha": "ORPHA:778",
+    "mondo": "MONDO:0010726",
+    "efo": "MONDO_0010726",
+    "name": "Rett syndrome",
+    "name_es": "Síndrome de Rett",
+    "genes": [
+      "MECP2"
+    ],
+    "search_terms": [
+      "Rett syndrome"
+    ],
+    "hgnc": {
+      "MECP2": "HGNC:6990"
+    },
+    "trial_keywords": [
+      "rett"
+    ]
+  },
+  {
+    "slug": "cdkl5",
+    "orpha": "ORPHA:505652",
+    "mondo": "MONDO:0100039",
+    "efo": "MONDO_0100039",
+    "name": "CDKL5 deficiency disorder",
+    "name_es": "Trastorno por deficiencia de CDKL5",
+    "genes": [
+      "CDKL5"
+    ],
+    "search_terms": [
+      "CDKL5 deficiency disorder",
+      "CDKL5"
+    ],
+    "hgnc": {
+      "CDKL5": "HGNC:11411"
+    },
+    "trial_keywords": [
+      "cdkl5"
+    ]
+  },
+  {
+    "slug": "angelman",
+    "orpha": "ORPHA:72",
+    "mondo": "MONDO:0007113",
+    "efo": "MONDO_0007113",
+    "name": "Angelman syndrome",
+    "name_es": "Síndrome de Angelman",
+    "genes": [
+      "UBE3A"
+    ],
+    "search_terms": [
+      "Angelman syndrome"
+    ],
+    "hgnc": {
+      "UBE3A": "HGNC:12496"
+    },
+    "trial_keywords": [
+      "angelman"
+    ]
+  },
+  {
+    "slug": "cln2",
+    "orpha": "ORPHA:228349",
+    "mondo": "MONDO:0008769",
+    "efo": "MONDO_0008769",
+    "name": "CLN2 disease (late infantile neuronal ceroid lipofuscinosis)",
+    "name_es": "Enfermedad CLN2 (lipofuscinosis ceroidea neuronal infantil tardía)",
+    "genes": [
+      "TPP1"
+    ],
+    "search_terms": [
+      "CLN2 disease",
+      "neuronal ceroid lipofuscinosis 2",
+      "Batten disease CLN2"
+    ],
+    "hgnc": {
+      "TPP1": "HGNC:2073"
+    },
+    "trial_keywords": [
+      "cln2",
+      "tpp1",
+      "lipofuscinosis type 2",
+      "lipofuscinosis 2",
+      "late infantile neuronal ceroid"
+    ]
+  }
 ]

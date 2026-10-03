@@ -1,11 +1,9 @@
-/**
- * Configuración de marca y videos. Cambiar aquí el nombre cuando se decida; el logo entra después.
- * Los videos aceptan URL de YouTube (watch o embed), Vimeo o un .mp4 directo.
- */
+/** Brand + links. Videos accept YouTube (watch or embed), Vimeo or a direct .mp4 URL. */
 export const site = {
-  name: process.env.NEXT_PUBLIC_SITE_NAME ?? "Atlas",          // nombre tentativo
-  tagline: "Cada respuesta rara, con su fuente.",
-  taglineEn: "Every rare answer, traced to its source.",
+  name: "Nexmed",
+  logo: "/brand/nexmed-logo.png",
+  tagline: "The rare disease atlas where every connection shows its source.",
+  taglineShort: "Rare disease, connected. Every link sourced.",
   challenge: "Hack-Nation 7 · Challenge 5 · AI Atlas for Rare Diseases · Buffalo Initiative × OpenAI",
   github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/",
   videos: {
