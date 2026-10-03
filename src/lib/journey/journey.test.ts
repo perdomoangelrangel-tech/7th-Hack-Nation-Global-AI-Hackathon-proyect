@@ -192,3 +192,18 @@ describe("matchmaking + intro draft", async () => {
   });
   it("returns null for unknown diseases", () => expect(matchPartners(g, "disease:NOPE")).toBeNull());
 });
+
+describe("10× view", async () => {
+  const { tenX } = await import("./tenx");
+  const t = tenX(buildJourney(g, STXBP1, "maria", "en")!);
+  it("labels every duration as an assumption with a rationale and cites the Nexmed phases it can", () => {
+    for (const p of t.phases) { expect(p.typical.rationale).toMatch(/Assumption|assumption/); expect(p.nexmed.rationale.length).toBeGreaterThan(10); }
+    expect(t.phases.filter((p) => p.discovery).every((p) => p.nexmed.cite && p.nexmed.cite.edges.length > 0)).toBe(true);
+    expect(t.assumption_note).toMatch(/assumptions/);
+  });
+  it("only claims the gain on discovery; protocol never gets faster than the typical minimum without a shared study", () => {
+    expect(t.discovery.ratio[0]).toBeGreaterThanOrEqual(5);
+    expect(t.total.nexmed[1]).toBeLessThanOrEqual(t.total.typical[1]);
+    expect(t.validate_next.length).toBeGreaterThanOrEqual(2);
+  });
+});
