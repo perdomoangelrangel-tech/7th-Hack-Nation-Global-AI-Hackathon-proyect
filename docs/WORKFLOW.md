@@ -24,7 +24,7 @@ The **brain** (Claude Code session in the main checkout `nexmed/`) owns setup, i
 | **action** | 3105 · `../nexmed-action` | `src/components/atlas/JourneyPanel.tsx` · `src/components/cocreate/**` · `src/components/journey/**` (new) · `src/lib/journey/**` (new) · `src/app/api/{journey,proposals,match}/**` · `src/app/plan/**` (new, optional) |
 | **brand** | 3106 · `../nexmed-brand` | `src/app/page.tsx` · `src/components/landing/**` (new) · `src/components/brand/**` (new) · `src/components/three/**` (new, shared 3D primitives) · `public/**` · `blender/**` (new) · `src/app/globals.css` · `src/app/layout.tsx` · `src/lib/site.ts` · `DESIGN.md` · old `src/components/FlowDiagram.tsx`, `VideoSlot.tsx` (delete or reuse) |
 
-| **user-verifier** | 3000 (main) · reads only | writes only `docs/qa/**` and bitácora entries (`NEED(<lane>)` bug reports) |
+| **user-verifier** | 3007 · `../nexmed-qa` (detached `main`) | writes only `../nexmed-shared/qa/**` and bitácora entries (`NEED(<lane>)` bug reports) |
 
 Brain only: `package.json`, `package-lock.json`, `next.config.ts`, `vercel.json`, `CLAUDE.md`, `AGENTS.md`, `docs/WORKFLOW.md`, `README.md`, `.env.example`.
 Need a dependency or a change in someone else's path? Append a `HANDOFF` entry to the bitácora. Pre-installed deps: react-force-graph-2d/3d, three, @react-three/fiber, @react-three/drei, three-spritetext, graphology, graphology-communities-louvain, openai, @elevenlabs/react, motion, zod, @supabase/supabase-js.
