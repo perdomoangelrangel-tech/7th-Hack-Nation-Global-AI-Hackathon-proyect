@@ -51,12 +51,15 @@ export const SOURCES: Record<SourceId, Omit<SourceInfo, "last_synced_at">> = {
   clinvar:           { id: "clinvar", name: "ClinVar (NCBI)", license: "Public domain", url: "https://www.ncbi.nlm.nih.gov/clinvar" },
   ctgov:             { id: "ctgov", name: "ClinicalTrials.gov", license: "Public domain", url: "https://clinicaltrials.gov/api/v2" },
   opentargets:       { id: "opentargets", name: "Open Targets Platform", license: "CC0", url: "https://platform.opentargets.org" },
-  reactome:          { id: "reactome", name: "Reactome (vía Open Targets)", license: "CC BY 4.0", url: "https://reactome.org" },
+  reactome:          { id: "reactome", name: "Reactome (via Open Targets)", license: "CC BY 4.0", url: "https://reactome.org" },
   pubmed:            { id: "pubmed", name: "PubMed (NCBI E-utilities)", license: "Public domain", url: "https://pubmed.ncbi.nlm.nih.gov" },
   nih_reporter:      { id: "nih_reporter", name: "NIH RePORTER", license: "Public domain", url: "https://reporter.nih.gov" },
-  patient_orgs:      { id: "patient_orgs", name: "Organizaciones de pacientes (curado, sitio oficial)", license: "Public data", url: "supabase/seed/organizations.json" },
-  atlas_analysis:    { id: "atlas_analysis", name: "Análisis del atlas (inferido)", license: "MIT", url: "scripts/analyze.ts" },
-  openai_extraction: { id: "openai_extraction", name: "Extracción con OpenAI sobre abstracts citados", license: "Derivado de PubMed", url: "scripts/extract.ts" },
+  patient_orgs:      { id: "patient_orgs", name: "Patient organizations (curated, official site)", license: "Public data", url: "supabase/seed/organizations.json" },
+  fda:               { id: "fda", name: "U.S. Food and Drug Administration", license: "Public domain", url: "https://www.fda.gov" },
+  atlas_analysis:    { id: "atlas_analysis", name: "Nexmed analysis (inferred, legacy id)", license: "MIT", url: "src/lib/atlas/analyze.ts" },
+  nexmed_analysis:   { id: "nexmed_analysis", name: "Nexmed analysis (inferred)", license: "MIT", url: "src/lib/atlas/analyze.ts" },
+  openai_extraction: { id: "openai_extraction", name: "OpenAI extraction from a cited paper", license: "Derived from PubMed", url: "https://pubmed.ncbi.nlm.nih.gov" },
+  community:         { id: "community", name: "Nexmed community drafts (not evidence)", license: "User submitted", url: "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect" },
 };
 
 const now = () => new Date().toISOString();
