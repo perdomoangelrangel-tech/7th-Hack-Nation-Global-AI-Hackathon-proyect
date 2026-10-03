@@ -140,9 +140,9 @@ export const Plaque: React.FC<{
   gap?: boolean;
   size?: number;
   maxWidth?: number;
-}> = ({ x, y, name, code, source, place = "below", appear = 1, accent, gap = false, size = 30, maxWidth = 420 }) => {
+  off?: number;
+}> = ({ x, y, name, code, source, place = "below", appear = 1, accent, gap = false, size = 30, maxWidth = 520, off = 34 }) => {
   if (appear <= 0.001) return null;
-  const off = 34;
   const style: React.CSSProperties = {
     position: "absolute",
     padding: "10px 16px 10px",

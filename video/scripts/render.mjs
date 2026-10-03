@@ -1,7 +1,8 @@
 // Batch renderer: bundles once, then renders stills / scenes / cuts.
 //   node scripts/render.mjs stills              → out/stills/<Scene>.png (one key frame per scene)
 //   node scripts/render.mjs scenes              → out/<Scene>.mp4 at full 1080p
-//   node scripts/render.mjs cuts [--scale=0.5]  → out/<Cut>-draft.mp4 (guides on)
+//   node scripts/render.mjs cuts [--scale=0.5]  → out/<Cut>-draft.mp4 (Demo60 · Tech60 · Team60, guides + captions on)
+//   node scripts/render.mjs cut-stills          → out/stills/<Cut>-<n>.png (a few frames of each cut, half size)
 //   node scripts/render.mjs final               → out/<Cut>.mp4 at 1080p, guides off (use once VO/recordings are in)
 //   add --only=MapBuild,Pitch60 to limit, --concurrency=N to tune.
 import { bundle } from "@remotion/bundler";
@@ -34,12 +35,16 @@ const SCENE_STILLS = {
   DataModel: 340,
   RidersAndFares: 360,
   ScaleNetwork: 280,
-  Stack: 270,
+  Stack: 300,
   EndCard: 120,
+  Hook: 150,
+  Connections: 420,
+  NextStep: 200,
+  Lessons: 430,
   TitleCardTech: 120,
   ScaleNetworkTech: 280,
 };
-const CUTS = ["Pitch60", "Pitch120", "Tech60", "Tech120"];
+const CUTS = ["Demo60", "Tech60", "Team60"];
 const pick = (ids) => (only?.length ? ids.filter((i) => only.includes(i)) : ids);
 
 fs.mkdirSync("out/stills", { recursive: true });
@@ -86,5 +91,14 @@ if (mode === "scenes" || mode === "all")
   for (const id of pick(Object.keys(SCENE_STILLS).filter((x) => !x.endsWith("Tech")))) await video(id, { output: `out/${id}.mp4` });
 if (mode === "cuts" || mode === "all")
   for (const id of pick(CUTS)) await video(id, { output: `out/${id}-draft.mp4`, inputProps: { guides: true }, sc: mode === "all" ? 0.5 : scale });
+if (mode === "cut-stills")
+  for (const id of pick(CUTS)) {
+    const composition = await selectComposition({ serveUrl, id, inputProps: { guides: true }, browserExecutable });
+    for (const f of [90, 400, 800, 1250, 1500, 1700]) {
+      const output = `out/stills/${id}-${String(f).padStart(4, "0")}.png`;
+      await renderStill({ serveUrl, composition, frame: f, output, inputProps: { guides: true }, scale: 0.5, browserExecutable });
+      console.log("still", output);
+    }
+  }
 if (mode === "final")
   for (const id of pick(CUTS)) await video(id, { output: `out/${id}.mp4`, inputProps: { guides: false }, sc: Number(flag("scale", "1")) });

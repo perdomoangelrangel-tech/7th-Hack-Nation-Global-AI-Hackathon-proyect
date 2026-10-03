@@ -10,6 +10,10 @@ import { RidersAndFares, FARES_NATURAL, FARES_SFX } from "./RidersAndFares";
 import { ScaleNetwork, SCALE_NATURAL, SCALE_SFX } from "./ScaleNetwork";
 import { Stack, STACK_NATURAL, STACK_SFX } from "./Stack";
 import { EndCard, END_NATURAL, END_SFX } from "./EndCard";
+import { Hook, HOOK_NATURAL, HOOK_SFX } from "./Hook";
+import { Connections, CONNECTIONS_NATURAL, CONNECTIONS_SFX } from "./Connections";
+import { NextStep, NEXTSTEP_NATURAL, NEXTSTEP_SFX } from "./NextStep";
+import { Lessons, LESSONS_NATURAL, LESSONS_SFX } from "./Lessons";
 
 /** SFX cue in scene-natural seconds. `until` cuts a long bed (ambience) with a short fade. */
 export type Cue = { name: string; at: number; until?: number; volume?: number };
@@ -29,6 +33,10 @@ export const SCENES: Record<string, { component: AnyScene; natural: number; sfx:
   ScaleNetwork: { component: ScaleNetwork, natural: SCALE_NATURAL, sfx: SCALE_SFX },
   Stack: { component: Stack, natural: STACK_NATURAL, sfx: STACK_SFX },
   EndCard: { component: EndCard, natural: END_NATURAL, sfx: END_SFX },
+  Hook: { component: Hook, natural: HOOK_NATURAL, sfx: HOOK_SFX },
+  Connections: { component: Connections, natural: CONNECTIONS_NATURAL, sfx: CONNECTIONS_SFX },
+  NextStep: { component: NextStep, natural: NEXTSTEP_NATURAL, sfx: NEXTSTEP_SFX },
+  Lessons: { component: Lessons, natural: LESSONS_NATURAL, sfx: LESSONS_SFX },
 };
 
 export type SceneKey = keyof typeof SCENES;

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AskExample } from "@/components/landing/AskExample";
+import { Connections } from "@/components/landing/Connections";
 import { Fares } from "@/components/landing/Fares";
 import { Footer } from "@/components/landing/Footer";
 import { Hero } from "@/components/landing/Hero";
@@ -23,6 +24,7 @@ export default function Home() {
         <Hero />
         <Odyssey />
         <HowItWorks />
+        <Connections />
         <AskExample />
         <Riders />
         <Fares />

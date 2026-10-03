@@ -21,6 +21,7 @@ query candidates($efoId: String!) {
         id maxClinicalStage
         drug {
           id name drugType maximumClinicalStage
+          parentMolecule { id name maximumClinicalStage }
           tradeNames { label source }
           synonyms { label source }
           mechanismsOfAction { rows { mechanismOfAction targets { approvedSymbol } } }
@@ -74,10 +75,36 @@ export async function opentargets(ctx: Ctx, d: SeedDisease) {
   ctx.sample("opentargets.candidates", { count: res?.data?.disease?.drugAndClinicalCandidates?.count, first: rows[0] });
 
   const diseaseRef = { type: "disease" as const, canonicalId: d.orpha, name: d.name };
-  const seen = new Set<string>();
+
+  // Salt forms (e.g. FENFLURAMINE HYDROCHLORIDE) are folded into their parent molecule (FENFLURAMINE),
+  // so one drug = one treatment node. The salt entity keeps `parent_chembl` for trial-name matching.
+  const groups = new Map<string, Any>();
   for (const r of rows) {
-    const drug = r?.drug; const chembl: string | undefined = drug?.id;
-    if (!chembl || seen.has(chembl)) continue;
+    const drug = r?.drug; if (!drug?.id) continue;
+    const parent = drug.parentMolecule?.id ? drug.parentMolecule : null;
+    const key: string = parent?.id ?? drug.id;
+    if (parent) {
+      ctx.batch.entity({ type: "treatment", canonicalId: drug.id, name: titleCase(drug.name ?? drug.id), props: { chembl_id: drug.id, parent_chembl: parent.id, salt_of: titleCase(parent.name ?? parent.id) } });
+    }
+    const g = groups.get(key);
+    if (!g) {
+      groups.set(key, {
+        ...r,
+        drug: { ...drug, id: key, name: parent?.name ?? drug.name, maximumClinicalStage: parent?.maximumClinicalStage ?? drug.maximumClinicalStage },
+        clinicalReports: [...(r.clinicalReports ?? [])],
+      });
+      continue;
+    }
+    if (stageToPhase(r.maxClinicalStage) > stageToPhase(g.maxClinicalStage)) g.maxClinicalStage = r.maxClinicalStage;
+    g.clinicalReports.push(...(r.clinicalReports ?? []));
+    g.drug.tradeNames = [...(g.drug.tradeNames ?? []), ...(drug.tradeNames ?? [])];
+    g.drug.synonyms = [...(g.drug.synonyms ?? []), ...(drug.synonyms ?? [])];
+    g.drug.mechanismsOfAction = { rows: [...(g.drug.mechanismsOfAction?.rows ?? []), ...(drug.mechanismsOfAction?.rows ?? [])] };
+  }
+
+  const seen = new Set<string>();
+  for (const r of groups.values()) {
+    const drug = r.drug; const chembl: string = drug.id;
     seen.add(chembl);
     const phase = stageToPhase(r.maxClinicalStage);
     const approvedForIndication = phase >= 4;
@@ -129,6 +156,18 @@ export async function opentargets(ctx: Ctx, d: SeedDisease) {
         })),
       ],
     });
+  }
+  // Retract Open Targets edges for this disease that the source no longer reports (or that were salt
+  // duplicates of a parent molecule). Skipped when the API returned nothing.
+  if (!ctx.dry && seen.size) {
+    const { data: existing } = await ctx.db.from("edge_evidence").select("edge_id, from_canonical_id, edge_props")
+      .eq("relation", "treats").eq("to_canonical_id", d.orpha).limit(500);
+    const stale = (existing ?? []).filter((x: Any) => x.edge_props?.origin === "opentargets" && !seen.has(x.from_canonical_id)).map((x: Any) => x.edge_id as string);
+    if (stale.length) {
+      const { error } = await ctx.db.from("edges").update({ status: "retracted", updated_at: new Date().toISOString() }).in("id", stale);
+      if (error) ctx.note(`opentargets retract: ${error.message}`);
+    }
+    ctx.extra.retracted = stale.length;
   }
   ctx.extra.candidates = seen.size;
   if (!seen.size) ctx.note(`opentargets: 0 drug/clinical candidates for ${efo}`);

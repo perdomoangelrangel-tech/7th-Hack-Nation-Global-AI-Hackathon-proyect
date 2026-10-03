@@ -4,7 +4,8 @@
  * sentence and cite it. Summaries only restate graph fields (names, codes, phases, sources, dates).
  */
 import type { DiseaseMap, Station } from "../atlas-data";
-import { clip, countriesOf, isApproved, isRecruiting, prevalenceLabel, sourceLabel, str, trialPhases, treatmentPhase, mechanismOf } from "./evidence";
+import { neighborSummary, pairEvidenceIds, type Connections } from "./connections";
+import { approvalOf, clip, countriesOf, externalIdShort, isApproved, isRecruiting, prevalenceLabel, sourceLabel, str, trialPhases, treatmentPhase, mechanismOf } from "./evidence";
 
 export interface ToolItem { summary: string; evidence_ids: string[]; url?: string }
 export interface ToolResponse {
@@ -29,13 +30,14 @@ export const TOOL_CATALOG = [
   { name: "literature", description: "Most recent PubMed papers linked to the disease.", params: { q: "disease", limit: "optional, default 5" } },
   { name: "communities", description: "Patient organizations and registered researchers.", params: { q: "disease" } },
   { name: "gaps", description: "Research gaps: empty lines, no approved treatment, no recruiting trial, single-source or low-confidence relations.", params: { q: "disease" } },
+  { name: "connections", description: "Diseases that share evidence with this one (symptoms, treatments, trials, researchers), ranked by a transparent score, with the next step.", params: { q: "disease" } },
   { name: "phenotype-match", description: "Rank atlas diseases by matching HPO phenotypes (differential support, not a diagnosis).", params: { hpo: "comma-separated HPO ids, e.g. HP:0001250,HP:0002373" } },
 ] as const;
 
 const ids = (s: Station, n = 2) => s.evidence.slice(0, n).map((e) => e.id);
 const cite = (s: Station) => {
   const e = s.evidence[0];
-  return e ? `${sourceLabel(e.source)} ${e.external_id}${e.published_on ? ` (${e.published_on})` : ""}` : "";
+  return e ? `${sourceLabel(e.source)} ${externalIdShort(e.source, e.external_id)}${e.published_on ? ` (${e.published_on})` : ""}` : "";
 };
 const item = (summary: string, s: Station): ToolItem => ({ summary: clip(summary, 220), evidence_ids: ids(s), url: s.evidence[0]?.url || undefined });
 
@@ -82,7 +84,7 @@ export function treatmentsTool(map: DiseaseMap): ToolResponse {
   const items = t.slice(0, 8).map((s) => {
     const ph = treatmentPhase(s);
     const mech = mechanismOf(s);
-    return item(`${s.name} (${s.canonical_id}) · ${isApproved(s) ? "approved" : "investigational"}${ph != null ? ` · phase ${ph}` : ""}${mech ? ` · ${mech}` : ""} · ${cite(s)}`, s);
+    return item(`${s.name} (${s.canonical_id}) · ${isApproved(s) ? `approved${approvalOf(s.edge_props) ? ` (${approvalOf(s.edge_props)!.label})` : ""}` : "investigational"}${ph != null ? ` · phase ${ph}` : ""}${mech ? ` · ${mech}` : ""} · ${cite(s)}`, s);
   });
   return fit({ ...head("treatments", map), total: map.totals.treatments, items, note: items.length ? undefined : NO_EVIDENCE });
 }
@@ -159,4 +161,19 @@ export function matchPhenotypes(maps: DiseaseMap[], hpo: string[]): MatchRow[] {
 export function phenotypeMatchTool(rows: MatchRow[], source: ToolResponse["source"], retrieved_at: string): ToolResponse {
   const items = rows.slice(0, 6).map((r) => ({ summary: `${r.name} (${r.orpha}) · ${r.matched.length} matching phenotypes (${r.matched.slice(0, 5).join(", ")}) · score ${r.score}`, evidence_ids: r.evidence_ids.slice(0, 4) }));
   return fit({ tool: "phenotype-match", disease: null, retrieved_at, source, total: rows.length, items, note: items.length ? "Differential support from sourced phenotypes, not a diagnosis." : NO_EVIDENCE });
+}
+
+export function connectionsTool(c: Connections): ToolResponse {
+  const ranked = c.neighbors.filter((n) => !n.gap);
+  const items = ranked.slice(0, 4).map((n) => ({ summary: neighborSummary(c.disease, n), evidence_ids: pairEvidenceIds(n).slice(0, 4) }));
+  const gaps = c.neighbors.filter((n) => n.gap).map((n) => n.disease.name);
+  return fit({
+    tool: "connections", disease: { orpha: c.disease.orpha, name: c.disease.name, name_es: c.disease.name_es }, retrieved_at: c.retrieved_at, source: c.source,
+    total: ranked.length, items,
+    note: [
+      "Score = 0.5·shared symptoms/union + 0.2·treatments + 0.15·trials + 0.15·researchers. Shared symptoms do not prove a shared mechanism: expert review needed.",
+      c.umbrella.length ? `Umbrella organizations (${c.umbrella.map((u) => u.name).join(", ")}) support every disease and are not scored.` : null,
+      gaps.length ? `No shared evidence with: ${gaps.join(", ")}.` : null,
+    ].filter(Boolean).join(" "),
+  });
 }

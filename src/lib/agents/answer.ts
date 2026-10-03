@@ -3,7 +3,7 @@
  * retrieval (disease from question or UI → evidence map) → drafting (LLM or deterministic) → verification.
  * Server-only: reads the graph through atlas-data.
  */
-import { getDiseaseMap, listDiseases, type DiseaseMap, type EvidenceRef } from "../atlas-data";
+import { getConnections, getDiseaseMap, listDiseases, type DiseaseMap, type EvidenceRef } from "../atlas-data";
 import { verify, type VerifiedOutput } from "../verifier";
 import { PROFILES, type Audience } from "./profiles";
 import { detectDisease, detectIntents, resolveDisease } from "./detect";
@@ -17,11 +17,15 @@ export async function answer({ question, audience, locale, disease }: AnswerInpu
   const profile = PROFILES[audience];
   const diseases = await listDiseases();
   const target = detectDisease(question, diseases) ?? resolveDisease(disease, diseases);
-  const map = target ? await getDiseaseMap(target.orpha) : null;
-  const { tools, evidence } = map ? toolsForTurn(map, profile.tools, detectIntents(question)) : { tools: {}, evidence: [] as EvidenceRef[] };
+  const intents = detectIntents(question);
+  const [map, conn] = await Promise.all([
+    target ? getDiseaseMap(target.orpha) : Promise.resolve(null),
+    target && intents.includes("connections") ? getConnections(target.orpha) : Promise.resolve(null),
+  ]);
+  const { tools, evidence } = map ? toolsForTurn(map, profile.tools, intents, conn) : { tools: {}, evidence: [] as EvidenceRef[] };
   const allowed = new Set(evidence.map((e) => e.id));
   const llm = process.env.OPENAI_API_KEY && map ? await llmDraft(profile.system(locale), question, tools, evidence) : null;
-  const raw = llm ?? onlyAllowed(demoDraft(map, audience, locale, question), allowed);
+  const raw = llm ?? onlyAllowed(demoDraft(map, audience, locale, question, conn), allowed);
   return { map, evidence, out: verify(raw, allowed, locale), mode: llm ? "llm" : "demo" };
 }
 

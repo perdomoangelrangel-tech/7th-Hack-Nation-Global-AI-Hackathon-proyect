@@ -35,7 +35,7 @@ const yb = (k: number) => 540 + (k - 3) * 18;
 
 const STOPS = [
   { x: 1250, label: "/api/tools/*", sub: "read-only graph queries", place: "above" as const, mono: true },
-  { x: 1435, label: "LLM draft", sub: "JSON claims + evidence_ids", place: "below" as const },
+  { x: 1435, label: "OpenAI draft", sub: "JSON claims + evidence_ids", place: "below" as const },
   { x: 1605, label: "Verifier", sub: "deterministic", place: "above" as const },
   { x: 1765, label: "Voice", sub: "ElevenLabs agents", place: "below" as const },
 ];
@@ -210,6 +210,7 @@ export const Architecture: React.FC<SceneProps> = ({ dur }) => {
         }}
       >
         <div style={{ fontFamily: F.mono, fontSize: 20, color: C.ink3 }}>entities · edges · evidence</div>
+        <div style={{ fontFamily: F.mono, fontSize: 20, color: C.ink3, marginTop: 4 }}>+ disease_links view</div>
         <div
           style={{
             marginTop: 12,

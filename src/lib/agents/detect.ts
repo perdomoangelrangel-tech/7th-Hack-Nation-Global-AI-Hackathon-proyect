@@ -39,9 +39,10 @@ export function resolveDisease(ref: string | null | undefined, diseases: Disease
     ?? detectDisease(ref, diseases);
 }
 
-export type Intent = "cure" | "genes" | "symptoms" | "treatments" | "trials" | "community" | "literature" | "gaps";
+export type Intent = "connections" | "cure" | "genes" | "symptoms" | "treatments" | "trials" | "community" | "literature" | "gaps";
 
 const INTENTS: [Intent, RegExp][] = [
+  ["connections", /\b(similar\w*|related|share[sd]?|sharing|in common|other diseases?|connections?|connected|collaborat\w*|together|compartid\w*|comparten?|parecid\w*|relacionad\w*|otras enfermedades|conexion\w*|colabor\w*|juntos|juntas)\b/],
   ["cure", /\b(cures?|cured|curing|curable|cura|curas|curar\w*|curacion\w*|heal\w*|sanar\w*)\b/],
   ["gaps", /\b(gaps?|huecos?|lagunas?|missing|falta|faltan|unknowns?|desconoc\w*|unmet|weak|debil\w*|unsourced)\b/],
   ["trials", /\b(trials?|ensayos?|recruit\w*|reclut\w*|nct\d*|enrol\w*|inscrib\w*)\b/],

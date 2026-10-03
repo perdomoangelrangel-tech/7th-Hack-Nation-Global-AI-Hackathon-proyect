@@ -11,6 +11,7 @@
 import { publicClient } from "./supabase/server";
 import snapshotJson from "../data/snapshot.json";
 import { cleanAffiliation, computeGaps, isRecruiting, isWeak, shortName, sortLiterature } from "./agents/evidence";
+import { buildNeighbor, rankNeighbors, type Connections, type DiseaseRef, type LinkItem, type LinkKind, type Neighbor, type Umbrella } from "./agents/connections";
 
 const recruitingFirst = (list: Station[]) => [...list].sort((a, b) => Number(isRecruiting(b)) - Number(isRecruiting(a)));
 
@@ -70,10 +71,19 @@ export interface DiseaseMap {
   retrieved_at: string;
 }
 
+interface SnapshotLinkItem { kind: LinkKind; code: string | null; name: string; props: Record<string, unknown>; a: Record<string, unknown>; b: Record<string, unknown>; confidence: number | null; ev_a: EvidenceRef[]; ev_b: EvidenceRef[] }
+interface SnapshotConnections {
+  phenotype_totals: Record<string, number>;
+  umbrella: Umbrella[];
+  pairs: { a: string; b: string; counts: Partial<Record<LinkKind, number>>; items: SnapshotLinkItem[] }[];
+  retrieved_at: string;
+}
+
 interface Snapshot {
   generated_at: string | null;
   diseases: DiseaseSummary[];
   maps: Record<string, Omit<DiseaseMap, "source">>;
+  connections?: SnapshotConnections;
 }
 
 const snapshot = snapshotJson as unknown as Snapshot;
@@ -308,4 +318,117 @@ export async function exportSnapshot(): Promise<Snapshot | null> {
   }
   if (!Object.keys(maps).length) return null;
   return { generated_at: new Date().toISOString(), diseases: diseases.filter((d) => maps[d.orpha]), maps };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Connections (Module 3): diseases that share evidence with this one. Live view `disease_links`, snapshot fallback.
+// ---------------------------------------------------------------------------------------------------------
+
+interface LinkRow {
+  disease_a: string; disease_b: string; kind: LinkKind; item_code: string | null; item_name: string;
+  item_props: Record<string, unknown> | null; props_a: Record<string, unknown> | null; props_b: Record<string, unknown> | null;
+  confidence: number | string | null;
+  evidence: { id?: string; source: string; external_id: string; url: string; retrieved_at?: string; side: "a" | "b" }[] | null;
+}
+
+const connCache = new Map<string, { at: number; value: Connections }>();
+const toRef = (d: DiseaseSummary): DiseaseRef => ({ orpha: d.orpha, name: d.name, name_es: d.name_es, short: d.short });
+
+function linkEvidence(rows: LinkRow["evidence"], side: "a" | "b", max = 3): EvidenceRef[] {
+  return (rows ?? []).filter((e) => e.side === side).slice(0, max).map((e) => ({
+    id: e.id ?? `link:${e.source}:${e.external_id}`, source: e.source, external_id: e.external_id, url: e.url,
+    published_on: null, retrieved_at: e.retrieved_at ?? new Date().toISOString(),
+  }));
+}
+
+function rowToItem(r: LinkRow): LinkItem {
+  const props = { ...(r.item_props ?? {}) };
+  if (r.kind === "researcher") props.affiliation = cleanAffiliation(typeof props.affiliation === "string" ? props.affiliation : null);
+  return {
+    kind: r.kind, code: r.item_code ?? (r.kind === "researcher" && typeof props.orcid === "string" ? `ORCID:${props.orcid}` : null),
+    name: r.item_name, props, here: r.props_a ?? {}, there: r.props_b ?? {},
+    confidence: r.confidence == null ? null : Number(r.confidence),
+    evidence_here: linkEvidence(r.evidence, "a"), evidence_there: linkEvidence(r.evidence, "b"),
+  };
+}
+
+async function loadConnectionsLive(orpha: string, diseases: DiseaseSummary[]): Promise<Connections | null> {
+  const db = publicClient();
+  if (!db || !liveAvailable()) return null;
+  try {
+    return await withBudget(async (signal) => {
+      const d = await db.from("entities").select("id, canonical_id").eq("type", "disease").eq("canonical_id", orpha).abortSignal(signal).maybeSingle();
+      if (d.error) throw d.error;
+      if (!d.data) return null;
+      const links = await db.from("disease_links").select("*").eq("disease_a", d.data.id).limit(1000).abortSignal(signal);
+      if (links.error) throw links.error;
+      const rows = (links.data ?? []) as LinkRow[];
+      const neighborIds = [...new Set(rows.map((r) => r.disease_b))];
+      const orgCodes = [...new Set(rows.filter((r) => r.kind === "organization" && r.item_code).map((r) => r.item_code as string))];
+      const [ents, orgs] = await Promise.all([
+        neighborIds.length ? db.from("entities").select("id, canonical_id").in("id", neighborIds).abortSignal(signal) : Promise.resolve({ data: [], error: null }),
+        orgCodes.length ? db.from("entities").select("id, canonical_id, name, props").eq("type", "organization").in("canonical_id", orgCodes).abortSignal(signal) : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (ents.error) throw ents.error;
+      if (orgs.error) throw orgs.error;
+      const orgRows = (orgs.data ?? []) as { id: string; canonical_id: string; name: string; props: Record<string, unknown> | null }[];
+      const allIds = [d.data.id as string, ...neighborIds];
+      const [phen, supports] = await Promise.all([
+        Promise.all(allIds.map((id) => db.from("edges").select("id", { count: "exact", head: true }).eq("from_id", id).eq("relation", "has_phenotype").eq("status", "active").abortSignal(signal))),
+        orgRows.length ? db.from("edges").select("from_id, to_id").eq("relation", "supports").eq("status", "active").in("from_id", orgRows.map((o) => o.id)).abortSignal(signal) : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (supports.error) throw supports.error;
+      const phenById = new Map(allIds.map((id, i) => [id, phen[i].count ?? 0]));
+      const supportCount = new Map<string, Set<string>>();
+      for (const e of (supports.data ?? []) as { from_id: string; to_id: string }[]) supportCount.set(e.from_id, (supportCount.get(e.from_id) ?? new Set()).add(e.to_id));
+      const umbrella: Umbrella[] = orgRows.filter((o) => (supportCount.get(o.id)?.size ?? 0) >= 4)
+        .map((o) => ({ code: o.canonical_id, name: o.name, url: typeof o.props?.url === "string" ? o.props.url : "" }));
+      const orphaById = new Map(((ents.data ?? []) as { id: string; canonical_id: string }[]).map((e) => [e.id, e.canonical_id]));
+      const here = diseases.find((x) => x.orpha === orpha);
+      if (!here) return null;
+      const neighbors: Neighbor[] = [];
+      for (const other of diseases) {
+        if (other.orpha === orpha) continue;
+        const id = [...orphaById.entries()].find(([, o]) => o === other.orpha)?.[0];
+        const items = id ? rows.filter((r) => r.disease_b === id).map(rowToItem) : [];
+        neighbors.push(buildNeighbor({ disease: toRef(other), items, phenHere: phenById.get(d.data.id as string) ?? 0, phenThere: id ? phenById.get(id) ?? 0 : 0, umbrella }));
+      }
+      return { disease: toRef(here), neighbors: rankNeighbors(neighbors), umbrella, source: "live" as const, retrieved_at: new Date().toISOString() };
+    });
+  } catch {
+    markDown();
+    return null;
+  }
+}
+
+function connectionsFromSnapshot(orpha: string, diseases: DiseaseSummary[]): Connections | null {
+  const c = snapshot.connections;
+  const here = diseases.find((x) => x.orpha === orpha);
+  if (!c || !here) return null;
+  const neighbors: Neighbor[] = [];
+  for (const other of diseases) {
+    if (other.orpha === orpha) continue;
+    const pair = c.pairs.find((p) => (p.a === orpha && p.b === other.orpha) || (p.b === orpha && p.a === other.orpha));
+    const flip = pair?.b === orpha;
+    const items: LinkItem[] = (pair?.items ?? []).map((it) => ({
+      kind: it.kind, code: it.code, name: it.name, props: it.props, confidence: it.confidence,
+      here: flip ? it.b : it.a, there: flip ? it.a : it.b,
+      evidence_here: flip ? it.ev_b : it.ev_a, evidence_there: flip ? it.ev_a : it.ev_b,
+    }));
+    neighbors.push(buildNeighbor({ disease: toRef(other), items, counts: pair?.counts, phenHere: c.phenotype_totals[orpha] ?? 0, phenThere: c.phenotype_totals[other.orpha] ?? 0, umbrella: c.umbrella }));
+  }
+  return { disease: toRef(here), neighbors: rankNeighbors(neighbors), umbrella: c.umbrella, source: "snapshot", retrieved_at: c.retrieved_at };
+}
+
+/** Ranked neighbors for one disease: shared evidence (both sides), score breakdown, next steps, honest gaps. */
+export async function getConnections(orpha: string): Promise<Connections | null> {
+  const key = orpha.trim().toUpperCase().replace(/^ORPHA\s*:?\s*/, "ORPHA:");
+  if (RETRACTED.has(key)) return null;
+  const hit = connCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
+  const diseases = await listDiseases();
+  const live = await loadConnectionsLive(key, diseases);
+  const value = live ?? connectionsFromSnapshot(key, diseases);
+  if (value?.source === "live") connCache.set(key, { at: Date.now(), value });
+  return value;
 }

@@ -6,7 +6,7 @@ import { countriesOf, isApproved, isRecruiting, str, trialPhases, trialStatus, t
 import { site } from "@/lib/site";
 import type { AtlasCopy } from "./copy";
 import { LINE_META } from "./lines";
-import { CitationChip } from "./Plaque";
+import { ApprovalBadge, CitationChip } from "./Plaque";
 import { ArrowIcon, ExternalIcon } from "./Icons";
 
 export type TabKey = "treatments" | "trials" | "community" | "gaps";
@@ -95,6 +95,7 @@ function Treatments({ map, copy }: { map: DiseaseMap; copy: AtlasCopy }) {
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="font-display text-base font-bold text-ink">{s.name}</span>
                       {ph != null && <span className="rounded-full bg-panel px-2 py-0.5 font-mono text-xs text-t-treat">{copy.treat.phase(ph)}</span>}
+                      <ApprovalBadge s={s} copy={copy} />
                       <span className="font-mono text-xs text-ink-3">{s.canonical_id}</span>
                     </div>
                     {mechanismOf(s) && <p className="mt-0.5 text-sm text-ink-2">{mechanismOf(s)}</p>}

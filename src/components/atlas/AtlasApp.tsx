@@ -12,6 +12,8 @@ import { DiseaseMap, type Selection } from "./DiseaseMap";
 import { AskPanel } from "./AskPanel";
 import { VoiceAgent } from "./VoiceAgent";
 import { Sections, TABS, type TabKey } from "./Sections";
+import { Connections } from "./Connections";
+import type { Connections as Conn } from "@/lib/agents/connections";
 import { day } from "./Plaque";
 import { ChevronIcon } from "./Icons";
 import { prevalenceLabel } from "@/lib/agents/evidence";
@@ -19,7 +21,7 @@ import { prevalenceLabel } from "@/lib/agents/evidence";
 const LINE_KEYS: LineKey[] = ["genes", "phenotypes", "treatments", "trials", "literature", "community"];
 const DEFAULT_TAB: Record<Audience, TabKey> = { family: "treatments", clinical: "trials", research: "gaps" };
 
-export function AtlasApp({ diseases, map, orpha, initialAudience }: { diseases: DiseaseSummary[]; map: Atlas | null; orpha: string; initialAudience: Audience }) {
+export function AtlasApp({ diseases, map, connections, orpha, initialAudience }: { diseases: DiseaseSummary[]; map: Atlas | null; connections: Conn | null; orpha: string; initialAudience: Audience }) {
   const copy = useCopy(atlasCopy);
   const { lang } = useLang();
   const router = useRouter();
@@ -55,6 +57,10 @@ export function AtlasApp({ diseases, map, orpha, initialAudience }: { diseases: 
     try { window.history.replaceState(null, "", `/atlas?d=${encodeURIComponent(orpha)}&a=${a}`); } catch { /* ignore */ }
   };
   const navigate = (anchor: string) => {
+    if (anchor === "connections") {
+      document.getElementById("connections")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      return;
+    }
     if ((TABS as string[]).includes(anchor)) setTab(anchor as TabKey);
     detailsRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   };
@@ -151,6 +157,8 @@ export function AtlasApp({ diseases, map, orpha, initialAudience }: { diseases: 
             </div>
           </aside>
         </div>
+
+        {connections && <Connections key={connections.disease.orpha} conn={connections} copy={copy} lang={lang} audience={audience} />}
 
         {map && (
           <div ref={detailsRef} id="details" className="scroll-mt-24">

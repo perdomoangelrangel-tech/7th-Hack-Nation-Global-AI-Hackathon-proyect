@@ -5,11 +5,12 @@
  * back become claims with NO evidence on purpose: the verifier drops them and the answer says
  * "There is no evidence in our sources for that."
  */
-import type { DiseaseMap } from "../atlas-data";
+import type { DiseaseMap, Station } from "../atlas-data";
+import { connectionClaims, nameIn, trialStatusText, type Connections } from "./connections";
 import type { AgentOutput } from "../verifier";
 import type { Audience } from "./profiles";
 import { askedRemedies, detectIntents, type Intent } from "./detect";
-import { clip, countriesOf, evidenceIds, fmtList, inSentence, isApproved, isRecruiting, str, trialPhases, treatmentPhase, mechanismOf } from "./evidence";
+import { approvalOf, clip, countriesOf, evidenceIds, fmtList, inSentence, isApproved, isRecruiting, str, trialPhases, treatmentPhase, mechanismOf } from "./evidence";
 
 type Locale = "en" | "es";
 type Claim = AgentOutput["claims"][number];
@@ -74,12 +75,15 @@ function treatments(map: DiseaseMap, a: Audience, l: Locale, asked: boolean): Cl
   if (!t.length) return asked ? [{ text: l === "es" ? `Tratamientos documentados para ${dn}.` : `Documented treatments for ${dn}.`, evidence_ids: [] }] : [];
   const approved = t.filter(isApproved).slice(0, 3);
   const inv = t.filter((s) => !isApproved(s)).slice(0, 3);
+  /** "Ganaxolone (FDA 2022)" when the edge records the regulator and year. */
+  const named = (s: Station) => { const ap = isApproved(s) ? approvalOf(s.edge_props) : null; return ap ? `${s.name} (${ap.label})` : s.name; };
   const out: Claim[] = [];
   if (a === "clinical") {
     for (const s of [...approved, ...inv].slice(0, 3)) {
       const ph = phaseLabel(treatmentPhase(s), l);
       const mech = mechanismOf(s);
-      const status = isApproved(s) ? (l === "es" ? "aprobado" : "approved") : (l === "es" ? "en investigación" : "investigational");
+      const ap = approvalOf(s.edge_props);
+      const status = isApproved(s) ? `${l === "es" ? "aprobado" : "approved"}${ap ? ` (${ap.label})` : ""}` : (l === "es" ? "en investigación" : "investigational");
       out.push({ text: `${s.name} (${s.canonical_id}) · ${[ph, status, mech].filter(Boolean).join(" · ")}.`, evidence_ids: evidenceIds([s]) });
     }
     return out;
@@ -87,15 +91,15 @@ function treatments(map: DiseaseMap, a: Audience, l: Locale, asked: boolean): Cl
   if (a === "research") {
     const top = inv.sort((x, y) => (treatmentPhase(y) ?? 0) - (treatmentPhase(x) ?? 0))[0];
     out.push({ text: l === "es"
-      ? `${map.totals.treatments} candidatos terapéuticos en nuestras fuentes${approved.length ? `; aprobados para esta enfermedad: ${fmtList(approved.map((s) => s.name), l)}` : ""}${top ? `; el más avanzado sin aprobación: ${top.name} (${phaseLabel(treatmentPhase(top), l) ?? "fase sin dato"})` : ""}.`
-      : `${map.totals.treatments} therapeutic candidates in our sources${approved.length ? `; approved for this disease: ${fmtList(approved.map((s) => s.name), l)}` : ""}${top ? `; most advanced without approval: ${top.name} (${phaseLabel(treatmentPhase(top), l) ?? "phase not recorded"})` : ""}.`,
+      ? `${map.totals.treatments} candidatos terapéuticos en nuestras fuentes${approved.length ? `; aprobados para esta enfermedad: ${fmtList(approved.map(named), l)}` : ""}${top ? `; el más avanzado sin aprobación: ${top.name} (${phaseLabel(treatmentPhase(top), l) ?? "fase sin dato"})` : ""}.`
+      : `${map.totals.treatments} therapeutic candidates in our sources${approved.length ? `; approved for this disease: ${fmtList(approved.map(named), l)}` : ""}${top ? `; most advanced without approval: ${top.name} (${phaseLabel(treatmentPhase(top), l) ?? "phase not recorded"})` : ""}.`,
       evidence_ids: evidenceIds([...approved, ...(top ? [top] : [])], 1) });
     return out;
   }
   if (approved.length) {
     out.push({ text: l === "es"
-      ? `Medicamentos que nuestras fuentes registran como aprobados: ${fmtList(approved.map((s) => s.name), l)}.`
-      : `Medicines our sources list as approved: ${fmtList(approved.map((s) => s.name), l)}.`, evidence_ids: evidenceIds(approved) });
+      ? `Medicamentos que nuestras fuentes registran como aprobados para ${dn}: ${fmtList(approved.map(named), l)}.`
+      : `Medicines our sources list as approved for ${dn}: ${fmtList(approved.map(named), l)}.`, evidence_ids: evidenceIds(approved) });
   } else if (asked) {
     out.push({ text: l === "es" ? `Un tratamiento aprobado para ${dn}.` : `An approved treatment for ${dn}.`, evidence_ids: [] });
   }
@@ -219,16 +223,43 @@ function nextSteps(map: DiseaseMap, a: Audience, l: Locale): Step[] {
   return steps;
 }
 
+function connections(conn: Connections | null | undefined, map: DiseaseMap, a: Audience, l: Locale): { claims: Claim[]; steps: Step[] } {
+  const ranked = (conn?.neighbors ?? []).filter((n) => !n.gap);
+  if (!conn || !ranked.length) {
+    return { claims: [{ text: l === "es" ? `Otras enfermedades que comparten evidencia con ${diseaseName(map, l)}.` : `Other diseases that share evidence with ${map.disease.name}.`, evidence_ids: [] }], steps: [] };
+  }
+  const [top, second] = ranked;
+  const claims = connectionClaims(conn.disease, top, l, a, 3).map((c, i) => (i === 0 ? { ...c, text: (l === "es" ? `Con ${nameIn(top.disease, l)}: ` : `With ${top.disease.name}: `) + c.text } : c));
+  if (second) {
+    const c2 = connectionClaims(conn.disease, second, l, a, 1)[0];
+    if (c2) claims.push({ ...c2, text: (l === "es" ? `Con ${nameIn(second.disease, l)}: ` : `With ${second.disease.name}: `) + c2.text });
+  }
+  const steps: Step[] = [];
+  for (const s of top.steps) {
+    if (s.kind === "ask_sponsor" && s.item) steps.push({ kind: "treatment", label: l === "es" ? `Preguntar al patrocinador: ${s.item}` : `Ask the sponsor: ${s.item}`, ref: s.url });
+    if (s.kind === "trial_eligibility" && s.nct) steps.push({ kind: "trial", label: l === "es" ? `Preguntar al equipo de ${s.label ?? s.nct} (${trialStatusText(s.status, l)})` : `Ask the ${s.label ?? s.nct} team (${trialStatusText(s.status, l)})`, ref: s.url });
+    if (s.kind === "trial_results" && s.nct) steps.push({ kind: "trial", label: l === "es" ? `Resultados de ${s.label ?? s.nct} (${trialStatusText(s.status, l)})` : `Results from ${s.label ?? s.nct} (${trialStatusText(s.status, l)})`, ref: s.url });
+    if (s.kind === "joint_call" && s.item) steps.push({ kind: "community", label: l === "es" ? `Llamada conjunta: ${s.item}` : `Joint call: ${s.item}`, ref: s.url });
+  }
+  steps.push({ kind: "research_gap", label: l === "es" ? "Por validar: mismo mecanismo (revisión experta)" : "To validate: same mechanism (expert review)", ref: "#connections" });
+  return { claims, steps };
+}
+
 /** Deterministic answer for one audience and locale. Only the map's evidence ids are ever attached. */
-export function demoDraft(map: DiseaseMap | null, audience: Audience, locale: Locale, question: string): AgentOutput {
+export function demoDraft(map: DiseaseMap | null, audience: Audience, locale: Locale, question: string, conn?: Connections | null): AgentOutput {
   if (!map) return { spoken: "", claims: [], next_steps: [] };
   const intents = detectIntents(question);
+  if (intents.includes("connections")) {
+    const c = connections(conn, map, audience, locale);
+    return { spoken: "", claims: c.claims.slice(0, MAX_CLAIMS), next_steps: c.steps.length ? c.steps : nextSteps(map, audience, locale) };
+  }
   const order = [...new Set<Intent>([...intents, ...DEFAULT_ORDER[audience]])];
   const claims: Claim[] = [...remedies(map, locale, question)];
   for (const i of order) {
     const asked = intents.includes(i);
     const add =
-      i === "cure" ? cure(map, locale)
+      i === "connections" ? []
+      : i === "cure" ? cure(map, locale)
       : i === "genes" ? genes(map, audience, locale)
       : i === "symptoms" ? symptoms(map, audience, locale)
       : i === "treatments" ? treatments(map, audience, locale, asked)

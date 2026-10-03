@@ -37,6 +37,17 @@ export function isApproved(s: Station) {
   return (treatmentPhase(s) ?? 0) >= 4;
 }
 
+/** Regulatory approval recorded on the edge (`approval: {agency, date, url}`) → { agency: "FDA", year: "2022", url }. */
+export function approvalOf(props: Record<string, unknown> | null | undefined): { agency: string; year: string | null; url: string | null; label: string } | null {
+  const a = props?.approval;
+  if (!a || typeof a !== "object") return null;
+  const r = a as Record<string, unknown>;
+  const agency = str(r.agency);
+  if (!agency) return null;
+  const year = str(r.date)?.match(/\d{4}/)?.[0] ?? null;
+  return { agency, year, url: str(r.url), label: year ? `${agency} ${year}` : agency };
+}
+
 export const mechanismOf = (s: Station) => str(s.edge_props.mechanism) ?? str(s.props.mechanism);
 
 const RECRUITING = new Set(["RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION"]);
@@ -112,8 +123,14 @@ export function clip(s: string, n: number) {
 export const SOURCE_LABEL: Record<string, string> = {
   orphanet: "Orphanet", hpo: "HPO", monarch: "Monarch", clinvar: "ClinVar", ctgov: "ClinicalTrials.gov",
   opentargets: "Open Targets", pubmed: "PubMed", patient_orgs: "Patient orgs", research_community: "Researcher registry",
+  fda: "FDA", ema: "EMA", pmda: "PMDA",
 };
 export const sourceLabel = (s: string) => SOURCE_LABEL[s] ?? s;
+/** External id without a prefix that repeats the source label ("FDA:ztalmy-2022" under "FDA" → "ztalmy-2022"). */
+export function externalIdShort(source: string, externalId: string) {
+  const label = sourceLabel(source);
+  return externalId.toLowerCase().startsWith(`${label.toLowerCase()}:`) ? externalId.slice(label.length + 1) : externalId;
+}
 
 /** Orphanet prevalence (string or [{type, class, geographic}]) → "1-9 / 100 000 · Prevalence at birth · Europe". */
 export function prevalenceLabel(v: unknown): string | null {

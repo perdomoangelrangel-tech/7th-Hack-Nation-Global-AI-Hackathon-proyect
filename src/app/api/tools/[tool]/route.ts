@@ -9,17 +9,18 @@
  *   GET /api/tools/literature?q=Angelman&limit=5
  *   GET /api/tools/communities?q=CDKL5
  *   GET /api/tools/gaps?q=CLN2
+ *   GET /api/tools/connections?q=CDKL5                → diseases sharing evidence, ranked, with next steps
  *   GET /api/tools/phenotype-match?hpo=HP:0001250,HP:0002373
  * Every item: { summary, evidence_ids }. Header x-atlas-key is required when ATLAS_TOOLS_KEY is set.
  * Data: live graph with a 4 s budget, falling back to the bundled snapshot.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getDiseaseMap, listDiseases, type DiseaseMap } from "@/lib/atlas-data";
+import { getConnections, getDiseaseMap, listDiseases, type DiseaseMap } from "@/lib/atlas-data";
 import { resolveDisease } from "@/lib/agents/detect";
 import { phenotypeMatch } from "@/lib/graph";
 import {
   TOOL_CATALOG, communitiesTool, diseaseTool, emptyTool, fit, gapsTool, literatureTool, matchPhenotypes,
-  phenotypeMatchTool, treatmentsTool, trialsTool, type MatchRow, type ToolResponse,
+  connectionsTool, phenotypeMatchTool, treatmentsTool, trialsTool, type MatchRow, type ToolResponse,
 } from "@/lib/agents/tools";
 import { answer } from "@/lib/agents/answer";
 
@@ -67,6 +68,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ tool: strin
 
     const q = sp.get("q")?.trim() ?? "";
     const d = resolveDisease(q, await listDiseases());
+    if (tool === "connections") {
+      const conn = d ? await getConnections(d.orpha) : null;
+      return json(conn ? connectionsTool(conn) : emptyTool(tool, "There is no evidence in our sources for that disease."));
+    }
     const map = d ? await getDiseaseMap(d.orpha) : null;
     if (!map) return json(emptyTool(tool, "There is no evidence in our sources for that disease."));
     return json(run(tool, map, sp));

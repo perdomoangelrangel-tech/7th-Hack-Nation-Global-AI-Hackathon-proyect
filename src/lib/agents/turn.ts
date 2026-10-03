@@ -4,12 +4,14 @@
  * through the verifier.
  */
 import type { DiseaseMap, EvidenceRef, Station } from "../atlas-data";
+import type { Connections } from "./connections";
+import { pairEvidence } from "./connections";
 import type { AgentOutput } from "../verifier";
 import type { Intent } from "./detect";
-import { communitiesTool, diseaseTool, gapsTool, literatureTool, treatmentsTool, trialsTool } from "./tools";
+import { communitiesTool, connectionsTool, diseaseTool, gapsTool, literatureTool, treatmentsTool, trialsTool } from "./tools";
 
 const INTENT_TOOL: Record<Intent, string> = {
-  cure: "treatments", genes: "disease", symptoms: "disease", treatments: "treatments", trials: "trials",
+  connections: "connections", cure: "treatments", genes: "disease", symptoms: "disease", treatments: "treatments", trials: "trials",
   community: "communities", literature: "literature", gaps: "gaps",
 };
 
@@ -21,7 +23,7 @@ export function turnTools(profileTools: string[], intents: Intent[]) {
 
 const all = (list: Station[]) => list.flatMap((s) => s.evidence);
 
-export function toolsForTurn(map: DiseaseMap, profileTools: string[], intents: Intent[]) {
+export function toolsForTurn(map: DiseaseMap, profileTools: string[], intents: Intent[], connections?: Connections | null) {
   const names = turnTools(profileTools, intents);
   const tools: Record<string, unknown> = {};
   const evidence: EvidenceRef[] = [];
@@ -33,6 +35,10 @@ export function toolsForTurn(map: DiseaseMap, profileTools: string[], intents: I
     else if (t === "trials") { tools.trials = trialsTool(map); evidence.push(...all(map.lines.trials)); }
     else if (t === "literature") { tools.literature = literatureTool(map); evidence.push(...all(map.lines.literature)); }
     else if (t === "communities") { tools.communities = communitiesTool(map); evidence.push(...all(map.lines.community)); }
+    else if (t === "connections" && connections) {
+      tools.connections = connectionsTool(connections);
+      for (const n of connections.neighbors) evidence.push(...pairEvidence(n));
+    }
     else if (t === "gaps") {
       tools.gaps = gapsTool(map);
       for (const g of map.gaps) for (const id of g.evidence_ids) { const e = index.get(id); if (e) evidence.push(e); }

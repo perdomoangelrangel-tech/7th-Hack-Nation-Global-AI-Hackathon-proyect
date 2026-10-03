@@ -1,6 +1,7 @@
 // Edge Function `ingest`: pulls open sources into the evidence graph.
 // Auth: header `x-ingest-key` must equal public.app_secrets('ingest_key') (verify_jwt is off).
-// Body: { orpha?: "ORPHA:33069", step?: "orphanet"|"ctgov"|"pubmed"|"clinvar"|"opentargets"|"hpo"|"orgs"|"community"|"all", dry?: boolean }
+// Body: { orpha?: "ORPHA:33069", step?: "orphanet"|"ctgov"|"pubmed"|"clinvar"|"opentargets"|"hpo"|"orgs"|"community"|"approvals"|"all", dry?: boolean }
+// Curated regulatory approvals (seed/approvals.json) are re-applied at the end of EVERY non-dry call.
 // Invoked from SQL with pg_net (see private.invoke_ingest) and scheduled with pg_cron.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Batch } from "./graph.ts";
@@ -14,9 +15,10 @@ import { community } from "./sources/community.ts";
 import { clinvar } from "./sources/clinvar.ts";
 import { orgs } from "./sources/orgs.ts";
 import { hpo } from "./sources/hpo.ts";
+import { approvals } from "./sources/approvals.ts";
 
 type DiseaseStep = "orphanet" | "opentargets" | "ctgov" | "pubmed" | "community" | "clinvar" | "orgs";
-type Step = DiseaseStep | "hpo" | "all";
+type Step = DiseaseStep | "hpo" | "approvals" | "all";
 
 // Order matters: orphanet creates the disease + gene nodes, opentargets the ChEMBL treatments that
 // ctgov interventions are matched to, pubmed the papers that community reads.
@@ -24,9 +26,9 @@ const DISEASE_STEPS: DiseaseStep[] = ["orphanet", "opentargets", "ctgov", "pubme
 const RUNNERS: Record<DiseaseStep, (ctx: Ctx, d: SeedDisease) => Promise<void>> = {
   orphanet, opentargets, ctgov, pubmed, community, clinvar, orgs,
 };
-const SOURCE_OF: Record<DiseaseStep | "hpo", SourceId> = {
+const SOURCE_OF: Record<DiseaseStep | "hpo" | "approvals", SourceId> = {
   orphanet: "orphanet", opentargets: "opentargets", ctgov: "ctgov", pubmed: "pubmed",
-  community: "pubmed", clinvar: "clinvar", orgs: "patient_orgs", hpo: "hpo",
+  community: "pubmed", clinvar: "clinvar", orgs: "patient_orgs", hpo: "hpo", approvals: "fda",
 };
 const BUDGET_MS = 125_000;
 
@@ -55,7 +57,7 @@ Deno.serve(async (req) => {
   const body: any = await req.json().catch(() => ({}));
   const step: Step = body.step ?? "all";
   const dry = body.dry === true;
-  const valid: Step[] = [...DISEASE_STEPS, "hpo", "all"];
+  const valid: Step[] = [...DISEASE_STEPS, "hpo", "approvals", "all"];
   if (!valid.includes(step)) return json({ error: `unknown step ${step}`, valid }, 400);
   const targets: SeedDisease[] = body.orpha ? DISEASES.filter((d) => d.orpha === body.orpha || d.slug === body.orpha) : DISEASES;
   if (!targets.length) return json({ error: `unknown disease ${body.orpha}`, known: DISEASES.map((d) => d.orpha) }, 400);
@@ -65,8 +67,8 @@ Deno.serve(async (req) => {
   const results: unknown[] = [];
   const skipped: string[] = [];
 
-  const runStep = async (name: DiseaseStep | "hpo", d: SeedDisease | null, fn: (ctx: Ctx) => Promise<void>) => {
-    if (Date.now() > deadline - 15_000) { skipped.push(`${d?.orpha ?? "ALL"}:${name}`); return; }
+  const runStep = async (name: DiseaseStep | "hpo" | "approvals", d: SeedDisease | null, fn: (ctx: Ctx) => Promise<void>) => {
+    if (name !== "approvals" && Date.now() > deadline - 15_000) { skipped.push(`${d?.orpha ?? "ALL"}:${name}`); return; }
     const notes: string[] = [];
     const ctx: Ctx = {
       db, batch: new Batch(), dry, deadline,
@@ -103,9 +105,13 @@ Deno.serve(async (req) => {
 
   if (step === "hpo") {
     await runStep("hpo", null, (ctx) => hpo(ctx));
-  } else {
+  } else if (step !== "approvals") {
     const steps = step === "all" ? DISEASE_STEPS : [step];
     for (const d of targets) for (const st of steps) await runStep(st, d, (ctx) => RUNNERS[st](ctx, d));
+  }
+  // Curated approvals last, on every call, so no upstream refresh can revert them.
+  if (!dry || step === "approvals") {
+    for (const d of targets) await runStep("approvals", d, (ctx) => approvals(ctx, d));
   }
 
   const ok = results.every((r) => (r as { ok: boolean }).ok);

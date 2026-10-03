@@ -33,6 +33,7 @@ export function Riders() {
                   <div className="md:pt-1">
                     <h3 className="text-2xl">{r.name}</h3>
                     <p className={`mt-1.5 font-mono text-[0.9375rem] font-semibold ${s.fare}`}>{r.fare}</p>
+                    {r.persona ? <p className="mt-1 font-mono text-[0.8125rem] text-ink-3">{r.persona}</p> : null}
                   </div>
                   <div className="relative">
                     <span

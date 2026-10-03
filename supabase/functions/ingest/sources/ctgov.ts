@@ -12,7 +12,8 @@ const FIELDS = [
   "StartDate", "PrimaryCompletionDate", "LastUpdatePostDate",
   "InterventionName", "InterventionType", "EnrollmentCount", "Condition", "MinimumAge", "MaximumAge",
 ].join(",");
-const TREATMENT_TYPES = new Set(["DRUG", "BIOLOGICAL", "GENETIC", "DIETARY_SUPPLEMENT", "COMBINATION_PRODUCT", "DEVICE"]);
+// DEVICE is excluded: in these trials devices are monitoring / assistive tools, not treatments.
+const TREATMENT_TYPES = new Set(["DRUG", "BIOLOGICAL", "GENETIC", "DIETARY_SUPPLEMENT", "COMBINATION_PRODUCT"]);
 const NOT_A_TREATMENT = /placebo|sham|vehicle|standard of care|usual care|best supportive|no intervention|^control|saline/i;
 const PHASE_NUM: Record<string, number> = { EARLY_PHASE1: 0.5, PHASE1: 1, PHASE2: 2, PHASE3: 3, PHASE4: 4 };
 
@@ -84,8 +85,8 @@ export async function ctgov(ctx: Ctx, d: SeedDisease) {
     });
 
     for (const iv of ivs) {
-      const name: string = (iv?.name ?? "").trim();
       const type: string = iv?.type ?? "OTHER";
+      const name = cleanIntervention(iv?.name ?? "");
       if (!name || !TREATMENT_TYPES.has(type) || NOT_A_TREATMENT.test(name)) continue;
       const key = matchTreatment(name, dict) ?? `CTGOV:${slug(name).slice(0, 80)}`;
       const a = interventions.get(key) ?? { name, type, ncts: new Set(), phase: 0, statuses: new Set(), titles: new Map() };
@@ -148,23 +149,26 @@ async function treatmentDictionary(ctx: Ctx): Promise<Dict> {
   const terms: [string, string][] = [];
   const names = new Map<string, string>();
   for (const t of data ?? []) {
-    names.set(t.canonical_id, t.name);
+    // salt forms point at their parent molecule (set by the Open Targets step)
+    const id = (t.props?.parent_chembl as string | undefined) ?? t.canonical_id;
+    if (id === t.canonical_id) names.set(id, t.name);
     const list = [t.name, ...((t.props?.trade_names as string[]) ?? []), ...((t.props?.synonyms as string[]) ?? [])];
     for (const n of list) {
       const norm = normalize(n);
-      if (norm.length >= 5) terms.push([norm, t.canonical_id]);
+      if (norm.length >= 5) terms.push([norm, id]);
     }
     // "fenfluramine hydrochloride" -> also "fenfluramine"
     const base = normalize(t.name).split(" ")[0];
-    if (base.length >= 6 && !SALTS.has(base)) terms.push([base, t.canonical_id]);
+    if (base.length >= 6 && !SALTS.has(base)) terms.push([base, id]);
   }
   terms.sort((a, b) => b[0].length - a[0].length);
   return { terms, names };
 }
 
+/** Treats edges owned by an authoritative source (Open Targets or a curated regulator approval). */
 async function existingOtTreats(ctx: Ctx, orpha: string): Promise<Map<string, { confidence: number; confidence_basis: string }>> {
   const { data } = await ctx.db.from("edge_evidence").select("from_canonical_id, edge_props, confidence, confidence_basis").eq("relation", "treats").eq("to_canonical_id", orpha).limit(500);
-  return new Map((data ?? []).filter((r: Any) => r.edge_props?.origin === "opentargets")
+  return new Map((data ?? []).filter((r: Any) => r.edge_props?.origin === "opentargets" || r.edge_props?.origin === "fda")
     .map((r: Any) => [r.from_canonical_id, { confidence: Number(r.confidence), confidence_basis: r.confidence_basis }]));
 }
 
@@ -174,4 +178,17 @@ function matchTreatment(name: string, dict: Dict): string | undefined {
   const n = ` ${normalize(name)} `;
   for (const [term, id] of dict.terms) if (n.includes(` ${term} `)) return id;
   return undefined;
+}
+
+/**
+ * Intervention names are free text. Strip arm / cohort labels and "for the treatment of ..." tails, and
+ * reject anything that still reads like a title or sentence (those are never treatment names).
+ */
+export function cleanIntervention(raw: string): string | null {
+  let n = raw.replace(/\s+/g, " ").trim();
+  n = n.split(/\s+for the treatment of\s+/i)[0];
+  n = n.replace(/\s*[-\u2013:,(]\s*(fixed[- ]dose|dose[- ]escalation|low[- ]dose|high[- ]dose|single[- ]dose|multiple[- ]dose|open[- ]label|cohort|arm|part\s+\w+)\b.*$/i, "").trim();
+  if (!n || n.length > 60 || /\.$/.test(n)) return null;
+  if (/\b(trial|study|randomi[sz]ed|placebo|double[- ]blind|cohort|questionnaire|assessment|monitoring|survey|interview)\b/i.test(n)) return null;
+  return n;
 }

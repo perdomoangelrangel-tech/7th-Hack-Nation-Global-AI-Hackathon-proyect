@@ -37,7 +37,8 @@ with d as (
     'edge_props', jsonb_strip_nulls(jsonb_build_object('frequency', edge_props->'frequency', 'association_type', edge_props->'association_type',
       'phase', edge_props->'phase', 'status', edge_props->'status', 'stage', edge_props->'stage', 'approved_for_indication', edge_props->'approved_for_indication',
       'investigational', edge_props->'investigational', 'mechanism', edge_props->'mechanism', 'origin', edge_props->'origin',
-      'intervention_type', edge_props->'intervention_type', 'nct_ids', edge_props->'nct_ids')),
+      'intervention_type', edge_props->'intervention_type', 'nct_ids', edge_props->'nct_ids',
+      'trial_status', edge_props->'trial_status', 'trial_phase', edge_props->'trial_phase', 'approval', edge_props->'approval')),
     'evidence', (select jsonb_agg(jsonb_build_object('id', e->'id', 'source', e->'source', 'external_id', e->'external_id', 'url', e->'url',
         'published_on', e->'published_on', 'retrieved_at', left(e->>'retrieved_at', 19) || 'Z', 'quote', left(e->>'quote', 100))) from (select e from jsonb_array_elements(evidence) e limit 2) z)
   ) j from r

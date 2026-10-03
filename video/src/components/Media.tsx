@@ -24,7 +24,13 @@ export const RecSlot: React.FC<{
   /** seconds to skip at the start of the recording */
   trimStart?: number;
   volume?: number;
-}> = ({ file, cue, tag, dur, trimStart = 0, volume = 1 }) => {
+  /** full-frame (team clips) instead of the framed screen */
+  fullBleed?: boolean;
+  /** placeholder header */
+  label?: string;
+  /** extra hint shown under the file path on the placeholder */
+  hint?: string;
+}> = ({ file, cue, tag, dur, trimStart = 0, volume = 1, fullBleed = false, label = "SCREEN RECORDING", hint }) => {
   const frame = useCurrentFrame();
   const path = `rec/${file}`;
   const exists = hasStatic(path);
@@ -36,11 +42,11 @@ export const RecSlot: React.FC<{
         <div
           style={{
             position: "absolute",
-            left: 64,
-            top: 48,
-            right: 64,
-            bottom: 48,
-            borderRadius: 18,
+            left: fullBleed ? 0 : 64,
+            top: fullBleed ? 0 : 48,
+            right: fullBleed ? 0 : 64,
+            bottom: fullBleed ? 0 : 48,
+            borderRadius: fullBleed ? 0 : 18,
             border: exists ? `3px solid ${C.ink}` : `4px dashed ${C.gap}`,
             overflow: "hidden",
             background: exists ? C.ink : C.panel,
@@ -51,7 +57,7 @@ export const RecSlot: React.FC<{
               src={staticFile(path)}
               trimBefore={Math.round(trimStart * FPS)}
               volume={volume}
-              style={{ width: "100%", height: "100%", objectFit: "contain", background: C.canvas }}
+              style={{ width: "100%", height: "100%", objectFit: fullBleed ? "cover" : "contain", background: C.canvas }}
             />
           ) : (
             <div
@@ -72,7 +78,7 @@ export const RecSlot: React.FC<{
                   <circle cx={22} cy={22} r={16} fill={(Math.floor(s * 2) % 2 === 0) ? C.gene : C.canvas} stroke={C.ink} strokeWidth={5} />
                 </svg>
                 <span style={{ fontFamily: F.mono, fontSize: 34, fontWeight: 700, color: C.ink, letterSpacing: "0.06em" }}>
-                  SCREEN RECORDING
+                  {label}
                 </span>
               </div>
               <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 54, color: C.ink, maxWidth: 1400, lineHeight: 1.15, letterSpacing: "-0.02em" }}>
@@ -81,6 +87,7 @@ export const RecSlot: React.FC<{
               <div style={{ fontFamily: F.mono, fontSize: 26, color: C.ink3 }}>
                 drop file → video/public/{path} · {(dur / FPS).toFixed(1)} s
               </div>
+              {hint && <div style={{ fontFamily: F.mono, fontSize: 24, color: C.ink3, marginTop: -12 }}>{hint}</div>}
             </div>
           )}
         </div>

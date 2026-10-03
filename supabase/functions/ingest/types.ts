@@ -22,12 +22,28 @@ export interface SeedOrganization {
   diseases: string[];
 }
 
+/** Curated regulatory approval tied to an official agency URL (supabase/seed/approvals.json). */
+export interface SeedApproval {
+  orpha: string;
+  treatment_id: string;      // CHEMBL id (verified) of the treatment entity
+  treatment_name: string;
+  trade_name?: string;
+  agency: string;            // FDA
+  date: string;              // YYYY-MM
+  published_on?: string;     // only when the official page shows it
+  indication: string;
+  external_id: string;
+  url: string;
+  quote: string;
+  verified?: string;         // how/when the URL and ids were checked
+}
+
 export type EntityType =
   | "disease" | "gene" | "phenotype" | "variant" | "trial" | "study" | "treatment" | "organization";
 export type Relation =
   | "causes" | "has_phenotype" | "has_variant" | "studies" | "treats" | "supports" | "researches" | "is_a";
 export type SourceId =
-  | "orphanet" | "hpo" | "monarch" | "clinvar" | "ctgov" | "opentargets" | "pubmed" | "patient_orgs";
+  | "orphanet" | "hpo" | "monarch" | "clinvar" | "ctgov" | "opentargets" | "pubmed" | "patient_orgs" | "fda";
 
 export interface EntityRef {
   type: EntityType;

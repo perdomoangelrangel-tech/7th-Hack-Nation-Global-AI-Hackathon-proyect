@@ -1,7 +1,7 @@
 "use client";
 /** Citation chips and the station plaque (name · code · facts · evidence with source, ID and date). */
 import type { EvidenceRef, LineKey, Station } from "@/lib/atlas-data";
-import { countriesOf, isApproved, sourceLabel, str, strList, trialPhases, treatmentPhase, mechanismOf } from "@/lib/agents/evidence";
+import { approvalOf, countriesOf, externalIdShort, isApproved, sourceLabel, str, strList, trialPhases, treatmentPhase, mechanismOf } from "@/lib/agents/evidence";
 import type { AtlasCopy } from "./copy";
 import { LINE_META } from "./lines";
 import { BackIcon, CloseIcon, ExternalIcon } from "./Icons";
@@ -12,7 +12,7 @@ export function CitationChip({ e, compact = false }: { e: EvidenceRef; compact?:
   const label = (
     <>
       <span className="shrink-0 whitespace-nowrap font-sans font-bold text-ink-2">{sourceLabel(e.source)}</span>
-      <span className="min-w-0 truncate">{e.external_id}</span>
+      <span className="min-w-0 truncate">{externalIdShort(e.source, e.external_id)}</span>
       {!compact && day(e.published_on) && <span className="shrink-0 whitespace-nowrap text-ink-3">· {day(e.published_on)}</span>}
     </>
   );
@@ -27,11 +27,25 @@ export function CitationChip({ e, compact = false }: { e: EvidenceRef; compact?:
   );
 }
 
+/** "Approved · FDA 2022" for a treatment whose edge records a regulatory approval for this disease (links to the notice). */
+export function ApprovalBadge({ s, copy }: { s: Station; copy: AtlasCopy }) {
+  const a = isApproved(s) ? approvalOf(s.edge_props) : null;
+  if (!a) return null;
+  const cls = "inline-flex items-center gap-1 rounded-full bg-panel px-2 py-0.5 font-mono text-xs font-bold text-t-treat";
+  return a.url
+    ? <a href={a.url} target="_blank" rel="noreferrer" className={`${cls} underline-offset-2 hover:underline`}>{copy.treat.approvedBy(a.label)}<ExternalIcon size={11} /></a>
+    : <span className={cls}>{copy.treat.approvedBy(a.label)}</span>;
+}
+
 /** Short secondary line under a station name (code + the one fact that matters for that line). */
 export function stationCode(s: Station, line: LineKey, c: AtlasCopy): string {
   const bits: (string | null)[] = [s.canonical_id || null];
   if (line === "phenotypes") bits.push(str(s.edge_props.frequency)?.replace(/\s*\(.*\)/, "") ?? null);
-  if (line === "treatments") { const p = treatmentPhase(s); bits.push(isApproved(s) ? c.props.approved.toLowerCase() : p != null ? c.treat.phase(p).toLowerCase() : null); }
+  if (line === "treatments") {
+    const p = treatmentPhase(s);
+    const a = approvalOf(s.edge_props);
+    bits.push(isApproved(s) ? (a ? `${c.props.approved.toLowerCase()} · ${a.label}` : c.props.approved.toLowerCase()) : p != null ? c.treat.phase(p).toLowerCase() : null);
+  }
   if (line === "trials") bits.push(str(s.props.status)?.replace(/_/g, " ").toLowerCase() ?? null);
   if (line === "literature") bits.push(day(s.evidence[0]?.published_on)?.slice(0, 4) ?? null);
   if (line === "community") {
@@ -48,7 +62,8 @@ function facts(s: Station, line: LineKey, c: AtlasCopy): [string, string][] {
   if (line === "phenotypes") out.push([p.frequency, str(s.edge_props.frequency)]);
   if (line === "treatments") {
     const ph = treatmentPhase(s);
-    out.push([p.approved, isApproved(s) ? p.yes : p.no], [p.phase, ph != null ? String(ph) : null], [p.mechanism, mechanismOf(s)], [p.type, str(s.props.drug_type) ?? str(s.edge_props.intervention_type)?.toLowerCase() ?? null], ["NCT", strList(s.edge_props.nct_ids).join(", ") || null]);
+    const a = isApproved(s) ? approvalOf(s.edge_props) : null;
+    out.push([p.approved, isApproved(s) ? (a ? `${p.yes} · ${a.label}` : p.yes) : p.no], [p.phase, ph != null ? String(ph) : null], [p.mechanism, mechanismOf(s)], [p.type, str(s.props.drug_type) ?? str(s.edge_props.intervention_type)?.toLowerCase() ?? null], ["NCT", strList(s.edge_props.nct_ids).join(", ") || null]);
   }
   if (line === "trials") {
     const cs = countriesOf(s);
@@ -75,6 +90,7 @@ export function StationPlaque({ station, line, copy, onClose, onBack, headingLev
             <p className={`font-display text-xs font-extrabold uppercase tracking-[0.06em] ${meta.text}`}>{copy.lines[line]}</p>
             <H className="mt-1 font-display text-lg font-bold leading-snug tracking-tight text-ink [overflow-wrap:anywhere]">{station.name}</H>
             {station.canonical_id && <p className="mt-0.5 font-mono text-sm text-ink-3">{station.canonical_id}</p>}
+            {line === "treatments" && isApproved(station) && approvalOf(station.edge_props) && <p className="mt-1.5"><ApprovalBadge s={station} copy={copy} /></p>}
           </div>
           <div className="flex shrink-0 gap-1">
             {onBack && (

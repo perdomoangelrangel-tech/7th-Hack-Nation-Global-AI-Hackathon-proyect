@@ -8,7 +8,7 @@ import { CUTS, cutFrames } from "./cuts/timeline";
 
 loadBrandFonts();
 
-const CUT_IDS: Record<string, string> = { pitch60: "Pitch60", pitch120: "Pitch120", tech60: "Tech60", tech120: "Tech120" };
+const CUT_IDS: Record<string, string> = { demo60: "Demo60", tech60: "Tech60", team60: "Team60" };
 const CUT_COMPONENTS: Record<string, React.FC<CutProps>> = Object.fromEntries(
   CUTS.map((cut) => {
     const C: React.FC<CutProps> = (p) => <Cut cut={cut} {...p} />;
@@ -19,7 +19,7 @@ const CUT_COMPONENTS: Record<string, React.FC<CutProps>> = Object.fromEntries(
 
 /**
  * Scenes/  → each scene at its natural length (render these at full quality).
- * Cuts/    → assembled videos with recording + audio slots (guides on = draft overlay).
+ * Cuts/    → Demo60, Tech60, Team60 (≤ 60 s each): scenes + recording slots + burned-in captions + audio slots.
  * Variants → a couple of scene variants used by the tech cut.
  */
 export const RemotionRoot: React.FC = () => (
@@ -34,7 +34,7 @@ export const RemotionRoot: React.FC = () => (
           fps={FPS}
           width={W}
           height={H}
-          defaultProps={{ guides: true, sfxVolume: 1 } as CutProps}
+          defaultProps={{ guides: true, captions: true, sfxVolume: 1 } as CutProps}
         />
       ))}
     </Folder>
