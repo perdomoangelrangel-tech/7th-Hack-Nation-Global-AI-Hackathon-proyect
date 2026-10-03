@@ -202,14 +202,14 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     g.cameraPosition({ x: x * ratio, y: y * ratio, z: z * ratio }, { x, y, z }, ms);
   }, [data]);
 
-  /** With a focus: its connected component (a far-away cluster should not shrink the story). */
+  /** With a focus: the story = the focus, the diseases it links to directly and every non-disease node (genes, pathways,
+   *  groups… all belong to the focus or its neighbors). The rest of the constellation stays visible around it. */
   const focusComponent = useMemo(() => {
     const f = view?.focus; if (!f) return null;
-    const adj = new Map<string, string[]>();
-    for (const l of data.links) { const a = endId(l.source), b = endId(l.target); adj.set(a, [...(adj.get(a) ?? []), b]); adj.set(b, [...(adj.get(b) ?? []), a]); }
-    const seen = new Set([f]); const q = [f];
-    while (q.length) for (const x of adj.get(q.shift()!) ?? []) if (!seen.has(x)) { seen.add(x); q.push(x); }
-    return seen;
+    const set = new Set([f]);
+    for (const n of data.nodes) if (n.type !== "disease") set.add(String(n.id));
+    for (const l of data.links) { const a = endId(l.source), b = endId(l.target); if (a === f) set.add(b); if (b === f) set.add(a); }
+    return set;
   }, [data, view]);
 
   const frameStory = useCallback((ms: number) => frame(focusComponent, ms), [frame, focusComponent]);
