@@ -70,7 +70,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
         <h2 className="text-xs uppercase tracking-widest text-ink-3">{t.route}</h2>
         <ol className="mt-2 space-y-2">
           {order.map((q, i) => (
-            <li key={q} className="text-sm"><span className="text-ink-3">{i + 1}. {t.q[i]}</span><br /><span className="text-ink">{j.summary[q].text}</span>{sup(j.summary[q].cite.edges)}{j.summary[q].cite.kinds.includes("inferred") && <span className="ml-2 text-[11px] text-amber">({c.inferred_review})</span>}</li>
+            <li key={q} className="text-sm"><span className="text-ink-3">{i + 1}. {t.q[i]}</span><br /><span className="text-ink">{j.summary[q].text}</span>{sup(j.summary[q].cite.edges)}{j.summary[q].cite.kinds.includes("inferred") && <span className="ml-2 text-[11px] text-brand-deep">({c.inferred_review})</span>}</li>
           ))}
         </ol>
       </section>
@@ -82,7 +82,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             {j.next.steps.map((s, i) => (
               <tr key={s.id} className="border-t border-line align-top">
                 <td className="py-2 pr-3 w-6 text-ink-3">{i + 1}</td>
-                <td className="py-2 pr-3"><p className="font-medium">{s.title}{sup(s.cite.edges)}</p><p className="text-ink-2 text-xs mt-0.5">{s.detail}</p>{s.needs_review && <p className="text-[11px] text-amber mt-0.5">{c.needs_review}</p>}</td>
+                <td className="py-2 pr-3"><p className="font-medium">{s.title}{sup(s.cite.edges)}</p><p className="text-ink-2 text-xs mt-0.5">{s.detail}</p>{s.needs_review && <p className="text-[11px] text-brand-deep mt-0.5">{c.needs_review}</p>}</td>
                 <td className="py-2 w-32 text-xs text-ink-2"><span className="text-ink-3">{t.owner}: </span>{c.owner[s.owner]}</td>
               </tr>
             ))}

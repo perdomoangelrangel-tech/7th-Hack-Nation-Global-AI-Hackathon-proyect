@@ -1,6 +1,6 @@
 /**
  * Edge kind is always visible: observed (solid) · inferred (dashed) · extracted (dotted) · proposed (ghost).
- * Mirrors the graph's line styles so a card and its highlighted edge read the same way.
+ * Amber is reserved for gaps / no evidence. Mirrors the graph's line styles so a card and its highlighted edge read the same way.
  */
 import type { JourneyCopy } from "./copy";
 
@@ -8,8 +8,8 @@ export type Kind = "observed" | "inferred" | "extracted" | "proposed";
 
 const STYLE: Record<Kind, string> = {
   observed: "border-solid border-brand-deep/40 text-brand-deep bg-brand-mist",
-  inferred: "border-dashed border-amber/70 text-amber bg-amber-soft/50",
-  extracted: "border-dotted border-amber/70 text-amber bg-amber-soft/40",
+  inferred: "border-dashed border-brand-deep/70 text-brand-deep bg-paper",
+  extracted: "border-dotted border-brand-deep/70 text-brand-deep bg-paper",
   proposed: "border-dashed border-ink-3/50 text-ink-3 bg-paper",
 };
 

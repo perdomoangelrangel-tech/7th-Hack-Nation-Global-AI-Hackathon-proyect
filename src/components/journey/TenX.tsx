@@ -63,8 +63,8 @@ export function TenX({ data, locale }: { data: TenXData; locale: Locale }) {
         ))}
       </ol>
 
-      <div className="mt-4 rounded-lg bg-amber-soft/40 px-3 py-2">
-        <p className="text-[11px] uppercase tracking-wider text-amber">{c.validate}</p>
+      <div className="mt-4 rounded-lg border border-dashed border-brand-deep/40 bg-brand-mist px-3 py-2">
+        <p className="text-[11px] uppercase tracking-wider text-brand-deep">{c.validate}</p>
         <ul className="mt-1 text-sm text-ink-2 list-disc pl-4 space-y-0.5">{data.validate_next.map((v) => <li key={v}>{v}</li>)}</ul>
       </div>
       <p className="mt-3 text-[11px] text-ink-3">{data.assumption_note}</p>

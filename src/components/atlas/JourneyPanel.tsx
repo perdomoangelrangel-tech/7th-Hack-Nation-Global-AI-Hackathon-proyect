@@ -151,8 +151,8 @@ function Connections({ x, t, c, onInspect, onFocusDisease, hoverable }: { x: Jou
         </article>
       ))}
       {x.connections.counterexamples.map((ce) => (
-        <article key={ce.disease} className="rounded-lg border border-dashed border-amber/60 bg-amber-soft/30 p-3" {...hoverable([x.disease.id, ce.disease], ce.cite.edges)}>
-          <p className="text-[11px] uppercase tracking-wider text-amber">{t.counterexample}</p>
+        <article key={ce.disease} className="rounded-lg border border-dashed border-brand-deep/40 bg-brand-mist p-3" {...hoverable([x.disease.id, ce.disease], ce.cite.edges)}>
+          <p className="text-[11px] uppercase tracking-wider text-brand-deep">{t.counterexample}</p>
           <button className="mt-1 font-medium text-sm hover:underline text-left" onClick={() => onFocusDisease(ce.disease)}>{ce.name}</button>
           <p className="text-sm text-ink-2 mt-1">{ce.why}</p>
           {ce.cite.edges[0] && <button onClick={() => onInspect(ce.cite.edges[0])} className="mt-1 text-xs text-brand-deep hover:underline">{t.inspect} →</button>}
@@ -331,8 +331,8 @@ function Facet({ label, items }: { label: string; items: string[] }) {
 function Review({ items, c }: { items: string[]; c: JourneyCopy }) {
   if (!items.length) return null;
   return (
-    <div className="mt-2 rounded-md bg-amber-soft/40 px-2.5 py-1.5">
-      <p className="text-[11px] uppercase tracking-wider text-amber">{c.needs_review}</p>
+    <div className="mt-2 rounded-md border border-dashed border-brand-deep/40 bg-brand-mist px-2.5 py-1.5">
+      <p className="text-[11px] uppercase tracking-wider text-brand-deep">{c.needs_review}</p>
       <ul className="text-xs text-ink-2 mt-0.5 space-y-0.5">{items.map((r) => <li key={r}>{r}</li>)}</ul>
     </div>
   );
