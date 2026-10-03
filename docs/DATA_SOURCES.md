@@ -78,10 +78,10 @@ The clusters shown in the app are **computed** (Louvain over phenotype + pathway
 | --- | --- |
 | `npx tsx scripts/resolve-seed.ts` | Verify / extend the disease slice (`supabase/seed/diseases.json`) |
 | `npx tsx scripts/build-edge-seed.ts` | Regenerate `supabase/functions/ingest/seed.ts` from the seed JSON |
-| `npm run ingest` | Local ingest of every seed disease into `data/atlas.json` (`--orpha=`, `--only=`, `--target=supabase` with `SUPABASE_SERVICE_ROLE_KEY`) |
+| `npm run ingest` | Local ingest of every seed disease into `data/atlas.json` (`--orpha=`, `--only=`). The live graph is written only by the Edge Function (HGNC gene ids, server-side prop merge) |
 | `npm run analyze` | Recompute analytics for `data/atlas.json` |
 | `npm run snapshot` | Export the live Supabase graph (public key) to `data/atlas.json`, analytics included (`--check` prints counts only) |
-| Edge Function `ingest` | Same sources inside Supabase, invoked by `pg_net` / `pg_cron` (`private.invoke_ingest(orpha, step)`), logged in `ingest_runs` |
+| Edge Function `ingest` | Same sources inside Supabase, invoked by `pg_net` / `pg_cron` (`private.invoke_ingest(orpha, step)`) or the manual GitHub workflow `ingest.yml`; logged in `ingest_runs` |
 
 ## What never enters
 
