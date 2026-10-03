@@ -163,3 +163,28 @@ describe("co-creation prefill", async () => {
     expect(ProposalInput.safeParse({ kind: "cure", title: "abc", body: "x" }).success).toBe(false);
   });
 });
+
+describe("matchmaking + intro draft", async () => {
+  const { matchPartners } = await import("./match");
+  const { draftIntro } = await import("./outreach");
+  const r = matchPartners(g, STXBP1, "maria", "en")!;
+  it("ranks partners with evidence-backed reasons and excludes our own patient group", () => {
+    expect(r.partners.length).toBeGreaterThan(0);
+    for (let i = 1; i < r.partners.length; i++) expect(r.partners[i - 1].score).toBeGreaterThanOrEqual(r.partners[i].score);
+    for (const p of r.partners) {
+      expect(p.reasons.length).toBeGreaterThan(0);
+      for (const e of p.cite.edges) expect(g.edgeById.has(e)).toBe(true);
+    }
+    expect(r.partners.some((p) => p.name === "STXBP1 Foundation")).toBe(false);
+    expect(r.partners.some((p) => p.name === "KCNQ2 Cure Alliance")).toBe(true);
+  });
+  it("drafts an intro whose every [n] reference resolves to a listed source", () => {
+    const j = buildJourney(g, STXBP1, "maria", "en")!;
+    const d = draftIntro(j, r.partners[0]);
+    const refs = [...d.body.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+    expect(refs.length).toBeGreaterThan(0);
+    for (const n of refs) expect(d.sources.some((s) => s.n === n)).toBe(true);
+    expect(d.body).toMatch(/not medical advice/);
+  });
+  it("returns null for unknown diseases", () => expect(matchPartners(g, "disease:NOPE")).toBeNull());
+});
