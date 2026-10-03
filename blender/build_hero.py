@@ -472,7 +472,7 @@ patch_glb(glb_path, REST)
 
 # ------------------------------------------------------------------ poster render (Cycles, transparent, soft contact shadow)
 bm = bmesh.new()
-bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=4.0)
+bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=60.0)  # big enough that its edge never enters the frame
 catcher = mesh_object("RIG-shadow", bm, C_RIG, None, smooth=False)
 catcher.is_shadow_catcher = True
 
@@ -493,4 +493,5 @@ if RENDER:
     png_path = PREVIEW or os.path.join(PUBLIC_MODELS, "nexmed-hero.png")
     scene.render.filepath = png_path
     bpy.ops.render.render(write_still=True)
+    fade_shadow(png_path)
     print(f"[nexmed] poster {png_path} ({os.path.getsize(png_path) / 1024:.0f} KB)")

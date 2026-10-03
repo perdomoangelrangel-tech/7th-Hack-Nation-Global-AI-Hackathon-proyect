@@ -441,3 +441,25 @@ def patch_glb(filepath, rest, keep=None):
         fh.write(out)
     summary = {a["name"]: len(a["channels"]) for a in gltf.get("animations", [])}
     print(f"[nexmed] patched {os.path.basename(filepath)}: rest pose for {len(rest)} nodes, dropped {dropped} baked channels, clips {summary}")
+
+
+def fade_shadow(png_path, cx=0.5, cy=0.2, rx=0.46, ry=0.2, strength=0.9):
+    """Shadow-catcher pixels are pure black with alpha; fade them to 0 outside an ellipse so the poster has no
+    visible edge on the light page. Coloured (model) pixels are untouched. cx/cy/rx/ry are fractions of the frame
+    (origin bottom-left, Blender pixel order)."""
+    import numpy as np
+    img = bpy.data.images.load(png_path, check_existing=False)
+    w, h = img.size
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(h, w, 4)
+    ys, xs = np.mgrid[0:h, 0:w]
+    d = np.sqrt(((xs / w - cx) / rx) ** 2 + ((ys / h - cy) / ry) ** 2)
+    t = np.clip((d - 0.55) / 0.45, 0.0, 1.0)
+    fall = 1.0 - t * t * (3 - 2 * t)
+    shadow = px[..., :3].max(axis=2) < 0.02
+    px[..., 3] = np.where(shadow, px[..., 3] * fall * strength, px[..., 3])
+    img.pixels.foreach_set(px.ravel())
+    img.filepath_raw = png_path
+    img.file_format = "PNG"
+    img.save()
+    bpy.data.images.remove(img)
+    print(f"[nexmed] faded shadow edge in {os.path.basename(png_path)}")
