@@ -4,7 +4,7 @@
 
 **Hack-Nation 7th Global AI Hackathon · Challenge 5 · AI Atlas for Rare Diseases** (Buffalo Initiative × OpenAI)
 
-**[▶ Live demo](https://nedamex.vercel.app)** *(deploying)* · [Videos](#videos) · [Architecture](docs/ARCHITECTURE.md) · [Team workflow](docs/WORKFLOW.md)
+**[▶ Live demo](https://nedamex.vercel.app)** · [Research portal (Lovable)](https://nedamex-research.lovable.app) · [Videos](#videos) · [Architecture](docs/ARCHITECTURE.md) · [Team workflow](docs/WORKFLOW.md)
 
 > The AI knows nothing on its own. It can only say what the graph backs with a source and a date.
 > No source, no answer.

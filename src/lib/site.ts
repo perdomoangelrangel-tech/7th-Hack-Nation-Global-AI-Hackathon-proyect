@@ -7,7 +7,7 @@ export const site = {
   promise: { en: "Every answer traced to its source. No source, no answer.", es: "Cada respuesta con su fuente. Sin fuente, no hay respuesta." },
   challenge: "Hack-Nation 7 · Challenge 5 · AI Atlas for Rare Diseases · Buffalo Initiative × OpenAI",
   github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect",
-  portal: process.env.NEXT_PUBLIC_RESEARCH_PORTAL_URL ?? "",
+  portal: process.env.NEXT_PUBLIC_RESEARCH_PORTAL_URL || "https://nedamex-research.lovable.app",
   videos: {
     demo: process.env.NEXT_PUBLIC_VIDEO_DEMO ?? "",
     tech: process.env.NEXT_PUBLIC_VIDEO_TECH ?? "",
