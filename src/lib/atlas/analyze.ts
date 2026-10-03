@@ -64,23 +64,47 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
 
   /* 1. Phenotype IC (and HPO ancestors) ------------------------------- */
   const phenotypes = ofType("phenotype");
+  // Ancestors: HPO ancestors stored on the term (bundled snapshot) or the closure of observed `is_a` edges (live DB).
+  const parents = new Map<string, string[]>();
+  for (const e of edges) if (e.relation === "is_a") parents.set(e.from, [...(parents.get(e.from) ?? []), e.to]);
+  const ancestorCache = new Map<string, Ancestor[]>();
+  const ancestorsFor = (p: Entity | undefined): Ancestor[] => {
+    if (!p) return [];
+    const declared = ancestorsOf(p);
+    if (declared.length || !parents.has(p.id)) return declared;
+    if (ancestorCache.has(p.id)) return ancestorCache.get(p.id)!;
+    const seen = new Set<string>(); const stack = [...(parents.get(p.id) ?? [])];
+    while (stack.length) { const x = stack.pop()!; if (seen.has(x) || x === p.id) continue; seen.add(x); stack.push(...(parents.get(x) ?? [])); }
+    const list = [...seen].sort().map((id) => { const a = entities.get(id); return { id: a?.canonical_id ?? id.replace(/^phenotype:/, ""), name: a?.name ?? id, n: a?.props.annotated_diseases ? Number(a.props.annotated_diseases) : null }; });
+    ancestorCache.set(p.id, list);
+    return list;
+  };
   const totalHpo = Math.max(0, ...phenotypes.map((e) => Number(e.props.hpo_total_diseases ?? 0)));
   const icFromCount = (n: number | null | undefined) => (n && n > 0 && totalHpo > 0 ? -Math.log(n / totalHpo) / Math.log(totalHpo) : null);
+  // Fallback IC = 1 - (atlas diseases whose phenotype closure contains the term) / (atlas diseases).
+  const closureCount = new Map<string, number>();
+  for (const d of diseases) {
+    const terms = new Set<string>();
+    for (const e of out("has_phenotype", d.id)) { terms.add(e.to); for (const a of ancestorsFor(entities.get(e.to))) terms.add(`phenotype:${a.id}`); }
+    for (const t of terms) closureCount.set(t, (closureCount.get(t) ?? 0) + 1);
+  }
+  const atlasIc = (term: string) => round(1 - (closureCount.get(term) ?? 0) / Math.max(1, diseases.length));
   const icOf = new Map<string, number>();
   const termName = new Map<string, string>();
   for (const p of phenotypes) {
-    // Normalized IC 0..1 = -ln(n/N)/ln(N). Without HPO counts, frequency inside the atlas (flagged in ic_basis).
-    const inAtlas = into("has_phenotype", p.id).filter((e) => diseaseIds.has(e.from)).length;
+    // Normalized IC 0..1 = -ln(n/N)/ln(N) from HPO annotation counts; without them, frequency inside the atlas (flagged in ic_basis).
     const fromHpo = icFromCount(Number(p.props.annotated_diseases ?? 0));
-    const ic = round(fromHpo ?? 1 - inAtlas / Math.max(1, diseases.length));
+    const ic = fromHpo !== null ? round(fromHpo) : atlasIc(p.id);
     icOf.set(p.id, ic);
     termName.set(p.id, p.name);
     p.props.ic = ic;
     p.props.ic_basis = fromHpo !== null ? "hpo_annotations" : "atlas_frequency";
-    for (const a of ancestorsOf(p)) {
+    for (const a of ancestorsFor(p)) {
+      const key = `phenotype:${a.id}`;
       const aic = icFromCount(a.n);
-      if (aic !== null) icOf.set(`phenotype:${a.id}`, round(aic));
-      if (!termName.has(`phenotype:${a.id}`)) termName.set(`phenotype:${a.id}`, a.name);
+      if (aic !== null) icOf.set(key, round(aic));
+      else if (!icOf.has(key)) icOf.set(key, atlasIc(key));
+      if (!termName.has(key)) termName.set(key, a.name);
     }
   }
 
@@ -93,7 +117,7 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     for (const [pid, e] of [...phenEdges].sort(([a], [b]) => a.localeCompare(b))) {
       const add = (term: string, w: number) => { if (w > (phen.get(term) ?? 0)) { phen.set(term, w); if (term !== pid) via.set(term, pid); } };
       add(pid, e.confidence * (icOf.get(pid) ?? 0.5));
-      for (const a of ancestorsOf(entities.get(pid))) {
+      for (const a of ancestorsFor(entities.get(pid))) {
         const ic = icOf.get(`phenotype:${a.id}`);
         if (ic !== undefined && ic >= MIN_ANCESTOR_IC) add(`phenotype:${a.id}`, e.confidence * ic);
       }
@@ -250,7 +274,9 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     const pw = shared_pathways[0], ph = shared_phenotypes[0];
     const byPathway = !!pw && pw.spec > 0;
     const label = byPathway ? pw.name : ph?.name ?? entities.get(members[0])?.name ?? "Cluster";
-    const label_basis = byPathway
+    const label_basis = members.length === 1
+      ? `Only member (no other atlas disease is similar enough); named after its ${byPathway ? "most specific Reactome pathway" : ph ? `most informative phenotype (IC ${ph.ic})` : "name"}`
+      : byPathway
       ? `Most specific shared Reactome pathway: ${pw.diseases} of ${members.length} member diseases participate in it vs ${Math.round(specificity(pw.id, "leaf") * 100)}% outside the cluster`
       : ph
         ? `Most informative shared phenotype (IC ${ph.ic}): present in ${ph.diseases} of ${members.length} member diseases${members.length > 1 ? "; no member-specific Reactome pathway" : ""}`

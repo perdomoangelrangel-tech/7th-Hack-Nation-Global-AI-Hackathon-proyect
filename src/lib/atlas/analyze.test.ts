@@ -72,7 +72,7 @@ describe("analyze()", () => {
   it("names every cluster with a label basis", () => {
     for (const c of analyze(bundled()).clusters) {
       expect(c.label.length).toBeGreaterThan(0);
-      expect(c.label_basis).toMatch(/Reactome pathway|phenotype|Single disease/);
+      expect(c.label_basis).toMatch(/Reactome pathway|phenotype|Single disease|Only member/);
     }
   });
 });
