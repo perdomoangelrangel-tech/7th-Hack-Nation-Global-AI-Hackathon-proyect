@@ -134,8 +134,9 @@ function subtitle(e: Entity, disease: string, l: Locale) {
 /* ------------------------------------------------------------------ */
 /* Vista del grafo                                                     */
 /* ------------------------------------------------------------------ */
-export interface GNode { id: string; type: EntityType; name: string; cluster: string | null; color: string | null; size: number; focus?: boolean; props?: Record<string, unknown> }
-export interface GLink { id: string; source: string; target: string; relation: string; kind: Edge["kind"]; confidence: number; label?: string }
+export interface GNode { id: string; type: EntityType; name: string; cluster: string | null; color: string | null; size: number; focus?: boolean; props?: Record<string, unknown>; /** links diseases of different mechanism clusters */ bridge?: boolean; /** community draft node (proposals layer) — never evidence */ draft?: boolean }
+/** `proposed` = community draft (never evidence); added client-side by the proposals layer. */
+export interface GLink { id: string; source: string; target: string; relation: string; kind: Edge["kind"] | "proposed"; confidence: number; label?: string; /** crosses two mechanism clusters */ bridge?: boolean }
 export interface GraphView { focus: string; nodes: GNode[]; links: GLink[]; clusters: { id: string; label: string; color: string; diseases: string[] }[] }
 
 export function graphView(focus: string, l: Locale): GraphView | null {
@@ -148,9 +149,9 @@ export function graphView(focus: string, l: Locale): GraphView | null {
     const e = byId.get(id); if (!e || nodes.has(id)) return;
     nodes.set(id, { id, type: e.type, name: nameOf(e, l), cluster: e.type === "disease" ? A?.disease_cluster[id] ?? null : null, color: e.type === "disease" ? color(id) : null, size, focus: id === focus });
   };
-  const addLink = (e: Edge) => {
+  const addLink = (e: Edge, bridge = crossCluster(e)) => {
     if (!nodes.has(e.from) || !nodes.has(e.to)) return;
-    links.set(e.id, { id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence });
+    links.set(e.id, { id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence, ...(bridge ? { bridge } : {}) });
   };
 
   // Todas las enfermedades del atlas (la constelación), con sus conexiones inferidas.
@@ -194,12 +195,21 @@ export function graphView(focus: string, l: Locale): GraphView | null {
   // Puentes: investigadores que ya trabajan en la foco y en una vecina.
   for (const b of (A?.bridges ?? []).filter((x) => x.kind === "investigator" && x.diseases.includes(focus) && x.diseases.some((d) => neighbors.includes(d))).slice(0, 4)) {
     addNode(b.entity, 3.5);
-    for (const eid of b.edges) { const e = atlas().edgeById.get(eid); if (e) addLink(e); }
+    const bn = nodes.get(b.entity);
+    if (bn && b.cross_cluster) nodes.set(b.entity, { ...bn, bridge: true });
+    for (const eid of b.edges) { const e = atlas().edgeById.get(eid); if (e) addLink(e, b.cross_cluster); }
   }
   return {
     focus, nodes: [...nodes.values()], links: [...links.values()],
     clusters: (A?.clusters ?? []).map((c) => ({ id: c.id, label: c.label, color: c.color, diseases: c.diseases })),
   };
+}
+
+/** A similarity edge between diseases of two different mechanism clusters: the bridges worth highlighting. */
+function crossCluster(e: Edge) {
+  const dc = atlas().snap.analytics?.disease_cluster;
+  if (!dc || e.relation !== "similar_to") return false;
+  return !!dc[e.from] && !!dc[e.to] && dc[e.from] !== dc[e.to];
 }
 
 /** Pantalla inicial: solo las enfermedades y sus conexiones inferidas (la constelación). */
@@ -208,7 +218,7 @@ export function constellation(l: Locale): GraphView {
   return {
     focus: "",
     nodes: diseases().map((d) => ({ id: d.id, type: "disease" as const, name: nameOf(d, l), cluster: A?.disease_cluster[d.id] ?? null, color: A?.clusters.find((c) => c.id === A.disease_cluster[d.id])?.color ?? null, size: 8 + (A?.centrality[d.id] ?? 0) / 14 })),
-    links: snap.edges.filter((e) => e.relation === "similar_to").map((e) => ({ id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence })),
+    links: snap.edges.filter((e) => e.relation === "similar_to").map((e) => ({ id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence, ...(crossCluster(e) ? { bridge: true } : {}) })),
     clusters: (A?.clusters ?? []).map((c) => ({ id: c.id, label: c.label, color: c.color, diseases: c.diseases })),
   };
 }
@@ -316,7 +326,11 @@ export function journey(d: string, l: Locale) {
   }
   const nbIds = new Set(nb.map((n) => n.disease));
   collaborators.sort((a, b) => score(b) - score(a));
-  function score(c: Collaborator) { return (c.diseases.some((x) => nbIds.has(x)) && c.diseases.includes(d) ? 10 : 0) + (c.kind === "investigator" ? 3 : c.kind === "patient_org" ? 4 : 2) + c.diseases.length; }
+  function score(c: Collaborator) {
+    // The disease's own patient groups always make the list (a family looks for them first), then bridges.
+    const ownGroup = c.kind === "patient_org" && c.diseases.includes(d) ? 20 : 0;
+    return ownGroup + (c.diseases.some((x) => nbIds.has(x)) && c.diseases.includes(d) ? 10 : 0) + (c.kind === "investigator" ? 3 : c.kind === "patient_org" ? 4 : 2) + c.diseases.length;
+  }
 
   // 4. ¿Qué hacemos después? Pasos concretos, cada uno con sus aristas de evidencia.
   const steps: Step[] = [];

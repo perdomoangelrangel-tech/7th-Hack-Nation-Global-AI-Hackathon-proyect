@@ -39,7 +39,7 @@ async function variantProfile(g: GraphWriter, d: SeedDisease, symbol: string) {
     to: { type: "disease", canonicalId: d.orpha, name: d.name },
     relation: "causes", confidence: 0.9, confidenceBasis: "orphanet_gene_association",
     props: { primary: true, variant_counts: { total, missense, truncating, clinvar_disease: d.clinvar_disease, search_url: searchUrl } },
-    evidence: [{ source: "clinvar", externalId: `count:${symbol}:${d.clinvar_disease}`, url: searchUrl, quote: `${total} variantes P/LP en ${symbol} para "${d.clinvar_disease}": ${missense} de sentido erróneo, ${truncating} truncantes` }],
+    evidence: [{ source: "clinvar", externalId: `count:${symbol}:${d.clinvar_disease}`, url: searchUrl, quote: `${total} P/LP ${symbol} variants for "${d.clinvar_disease}": ${missense} missense, ${truncating} truncating` }],
   });
 }
 

@@ -71,7 +71,9 @@ export async function orphanet(ctx: Ctx, d: SeedDisease) {
   const disease: EntityRef = {
     type: "disease", canonicalId: d.orpha, name: d.name,
     props: {
-      orpha: d.orpha, mondo: d.mondo, name_es: d.name_es, orphanet_name: preferred,
+      orpha: d.orpha, mondo: d.mondo, omim: d.omim, name_es: d.name_es, orphanet_name: preferred,
+      short_name: d.short_name, short_name_es: d.short_name_es,
+      opentargets_indexed: d.opentargets_indexed === false ? false : undefined,
       definition, xrefs: Object.keys(xrefs).length ? xrefs : undefined,
       prevalence: prevalence.length ? prevalence : undefined,
       age_of_onset: onset.length ? onset : undefined,
