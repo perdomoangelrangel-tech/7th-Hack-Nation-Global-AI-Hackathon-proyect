@@ -41,7 +41,12 @@ export function verify(raw: unknown, allowedEvidenceIds: Iterable<string>, local
   }
   // El texto hablado se reconstruye SOLO con claims verificados, así nunca se cuela una frase sin fuente.
   const parts = kept.map((c) => c.text.trim());
-  if (dropped.length) parts.push(locale === "es" ? NO_EVIDENCE_ES : NO_EVIDENCE_EN);
+  if (dropped.length) {
+    const notice = locale === "es" ? NO_EVIDENCE_ES : NO_EVIDENCE_EN;
+    // If the first thing asked was unsourced (e.g. "can a diet cure it?"), say so first, then what the sources do say.
+    const firstDropped = parsed.data.claims.length > 0 && dropped.some((d) => d.text === parsed.data.claims[0].text);
+    if (firstDropped) parts.unshift(notice); else parts.push(notice);
+  }
   parts.push(locale === "es" ? DISCLAIMER_ES : DISCLAIMER_EN);
   return { spoken: parts.join(" "), claims: kept, next_steps: parsed.data.next_steps, verified: dropped.length === 0, dropped };
 }

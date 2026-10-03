@@ -42,7 +42,7 @@ export function resolveDisease(ref: string | null | undefined, diseases: Disease
 export type Intent = "cure" | "genes" | "symptoms" | "treatments" | "trials" | "community" | "literature" | "gaps";
 
 const INTENTS: [Intent, RegExp][] = [
-  ["cure", /\b(cure|cured|cura|curar|curable|heal|sanar)\b/],
+  ["cure", /\b(cures?|cured|curing|curable|cura|curas|curar\w*|curacion\w*|heal\w*|sanar\w*)\b/],
   ["gaps", /\b(gaps?|huecos?|lagunas?|missing|falta|faltan|unknowns?|desconoc\w*|unmet|weak|debil\w*|unsourced)\b/],
   ["trials", /\b(trials?|ensayos?|recruit\w*|reclut\w*|nct\d*|enrol\w*|inscrib\w*)\b/],
   ["treatments", /\b(treat\w*|tratamient\w*|tratar|therap\w*|terapi\w*|drugs?|farmacos?|medic\w*|approved|aprobad\w*|care|cuidados?|manage\w*|manejo)\b/],
@@ -55,4 +55,17 @@ const INTENTS: [Intent, RegExp][] = [
 export function detectIntents(question: string): Intent[] {
   const q = norm(question);
   return INTENTS.filter(([, re]) => re.test(q)).map(([i]) => i);
+}
+
+/** Remedies people ask about that the graph may not back. Matched against the question, then checked against the map's treatments. */
+export const ASKED_REMEDIES: { re: RegExp; keys: string[]; en: string; es: string }[] = [
+  { re: /\b(diets?|dieta\w*|keto\w*|cetogen\w*|food|comida|alimenta\w*)\b/, keys: ["diet", "keto", "cetogen"], en: "A special diet", es: "Una dieta especial" },
+  { re: /\b(supplements?|suplement\w*|vitamin\w*)\b/, keys: ["vitamin", "supplement"], en: "Supplements or vitamins", es: "Suplementos o vitaminas" },
+  { re: /\b(homeopath\w*|homeopat\w*|herbs?|herbal|hierbas?|natural remed\w*|remedios? natural\w*)\b/, keys: ["homeopath", "herb"], en: "Homeopathy or herbal remedies", es: "Homeopatía o remedios herbales" },
+  { re: /\b(stem cells?|celulas madre)\b/, keys: ["stem cell"], en: "Stem-cell therapy", es: "La terapia con células madre" },
+];
+
+export function askedRemedies(question: string) {
+  const q = norm(question);
+  return ASKED_REMEDIES.filter((r) => r.re.test(q));
 }

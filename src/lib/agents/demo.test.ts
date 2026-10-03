@@ -69,3 +69,13 @@ describe("onlyAllowed", () => {
     expect(out.claims.map((c) => c.text)).toEqual(["b", "c"]);
   });
 });
+
+describe("remedies the graph does not back", () => {
+  it("drops a diet claim in EN and ES when no treatment station mentions a diet", () => {
+    const en = run("family", "en", "Can a special diet cure Dravet?");
+    expect(en.dropped.map((d) => d.text)).toContain("A special diet as a treatment for Dravet syndrome.");
+    const es = run("family", "es", "¿Una dieta especial puede curarlo? Dravet");
+    expect(es.dropped.map((d) => d.text).some((t) => t.startsWith("Una dieta especial"))).toBe(true);
+    expect(es.dropped.map((d) => d.text).some((t) => t.startsWith("Una cura"))).toBe(true);
+  });
+});

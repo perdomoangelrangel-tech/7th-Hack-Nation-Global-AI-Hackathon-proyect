@@ -8,7 +8,7 @@
 import type { DiseaseMap } from "../atlas-data";
 import type { AgentOutput } from "../verifier";
 import type { Audience } from "./profiles";
-import { detectIntents, type Intent } from "./detect";
+import { askedRemedies, detectIntents, type Intent } from "./detect";
 import { clip, countriesOf, evidenceIds, fmtList, inSentence, isApproved, isRecruiting, str, trialPhases, treatmentPhase, mechanismOf } from "./evidence";
 
 type Locale = "en" | "es";
@@ -187,6 +187,14 @@ function gaps(map: DiseaseMap, a: Audience, l: Locale): Claim[] {
   return a === "family" ? out.slice(0, 1) : out;
 }
 
+/** Remedies the person named that no treatment station backs become unsourced claims, so the verifier drops them visibly. */
+function remedies(map: DiseaseMap, l: Locale, question: string): Claim[] {
+  const names = map.lines.treatments.map((t) => `${t.name} ${JSON.stringify(t.props ?? {})}`.toLowerCase());
+  return askedRemedies(question)
+    .filter((r) => !names.some((n) => r.keys.some((k) => n.includes(k))))
+    .map((r) => ({ text: l === "es" ? `${r.es} como tratamiento para ${diseaseName(map, l)}.` : `${r.en} as a treatment for ${diseaseName(map, l)}.`, evidence_ids: [] }));
+}
+
 function cure(map: DiseaseMap, l: Locale): Claim[] {
   return [{ text: l === "es" ? `Una cura para ${diseaseName(map, l)}.` : `A cure for ${diseaseName(map, l)}.`, evidence_ids: [] }];
 }
@@ -216,7 +224,7 @@ export function demoDraft(map: DiseaseMap | null, audience: Audience, locale: Lo
   if (!map) return { spoken: "", claims: [], next_steps: [] };
   const intents = detectIntents(question);
   const order = [...new Set<Intent>([...intents, ...DEFAULT_ORDER[audience]])];
-  const claims: Claim[] = [];
+  const claims: Claim[] = [...remedies(map, locale, question)];
   for (const i of order) {
     const asked = intents.includes(i);
     const add =
