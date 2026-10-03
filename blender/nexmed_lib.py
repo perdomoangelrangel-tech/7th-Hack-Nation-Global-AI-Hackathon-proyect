@@ -136,7 +136,7 @@ def bm_cylinder_between(bm, a, b, radius, segments=6, cap=True):
     bmesh.ops.create_cone(bm, cap_ends=cap, cap_tris=False, segments=segments, radius1=radius, radius2=radius, depth=length, matrix=m, calc_uvs=False)
 
 
-def curve_tube(name, coll, points, radii=None, bevel=0.03, resolution=3, mat=None, caps=True):
+def curve_tube(name, coll, points, radii=None, bevel=0.03, resolution=3, mat=None, caps=True, cyclic=False):
     """Polyline -> beveled tube converted to a mesh object (glTF friendly)."""
     cu = bpy.data.curves.new(name + "_crv", "CURVE")
     cu.dimensions = "3D"
@@ -146,6 +146,7 @@ def curve_tube(name, coll, points, radii=None, bevel=0.03, resolution=3, mat=Non
     cu.twist_mode = "MINIMUM"
     sp = cu.splines.new("POLY")
     sp.points.add(len(points) - 1)
+    sp.use_cyclic_u = cyclic
     for i, p in enumerate(points):
         sp.points[i].co = (p[0], p[1], p[2], 1.0)
         sp.points[i].radius = radii[i] if radii else 1.0
@@ -218,6 +219,7 @@ def push_scale_track(ob, track_name, keys):
     act.name = f"{track_name}__{ob.name}"
     ad.action = None
     ob.scale = rest
+    _register(track_name, ob, ["scale"])
     track = ad.nla_tracks.new()
     track.name = track_name
     strip = track.strips.new(track_name, int(keys[0][0]), act)
@@ -239,6 +241,7 @@ def push_track(ob, track_name, keyframes):
     ad.action = None
     for path, val in rest.items():
         setattr(ob, path, val)
+    _register(track_name, ob, {p for _, values in keyframes for p in values})
     track = ad.nla_tracks.new()
     track.name = track_name
     strip = track.strips.new(track_name, int(keyframes[0][0]), act)
@@ -367,4 +370,74 @@ def rng(seed):
     return random.Random(seed)
 
 
-__all__ = [n for n in dir() if not n.startswith("_")] + ["math", "Vector", "Matrix", "bmesh", "bpy"]
+
+
+# ---------------------------------------------------------------- glTF post-pass
+# Blender's NLA-track export bakes the rest pose at the current frame (where "Appear"/"Intro" scale everything to 0)
+# and adds constant channels for paths a clip never keyed. We record what we keyed + the true rest pose and patch the GLB.
+ANIM_KEEP = {}
+_PATH = {"location": "translation", "rotation_euler": "rotation", "scale": "scale"}
+
+
+def _register(track_name, ob, data_paths):
+    ANIM_KEEP.setdefault(track_name, set()).update((ob.name, _PATH[p]) for p in data_paths)
+
+
+def snapshot_rest(objects):
+    return {o.name: (o.location.copy(), o.rotation_euler.to_quaternion(), o.scale.copy()) for o in objects}
+
+
+def restore_rest(rest):
+    for name, (loc, quat, scale) in rest.items():
+        ob = bpy.data.objects.get(name)
+        if ob is None:
+            continue
+        ob.location = loc
+        ob.rotation_euler = quat.to_euler()
+        ob.scale = scale
+
+
+def patch_glb(filepath, rest, keep=None):
+    import json
+    import struct
+    keep = ANIM_KEEP if keep is None else keep
+    with open(filepath, "rb") as fh:
+        data = fh.read()
+    json_len, json_type = struct.unpack_from("<II", data, 12)
+    gltf = json.loads(data[20:20 + json_len])
+    rest_bin = data[20 + json_len:]
+    for node in gltf.get("nodes", []):
+        r = rest.get(node.get("name"))
+        if r is None:
+            continue
+        loc, q, s = r
+        node.pop("translation", None), node.pop("rotation", None), node.pop("scale", None)
+        t = [loc.x, loc.z, -loc.y]
+        rq = [q.x, q.z, -q.y, q.w]
+        sc = [s.x, s.z, s.y]
+        if any(abs(v) > 1e-7 for v in t):
+            node["translation"] = t
+        if any(abs(a - b) > 1e-7 for a, b in zip(rq, [0, 0, 0, 1])):
+            node["rotation"] = rq
+        if any(abs(v - 1) > 1e-7 for v in sc):
+            node["scale"] = sc
+    dropped = 0
+    for anim in gltf.get("animations", []):
+        allowed = keep.get(anim.get("name"), set())
+        channels, samplers = [], []
+        for ch in anim["channels"]:
+            name = gltf["nodes"][ch["target"]["node"]].get("name")
+            if (name, ch["target"]["path"]) not in allowed:
+                dropped += 1
+                continue
+            samplers.append(anim["samplers"][ch["sampler"]])
+            ch["sampler"] = len(samplers) - 1
+            channels.append(ch)
+        anim["channels"], anim["samplers"] = channels, samplers
+    blob = json.dumps(gltf, separators=(",", ":")).encode()
+    blob += b" " * ((4 - len(blob) % 4) % 4)
+    out = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(blob) + len(rest_bin)) + struct.pack("<II", len(blob), json_type) + blob + rest_bin
+    with open(filepath, "wb") as fh:
+        fh.write(out)
+    summary = {a["name"]: len(a["channels"]) for a in gltf.get("animations", [])}
+    print(f"[nexmed] patched {os.path.basename(filepath)}: rest pose for {len(rest)} nodes, dropped {dropped} baked channels, clips {summary}")

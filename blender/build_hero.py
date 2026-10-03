@@ -427,6 +427,8 @@ for i, (p, rad, kind) in enumerate(node_specs):
         halo.parent = ob
         halo.rotation_euler = (R.uniform(0.6, 1.1), R.uniform(-0.4, 0.4), R.uniform(0, TAU))
 
+REST = snapshot_rest(list(C_HERO.objects))
+
 # ------------------------------------------------------------------ animation (Blender-authored, exported as glTF clips)
 # Intro (frames 0-75): fragments + nodes pop in from bottom to top.  Idle (0-120, loops): a pulse wave climbs the crown.
 z_min = min(o.location.z for o in fragments + nodes)
@@ -466,6 +468,7 @@ print(f"[nexmed] hero objects={len(exportables)} triangles={tris} nodes={len(nod
 os.makedirs(PUBLIC_MODELS, exist_ok=True)
 glb_path = os.path.join(PUBLIC_MODELS, "nexmed-hero.glb")
 export_glb(glb_path, exportables, animations=True, compression=COMPRESSION)
+patch_glb(glb_path, REST)
 
 # ------------------------------------------------------------------ poster render (Cycles, transparent, soft contact shadow)
 bm = bmesh.new()
@@ -486,7 +489,7 @@ print(f"[nexmed] saved {blend_path}")
 
 if RENDER:
     setup_cycles(scene, samples=24 if PREVIEW else SAMPLES, width=700 if PREVIEW else 1500, height=700 if PREVIEW else 1500, transparent=True)
-    scene.frame_set(120)  # rest pose (all nodes visible)
+    scene.frame_set(120)  # Intro finished, Idle back at its first key
     png_path = PREVIEW or os.path.join(PUBLIC_MODELS, "nexmed-hero.png")
     scene.render.filepath = png_path
     bpy.ops.render.render(write_still=True)
