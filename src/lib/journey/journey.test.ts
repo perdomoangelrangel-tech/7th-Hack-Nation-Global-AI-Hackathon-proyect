@@ -10,6 +10,10 @@ const snap = JSON.parse(readFileSync(join(process.cwd(), "data", "atlas.json"), 
 const g = indexSnapshot(snap);
 const STXBP1 = "disease:ORPHA:599373";
 const KCNQ2 = "disease:ORPHA:439218";
+// Expectations are derived from the snapshot, so the tests survive the data lane growing the slice.
+const simEdges = snap.edges.filter((e) => e.relation === "similar_to" && (e.from === STXBP1 || e.to === STXBP1)).sort((a, b) => b.confidence - a.confidence);
+const LEAD = simEdges[0].from === STXBP1 ? simEdges[0].to : simEdges[0].from;
+const COUNTER = (snap.analytics?.counterexamples ?? []).find((c) => c.a === STXBP1 || c.b === STXBP1);
 
 /** Every cited edge must exist in the graph; every cited evidence id must belong to a cited edge. */
 function allCites(j: JourneyV2) {
@@ -25,7 +29,8 @@ describe("journey v2 · Maria's STXBP1 case", () => {
 
   it("answers the four questions from the graph", () => {
     expect(j.connections.neighbors.length).toBeGreaterThan(0);
-    expect(j.connections.neighbors[0].disease).toBe(KCNQ2);          // strongest inferred neighbor first
+    expect(j.connections.neighbors[0].disease).toBe(LEAD);           // strongest inferred neighbor first
+    expect(j.connections.neighbors.some((n) => n.disease === KCNQ2)).toBe(true);
     expect(j.connections.neighbors[0].cite.kinds).toContain("inferred");
     expect(j.assets.own.length + j.assets.reusable.length).toBeGreaterThan(0);
     expect(j.people.collaborators.length).toBeGreaterThan(0);
@@ -51,7 +56,8 @@ describe("journey v2 · Maria's STXBP1 case", () => {
   });
 
   it("shows a counterexample: similar symptoms, different mechanism", () => {
-    expect(j.connections.counterexamples.some((c) => c.disease === "disease:ORPHA:505652")).toBe(true);
+    expect(COUNTER).toBeDefined();
+    expect(j.connections.counterexamples.some((c) => c.disease === (COUNTER!.a === STXBP1 ? COUNTER!.b : COUNTER!.a))).toBe(true);
     expect(j.connections.counterexamples[0].why).toMatch(/different strategy/);
   });
 
@@ -161,7 +167,9 @@ describe("co-creation prefill", async () => {
       for (const e of d.edges) expect(g.edgeById.has(e)).toBe(true);
       expect(ProposalInput.safeParse({ ...d, disease: STXBP1, persona: "maria" }).success).toBe(true);
     }
-    expect(prefillDraft("collaboration", j).title).toContain("KCNQ2 Cure Alliance");
+    const collab = prefillDraft("collaboration", j);
+    expect(collab.title).toContain("STXBP1 Foundation");
+    expect(collab.entities).toContain(LEAD);
   });
   it("rejects unknown kinds", () => {
     expect(ProposalInput.safeParse({ kind: "cure", title: "abc", body: "x" }).success).toBe(false);

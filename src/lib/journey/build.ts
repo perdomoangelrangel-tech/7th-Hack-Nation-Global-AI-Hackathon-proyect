@@ -173,7 +173,7 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
     };
   };
   const nbRank = new Map(neighbors.map((n, i) => [n.disease, i]));
-  const rankAsset = (a: AssetCard) => (a.shared_with.length ? -100 : 0) + (a.active ? 0 : a.status === "COMPLETED" ? 30 : 50) + ASSET_KIND_ORDER.indexOf(a.kind) * 5 + (nbRank.get(a.disease) ?? 0);
+  const rankAsset = (a: AssetCard) => (a.shared_with.length ? -100 : 0) + (a.active ? 0 : a.status === "COMPLETED" ? 30 : 50) + ASSET_KIND_ORDER.indexOf(a.kind) * 5 + (nbRank.get(a.disease) ?? 0) * 12;
   const own = assetEdges(d).map((e) => toAsset(e, true)).sort((a, b) => rankAsset(a) - rankAsset(b));
   const ownIds = new Set(own.map((a) => a.id));
   const reusable = neighbors.slice(0, 3).flatMap((n) => assetEdges(n.disease).map((e) => toAsset(e, false)))
@@ -267,7 +267,12 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
     detail: tr(l, `${sharedOwn.title}${sharedOwn.sponsor ? ` (${sharedOwn.sponsor})` : ""}, ${prettyStatus(sharedOwn.status)}. Ask the study team how families can join and which data could be shared across both communities.`,
                   `${sharedOwn.title}${sharedOwn.sponsor ? ` (${sharedOwn.sponsor})` : ""}, ${prettyStatus(sharedOwn.status)}. Pregunten al equipo cómo pueden unirse las familias y qué datos podrían compartirse entre ambas comunidades.`) });
   const REUSE_KINDS = new Set(["natural_history", "registry", "observational_cohort"]);
-  const reuse = reusable.find((a) => a.active && REUSE_KINDS.has(a.kind)) ?? reusable.find((a) => a.active) ?? reusable[0];
+  // Closest neighbors first (rank < 2): natural history / registry, then cohort; only then farther neighbors.
+  const near = (a: AssetCard) => (nbRank.get(a.disease) ?? 9) < 2;
+  const reuse = reusable.find((a) => a.active && near(a) && (a.kind === "natural_history" || a.kind === "registry"))
+    ?? reusable.find((a) => a.active && near(a) && REUSE_KINDS.has(a.kind))
+    ?? reusable.find((a) => a.active && REUSE_KINDS.has(a.kind))
+    ?? reusable.find((a) => a.active) ?? reusable[0];
   if (reuse) steps.push({ id: "reuse", kind: "reuse", owner: "patient_group", nodes: [reuse.id, reuse.disease, d], needs_review: true, cite: reuse.cite,
     title: tr(l, `Ask whether ${reuse.nct} (${reuse.disease_name}) could include ${dn}`, `Preguntar si ${reuse.nct} (${reuse.disease_name}) podría incluir ${dn}`),
     detail: `${reuse.title}. ${reuse.needs_review.join(" ")}` });
