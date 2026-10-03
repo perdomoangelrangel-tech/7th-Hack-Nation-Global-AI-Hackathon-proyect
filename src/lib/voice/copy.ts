@@ -3,7 +3,7 @@ import type { Locale } from "../i18n";
 
 const en = {
   voice_eleven: "ElevenLabs voice",
-  voice_browser: "Browser voice (fallback)",
+  voice_browser: "Browser voice — natural voice unavailable right now",
   captions: "Captions",
   transcript: "Transcript",
   skip_prev: "Previous sentence",
@@ -37,7 +37,7 @@ export type VoiceCopy = typeof en;
 const es: VoiceCopy = {
   ...en,
   voice_eleven: "Voz de ElevenLabs",
-  voice_browser: "Voz del navegador (respaldo)",
+  voice_browser: "Voz del navegador — la voz natural no está disponible ahora",
   captions: "Subtítulos",
   transcript: "Transcripción",
   skip_prev: "Frase anterior",
