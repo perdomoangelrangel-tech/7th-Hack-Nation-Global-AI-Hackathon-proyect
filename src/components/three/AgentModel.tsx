@@ -111,7 +111,7 @@ export function AgentModel({ state, getLevel, onHidden, onReady }: AgentModelPro
       const t = performance.now() / 1000;
       for (const p of parts.petals) {
         const wave = 0.65 + 0.35 * Math.sin(t * 9 + p.i * 0.9);
-        p.obj.scale.x *= 1 + l * 2.2 * wave;
+        p.obj.scale.x *= 1 + l * 1.5 * wave;
       }
       parts.core?.scale.multiplyScalar(1 + l * 0.06);
     }

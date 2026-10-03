@@ -150,7 +150,7 @@ for k, (tx, ty, r, size, ph, turns) in enumerate(ORBITS):
 # ------------------------------------------------------------------ voice petals (ring in the screen plane)
 POP_PETALS = empty("POP_PETALS", ROOT)
 STATE_PETALS = empty("STATE_PETALS", POP_PETALS)
-N_PETALS, PETAL_IN, PETAL_LEN, PETAL_REST = 24, 0.50, 0.18, 0.5
+N_PETALS, PETAL_IN, PETAL_LEN, PETAL_REST = 24, 0.50, 0.26, 0.42
 petal_mesh = bpy.data.meshes.new("MESH-agent-petal")
 bm = bmesh.new()
 bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=8, radius=1.0, matrix=Matrix.Translation((1.0, 0, 0)) @ Matrix.Diagonal((1.0, 0.13, 0.13, 1.0)) @ Matrix.Identity(4))
@@ -169,7 +169,7 @@ for i in range(N_PETALS):
     p.parent = STATE_PETALS
     p.location = d * PETAL_IN + Vector((0, 0.05, 0))
     p.rotation_euler = (0, -a, 0)
-    p.scale = (PETAL_LEN * PETAL_REST, PETAL_LEN * 1.45, PETAL_LEN * 1.45)
+    p.scale = (PETAL_LEN * PETAL_REST, PETAL_LEN * 1.7, PETAL_LEN * 1.7)
     petals.append((p, i))
 
 REST = snapshot_rest(list(C.objects))
@@ -216,7 +216,7 @@ for p, i in petals:
     keys = []
     for f in range(0, 31, 3):
         w = math.sin(TAU * (f / 30.0) * 2 - i * TAU * 3 / N_PETALS)
-        amp = 1.0 + 1.7 * max(0.0, w) ** 1.5
+        amp = 1.0 + 2.0 * max(0.0, w) ** 1.5
         keys.append((f, E(rest.x * amp, rest.y, rest.z)))
     keys[-1] = (30, keys[0][1])
     ease_keys(p, "Speak", "scale", keys)
@@ -238,7 +238,7 @@ world(scene, PALETTE["brand_mist"], 0.4)
 area_light("LGT-key", (-2.4, -3.2, 3.2), (0, 0, 0), 260, 2.5, "#fffaf2", C_RIG)
 area_light("LGT-fill", (3.0, -2.0, 0.6), (0, 0, 0), 90, 3.0, "#eef5ff", C_RIG)
 area_light("LGT-rim", (0.6, 3.0, 2.2), (0, 0, 0), 300, 2.0, "#cfe6ff", C_RIG)
-camera("CAM-agent", (0, -5.2, 0.35), (0, 0, 0), lens=60, coll=C_RIG)
+camera("CAM-agent", (0, -4.5, 0.3), (0, 0, 0), lens=60, coll=C_RIG)
 
 
 def solo(names):
