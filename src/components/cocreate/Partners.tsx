@@ -47,8 +47,10 @@ export function Partners({ persona, locale, disease, journey, onPropose }: { per
   };
 
   return (
-    <div className="mt-3">
-      <p className="text-[11px] uppercase tracking-wider text-ink-3" title={res.r?.method}>{c.partners}</p>
+    <details className="mt-3 group">
+      <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-ink-3" title={res.r?.method}>
+        {c.partners} ({partners.length}) <span className="normal-case tracking-normal text-ink-2 group-open:hidden">· {partners[0].name}</span>
+      </summary>
       <ul className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
         {partners.map((p) => (
           <li key={p.id} className="rounded-lg border border-line bg-paper px-2.5 py-2">
@@ -63,7 +65,7 @@ export function Partners({ persona, locale, disease, journey, onPropose }: { per
         ))}
       </ul>
       <IntroDialog intro={intro} locale={locale} onClose={() => setIntro(null)} />
-    </div>
+    </details>
   );
 }
 
