@@ -55,6 +55,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [hiddenKinds, setHiddenKinds] = useState<Set<string>>(EMPTY);
   const [loadError, setLoadError] = useState(false);
   const pendingNarration = useRef(false);
+  const panelRef = useRef<HTMLElement>(null);
+  const firstInspect = useRef(true);
   const n = useNarration();
   const { prefs, setPrefs } = usePrefs();
   const autoNarrate = prefs.autoRead;
@@ -114,6 +116,12 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (inspect && !isDraftId(inspect)) u.searchParams.set("e", inspect); else u.searchParams.delete("e");
     window.history.replaceState(null, "", u.toString());
   }, [focus, persona, locale, inspect]);
+
+  // Small screens: the panel sits under the graph, so bring an opened edge into view (not on first load).
+  useEffect(() => {
+    if (firstInspect.current) { firstInspect.current = false; return; }
+    if (inspect && window.innerWidth < 1024) panelRef.current?.scrollIntoView({ behavior: prefs.reduceMotion ? "auto" : "smooth", block: "start" });
+  }, [inspect, prefs.reduceMotion]);
 
   const { stop: stopNarration } = n;
   const goTo = useCallback((d: string, narrate = autoNarrate) => {
@@ -251,7 +259,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         </details>
 
         {/* Right panel: the journey */}
-        <aside className="relative border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh]" aria-label={shownJourney?.disease.name ?? t.q1}>
+        <aside ref={panelRef} className="relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh]" aria-label={shownJourney?.disease.name ?? t.q1}>
           {/* Cross-lane mount points (voice lane, action lane). Keep them. */}
           <VoiceDock persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
           <CoCreate persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} edgeIds={inspect && !isDraftId(inspect) ? [inspect] : undefined} />
