@@ -195,6 +195,31 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             {graph.mode === "2d" && graph.reason && <span className="hidden sm:inline rounded-full bg-paper/90 px-2 py-0.5 text-[11px] text-ink-3">{t.fallback_reason[graph.reason]}</span>}
           </div>
 
+          {/* Graph tooltips (float-tooltip) in the light theme. */}
+          <style>{`.float-tooltip-kap{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font:500 12px var(--font-sans);box-shadow:0 4px 14px rgb(14 44 71 / .12)}`}</style>
+
+          {/* Keyboard / screen-reader path through the graph: appears when focused. */}
+          {fullView && fullView.links.length > 0 && (
+            <nav aria-label={t.explore_more} className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:right-3 focus-within:top-14 focus-within:z-20 focus-within:max-h-[60%] focus-within:w-72 focus-within:overflow-auto focus-within:rounded-xl focus-within:border focus-within:border-line focus-within:bg-paper focus-within:p-2 focus-within:shadow-lg">
+              <p className="px-2 py-1 text-xs uppercase tracking-widest text-ink-3">{t.explore_more}</p>
+              <ul>
+                {fullView.links.slice(0, 60).map((l) => {
+                  const name = (v: unknown) => { const id = typeof v === "object" && v ? (v as GNode).id : String(v); return fullView.nodes.find((x) => x.id === id)?.name ?? id; };
+                  return <li key={l.id}><button type="button" onClick={() => onLink(l)} onFocus={() => setHover({ nodes: [], edges: [l.id] })} onBlur={() => setHover({ nodes: [], edges: [] })} className="w-full rounded-lg px-2 py-1 text-left text-xs text-ink-2 hover:bg-brand-soft focus:bg-brand-soft">{name(l.source)} <span className="text-ink-3">{t.relations[l.relation] ?? l.relation}</span> {name(l.target)} · {t.status[kindOf(l.kind)]}</button></li>;
+                })}
+              </ul>
+            </nav>
+          )}
+
+          {/* Honest "no supported route": say what is unknown and what would change the answer. */}
+          {shownJourney?.honest_gap && !inspect && (
+            <div role="status" className="absolute left-3 right-3 top-14 z-10 mx-auto max-w-md rounded-2xl border border-dashed border-amber/50 bg-paper/95 p-4 shadow-sm">
+              <p className="text-sm font-semibold text-amber">{shownJourney.honest_gap.title}</p>
+              <p className="mt-1 text-sm text-ink-2">{shownJourney.honest_gap.detail}</p>
+              <p className="mt-2 text-sm text-ink">{shownJourney.honest_gap.next_question}</p>
+            </div>
+          )}
+
           {loadError && <p role="status" className="absolute left-3 right-3 top-14 z-10 mx-auto max-w-md rounded-xl border border-amber/40 bg-amber-soft px-3 py-2 text-sm text-amber">{t.load_error}</p>}
 
           <AnimatePresence>
