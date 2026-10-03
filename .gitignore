@@ -49,3 +49,5 @@ supabase/.temp
 # video renders
 /video/out/
 /video/node_modules/
+.claude/settings.local.json
+.claude/worktrees/

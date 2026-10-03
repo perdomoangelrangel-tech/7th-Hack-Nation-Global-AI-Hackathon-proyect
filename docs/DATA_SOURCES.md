@@ -1,68 +1,80 @@
-# Fuentes de datos
+# Data sources
 
-Todas son abiertas, con API pública y licencia que permite reutilización con atribución. Cada fila que entra al grafo guarda `source_id`, `external_id`, `url` y `retrieved_at`.
+Every source is open, has a public API, and has a license that allows reuse with attribution. Every edge in the graph has at least one `evidence` row with `source_id`, `external_id`, `url`, `published_on` (when the source gives one) and `retrieved_at`. A trigger flips an edge from `pending` to `active` on its first evidence row, and a guard blocks any `active` edge without evidence.
 
-> Las URLs se verificaron por documentación oficial. Mi sandbox no tiene salida a estos dominios, así que la primera prueba real se hace desde `npm run ingest` en una máquina del equipo o desde Vercel. Si un endpoint cambió, el script de esa fuente es el único archivo que se toca.
+## Sources
 
-## Mapa de qué fuente alimenta qué parte del grafo
+| Source | What we take | Endpoint | Graph output | License |
+| --- | --- | --- | --- | --- |
+| **Orphanet / Orphadata** | Definition, synonyms, cross-references (OMIM, ICD-10/11, MONDO), associated genes and their association type, HPO phenotypes with frequency, prevalence, age of onset, inheritance | `api.orphadata.com/{rd-cross-referencing, rd-associated-genes, rd-phenotypes, rd-epidemiology, rd-natural_history}/orphacodes/{code}?lang=en` | disease props, `gene -causes-> disease`, `disease -has_phenotype-> phenotype` | CC BY 4.0 |
+| **Monarch Initiative v3** | Fallback when Orphanet has no genes (ORPHA:72, where the genes sit on its subtypes) or fewer than 5 phenotypes (ORPHA:228349) | `api-v3.monarchinitiative.org/v3/api/association?…&category=biolink:CausalGeneToDiseaseAssociation \| DiseaseToPhenotypicFeatureAssociation` | `causes`, `has_phenotype` (props `via: "monarch"`) | CC BY 4.0 |
+| **HPO (JAX)** | Definition, synonyms and parent terms for every phenotype linked to a disease | `ontology.jax.org/api/hp/terms/{HP:id}` and `/parents` | phenotype props, `phenotype -is_a-> phenotype` | HPO license |
+| **Open Targets Platform** | Drug and clinical candidates per disease: max clinical stage (`APPROVAL`, `PHASE_3`, …), mechanism of action, targets, trade names, regulator and trial reports. **API change:** `knownDrugs` was removed; we use `drugAndClinicalCandidates` | `POST api.platform.opentargets.org/api/v4/graphql` | `treatment -treats-> disease` (props `origin: "opentargets"`) | CC0 |
+| **ClinicalTrials.gov v2** | Active trials only (`RECRUITING`, `NOT_YET_RECRUITING`, `ACTIVE_NOT_RECRUITING`, `ENROLLING_BY_INVITATION`) with phase, sites, countries, dates, ages and interventions. A trial is kept only if its title or conditions name the disease (`trial_keywords` in the seed), because the API expands condition queries. Trials that stop being active are retracted. | `clinicaltrials.gov/api/v2/studies?query.cond=…&filter.overallStatus=…` | `trial -studies-> disease`. Drug, biologic, genetic, supplement and device interventions become `treats` edges, marked `investigational` | Public domain |
+| **PubMed (E-utilities)** | 30 most recent reviews, trials and treatment papers per disease from the last 5 years, plus authors, affiliations and ORCID iDs | `esearch` → `esummary` → `efetch` (XML) | `study -studies-> disease`, and `research_community` rows | Public domain (metadata) |
+| **ClinVar (E-utilities)** | 25 pathogenic or likely pathogenic germline variants per seed gene | `esearch db=clinvar term={GENE}[gene] AND clinsig_pathogenic[prop]…` → `esummary` | `gene -has_variant-> variant` | Public domain |
+| **Patient organizations** | Curated list: name, country, website, kind | `supabase/seed/organizations.json` | `organization -supports\|researches-> disease` (evidence url = the org's website) | Public data |
 
-```mermaid
-flowchart LR
-  ORPHA[Orphanet / Orphadata] -->|enfermedad, genes, prevalencia| D((Enfermedad))
-  ORPHA -->|HPO por enfermedad| P((Fenotipo))
-  HPO[HPO · JAX] -->|definición y jerarquía| P
-  MON[Monarch v3] -->|enfermedad–gen–fenotipo integrados| D
-  MON --> G((Gen))
-  CV[ClinVar · NCBI] -->|variantes patogénicas| V((Variante))
-  G --> V
-  CT[ClinicalTrials.gov v2] -->|ensayos, sitios, estado| T((Ensayo))
-  OT[Open Targets] -->|fármacos conocidos y fase| TX((Tratamiento))
-  PM[PubMed · E-utilities] -->|artículos, revisiones| S((Estudio))
-  PO[Orgs. de pacientes · curado] --> O((Organización))
-  D --- G
-  D --- T
-  D --- TX
-  D --- S
-  D --- O
-```
+No API keys are needed. If you set `NCBI_API_KEY` as an Edge Function secret, PubMed and ClinVar go from 3 to 10 requests per second.
 
-## Detalle por fuente
+## How ingestion runs
 
-| Fuente | Qué tomamos | Endpoint base | Clave | Límite | Licencia |
-| --- | --- | --- | --- | --- | --- |
-| **Orphanet / Orphadata** | Ficha de enfermedad por ORPHA code, genes asociados, fenotipos HPO con frecuencia, prevalencia, cruces a OMIM/ICD | `https://api.orphadata.com/` — `rd-cross-referencing/orphacodes/{code}`, `rd-associated-genes/orphacodes/{code}`, `rd-phenotypes/orphacodes/{code}`, `rd-epidemiology/orphacodes/{code}` (parámetro `lang=en`) | No | Uso razonable | CC BY 4.0 |
-| **HPO (JAX)** | Definición, sinónimos y padres de cada término HP | `https://ontology.jax.org/api/hp/terms/{HP:id}`; búsqueda: `https://clinicaltables.nlm.nih.gov/api/hpo/v3/search?terms={texto}` | No | Uso razonable | HPO license (atribución) |
-| **Monarch Initiative v3** | Asociaciones enfermedad–gen–fenotipo ya integradas con MONDO; búsqueda por nombre | `https://api-v3.monarchinitiative.org/v3/api/search?q={texto}`; `…/v3/api/association?subject={MONDO}&category=biolink:DiseaseToPhenotypicFeatureAssociation` | No | Uso razonable | CC BY 4.0 / BSD |
-| **ClinVar (NCBI)** | Variantes con significado clínico por gen | `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=clinvar&term={GEN}[gene]+AND+pathogenic[CLNSIG]&retmode=json` → `esummary.fcgi?db=clinvar&id={ids}&retmode=json` | Opcional (`NCBI_API_KEY`, sube de 3 a 10 req/s) | 3 req/s sin clave | Dominio público (NCBI) |
-| **ClinicalTrials.gov v2** | Ensayos por condición, estado, países y sitios | `https://clinicaltrials.gov/api/v2/studies?query.cond={enfermedad}&filter.overallStatus=RECRUITING,NOT_YET_RECRUITING&pageSize=50&format=json` | No | Uso razonable | Dominio público |
-| **Open Targets Platform** | Fármacos conocidos por enfermedad con fase clínica y mecanismo | `POST https://api.platform.opentargets.org/api/v4/graphql` (query `disease(efoId){knownDrugs{rows{drug{name} phase mechanismOfAction}}}`) | No | Uso razonable | CC0 |
-| **PubMed (E-utilities)** | Artículos y revisiones recientes por enfermedad o gen, con PMID y fecha | `esearch.fcgi?db=pubmed&term={consulta}&sort=date&retmax=25&retmode=json` → `esummary.fcgi?db=pubmed&id={ids}&retmode=json` | Opcional (`NCBI_API_KEY`) | 3 req/s sin clave | Dominio público (metadatos) |
-| **Organizaciones de pacientes** | Nombre, país, sitio web, enfermedad | Archivo curado `supabase/seed/organizations.json` (NORD, EURORDIS, Global Genes, fundaciones específicas) | — | — | Datos públicos de cada organización |
+The container that builds the app cannot reach these sources, so ingestion runs inside Supabase:
 
-## Qué pasa con cada registro al entrar
+1. **Edge Function `ingest`** (`supabase/functions/ingest/`, `verify_jwt = false`). Every request must send the header `x-ingest-key` with the value of `app_secrets.ingest_key`. That table has RLS enabled and no policies, so only the service role can read it.
+   - Body: `{ orpha?: "ORPHA:33069" | "dravet", step?: "orphanet"|"opentargets"|"ctgov"|"pubmed"|"community"|"clinvar"|"orgs"|"hpo"|"all", dry?: boolean }`.
+   - `all` runs the disease steps in dependency order: orphanet → opentargets → ctgov → pubmed → community → clinvar → orgs. That takes about 10 s per disease, well under the 125 s budget.
+   - `dry: true` writes nothing and returns small raw API samples. `dry + step:"opentargets" + gql:"…"` runs any GraphQL query, which is how we debugged the Open Targets schema change.
+   - All writes go through `public.ingest_upsert(entities, edges, aliases)`, which can only be executed by the service role. It is idempotent on `(type, canonical_id)` and `(from, to, relation)`, merges props instead of overwriting them, ignores any edge without evidence, and re-activates a retracted edge when a source reports it again.
+   - Every step logs to `ingest_runs` (status, counts, notes) and updates `sources.last_synced_at`.
+2. **pg_net**: `select private.invoke_ingest('ORPHA:33069', 'all');` posts to the function. Responses land in `net._http_response` and are kept for 6 h.
+3. **pg_cron** jobs (UTC):
 
-1. **Normalizar el ID**: ORPHA, MONDO, HGNC, HP, NCT, PMID, CHEMBL. El ID canónico es la llave de `entities` (`type + canonical_id`), por eso correr la ingesta dos veces no duplica.
-2. **Crear o actualizar la entidad** con `ON CONFLICT (type, canonical_id) DO UPDATE`.
-3. **Crear la arista** (`causes`, `has_phenotype`, `has_variant`, `studies`, `treats`, `supports`, `serves`).
-4. **Adjuntar la evidencia** con `source_id`, `external_id`, `url`, `published_on`, `retrieved_at` y, cuando aplica, una cita literal corta.
-5. **Confianza**: viene de la fuente cuando existe (frecuencia HPO, fase clínica, significado ClinVar). Si no, 0.5 y se marca `confidence_basis = 'source_default'`.
-
-## Enfermedades demo (seed)
-
-Cinco monogénicas de inicio pediátrico y afectación neurológica, alineadas con la misión de Buffalo Initiative:
-
-| Enfermedad | ORPHA | Gen | Por qué |
+| Job | Schedule | Job | Schedule |
 | --- | --- | --- | --- |
-| Síndrome de Dravet | ORPHA:33069 | SCN1A | Epilepsia genética con ensayos activos y comunidad fuerte |
-| Síndrome de Rett | ORPHA:778 | MECP2 | Tiene fármaco aprobado reciente: muestra el nodo "tratamiento" |
-| Trastorno por deficiencia de CDKL5 | ORPHA:505652 | CDKL5 | Fundaciones de pacientes muy activas en investigación |
-| Síndrome de Angelman | ORPHA:72 | UBE3A | Varias terapias génicas en ensayo |
-| Enfermedad de Batten CLN2 | ORPHA:228354 | TPP1 | Terapia de reemplazo enzimático aprobada; ejemplo de "camino al tratamiento" |
+| `ingest-dravet` | `0 3 * * *` | `ingest-angelman` | `15 3 * * *` |
+| `ingest-rett` | `5 3 * * *` | `ingest-cln2` | `20 3 * * *` |
+| `ingest-cdkl5` | `10 3 * * *` | `ingest-hpo` | `0 4 * * 0` (weekly) |
 
-Para escalar a las 5,000+ monogénicas, la lista pasa a ser la salida de Orphadata (`rd-classification`), no un archivo a mano.
+The seed JSON is compiled into the function. After editing `supabase/seed/*.json`, run `node scripts/ingest/build-edge-seed.mjs` and redeploy. `npm run ingest` (Node, `scripts/ingest/`) is a local fallback only.
 
-## Qué NO entra
+## Prop keys the UI and agents can rely on
 
-- Datos de pacientes individuales de ninguna fuente.
-- Foros o redes sociales como evidencia clínica (solo como enlace a comunidad).
-- Cualquier dato sin `url` y `retrieved_at`.
+- **`treats` edge** (`edge_props`): `phase` (0–4; 4 = approved), `stage` (Open Targets stage), `status`, `approved_for_indication` (bool), `investigational` (bool), `origin` (`opentargets` | `clinicaltrials`), `mechanism`, `intervention_type`, `nct_ids[]`, `regulators[]`. Trial info merged onto an Open Targets edge is added as `trial_status`, `trial_phase` and `trial_statuses`.
+- **treatment entity**: `chembl_id`, `drug_type`, `approved` (approved for any indication), `max_stage`, `mechanism`, `targets[]`, `trade_names[]`, `synonyms[]`. Nodes from ClinicalTrials.gov only use the id `CTGOV:<slug>`.
+- **trial entity**: `nct_id`, `status`, `phase` (e.g. `PHASE2/PHASE3`), `phases[]`, `countries[]`, `countries_count`, `sites_count`, `sites[]` (facility, city, country, status; first 25), `start_date`, `primary_completion_date`, `enrollment`, `min_age`, `max_age`, `sponsor`, `interventions[]`, `conditions[]`, `url`.
+- **disease entity**: `definition`, `name_es`, `mondo`, `xrefs{OMIM,ICD-10,…}`, `prevalence[]`, `age_of_onset[]`, `inheritance[]`, `orphanet_url`. Spanish names are also stored in `entity_aliases` with `lang = 'es'`.
+- **study entity**: `pmid`, `journal`, `pub_date`, `authors[]`, `pubtype[]`, `doi`, `first_author`, `last_author` (`{name, affiliation, orcid, country}`).
+- **`research_community`**: one row per first or last author of each paper (`source = 'pubmed_author'`, `source_ref = 'PMID:…'`). These are public profiles and `open_to_contact = false`.
+
+## Demo diseases (seed)
+
+| Disease | ORPHA | MONDO | Gene |
+| --- | --- | --- | --- |
+| Dravet syndrome | ORPHA:33069 | MONDO:0100135 | SCN1A |
+| Rett syndrome | ORPHA:778 | MONDO:0010726 | MECP2 |
+| CDKL5 deficiency disorder | ORPHA:505652 | MONDO:0100039 | CDKL5 |
+| Angelman syndrome | ORPHA:72 | MONDO:0007113 | UBE3A |
+| CLN2 disease | **ORPHA:228349** | MONDO:0008769 | TPP1 |
+
+The original seed used ORPHA:228354, which is **CLN8** disease, and MONDO:0011122 for Dravet. Both are fixed. The CLN8 node has been renamed, all of its edges retracted and its aliases neutralized. Removing it completely needs a human-run `DELETE` (see below).
+
+## Counts after the first full load (2026-10-03)
+
+`graph_stats`: 780 entities · 886 active edges · 1,104 evidence rows · 80 trials · 72 treatments · 8 sources. Zero active edges lack evidence.
+
+| Disease | causes | has_phenotype | treats | studies (trials + papers) | variants | orgs | researchers |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Dravet | 7 | 46 | 21 | 54 | 25 | 5 | 59 |
+| Rett | 1 | 35 | 32 | 59 | 25 | 5 | 52 |
+| CDKL5 | 1 | 52 | 4 | 34 | 25 | 5 | 52 |
+| Angelman | 1 (Monarch) | 71 | 17 | 48 | 25 | 5 | 50 |
+| CLN2 | 1 (Monarch) | 15 (Monarch) | 2 | 34 | 25 | 4 | 50 |
+
+Treatments approved for the indication (according to Open Targets): Dravet (fenfluramine, cannabidiol, stiripentol), Rett (trofinetide), CLN2 (cerliponase alfa). Known gap: Open Targets has no ganaxolone record for CDKL5, so ganaxolone only appears as an investigational treatment from its phase 3 trial.
+
+## What does not come in
+
+- Data about individual patients, from any source.
+- Forums or social media as clinical evidence.
+- Any row without a `url` and `retrieved_at`.

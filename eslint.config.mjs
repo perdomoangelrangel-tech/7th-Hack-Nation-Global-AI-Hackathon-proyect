@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "video/**",
+    ".next-*/**",
+    ".claude/worktrees/**",
     "supabase/functions/**",
   ]),
 ]);

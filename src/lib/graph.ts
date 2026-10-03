@@ -25,7 +25,9 @@ export async function findDisease(q: string) {
   if (byId.data) return byId.data;
   const byName = await db.from("entities").select("*").eq("type", "disease").ilike("name", `%${q}%`).limit(1).maybeSingle();
   if (byName.data) return byName.data;
-  const alias = await db.from("entity_aliases").select("entity_id").ilike("alias", `%${q}%`).limit(1).maybeSingle();
+  // Aliases also hold drug and phenotype synonyms, so restrict the alias match to disease entities.
+  const alias = await db.from("entity_aliases").select("entity_id, entities!inner(type)")
+    .eq("entities.type", "disease").ilike("alias", `%${q}%`).limit(1).maybeSingle();
   if (alias.data) return (await db.from("entities").select("*").eq("id", alias.data.entity_id).single()).data;
   return null;
 }
@@ -68,11 +70,31 @@ export async function trialsFor(q: string, country?: string): Promise<ToolResult
   };
 }
 
+/** Treatment edge props (see docs/DATA_SOURCES.md): phase (0-4), stage, status, approved_for_indication,
+ *  investigational, origin ('opentargets' | 'clinicaltrials'), mechanism, intervention_type, nct_ids. */
+interface TreatProps {
+  phase?: number; stage?: string; status?: string; approved_for_indication?: boolean; investigational?: boolean;
+  origin?: string; mechanism?: string; intervention_type?: string; nct_ids?: string[]; trial_status?: string; trial_phase?: number;
+}
+
 export async function treatmentsFor(q: string): Promise<ToolResult<unknown> | null> {
   const d = await findDisease(q); if (!d) return null;
-  const rows = await edgesAround(d.id, "treats", "in");
+  const rows = (await edgesAround(d.id, "treats", "in")).sort((a, b) => {
+    const pa = a.edge_props as TreatProps; const pb = b.edge_props as TreatProps;
+    return Number(!!pb.approved_for_indication) - Number(!!pa.approved_for_indication) || (pb.phase ?? 0) - (pa.phase ?? 0);
+  });
   return {
-    data: rows.map((r) => ({ id: r.from_canonical_id, name: r.from_name, ...r.from_props, phase: (r.edge_props as { phase?: number })?.phase, confidence: r.confidence, evidence_ids: r.evidence.map((x) => x.id) })),
+    data: rows.map((r) => {
+      const e = r.edge_props as TreatProps;
+      return {
+        id: r.from_canonical_id, name: r.from_name, ...r.from_props,
+        phase: e.phase, stage: e.stage, status: e.status, origin: e.origin,
+        approved_for_indication: e.approved_for_indication ?? false, investigational: e.investigational ?? !e.approved_for_indication,
+        mechanism: e.mechanism ?? (r.from_props as { mechanism?: string })?.mechanism, intervention_type: e.intervention_type,
+        nct_ids: e.nct_ids ?? [], trial_status: e.trial_status, trial_phase: e.trial_phase,
+        confidence: r.confidence, evidence_ids: r.evidence.map((x) => x.id),
+      };
+    }),
     evidence: flatEvidence(rows), retrieved_at: now(),
     note: rows.length ? undefined : "No hay tratamientos documentados en nuestras fuentes para esta enfermedad.",
   };
@@ -93,15 +115,24 @@ export async function communitiesFor(q: string): Promise<ToolResult<unknown> | n
   const support = await edgesAround(d.id, "supports", "in");
   const research = await edgesAround(d.id, "researches", "in");
   const map = (r: EdgeRow) => ({ name: r.from_name, ...r.from_props, evidence_ids: r.evidence.map((x) => x.id) });
-  return { data: { patient_organizations: support.map(map), research_communities: research.map(map) }, evidence: flatEvidence([...support, ...research]), retrieved_at: now() };
+  // Researchers derived from PubMed authorship (source_ref = PMID of the paper) plus self-registered profiles.
+  const db = publicClient()!;
+  const { data: researchers } = await db.from("research_community")
+    .select("name, affiliation, country, role, focus, orcid, source, source_ref, open_to_contact")
+    .eq("disease_id", d.id).eq("public_profile", true).order("created_at", { ascending: false }).limit(30);
+  return {
+    data: { patient_organizations: support.map(map), research_communities: research.map(map), researchers: researchers ?? [] },
+    evidence: flatEvidence([...support, ...research]), retrieved_at: now(),
+  };
 }
 
 export async function gapsFor(q: string): Promise<ToolResult<unknown> | null> {
   const d = await findDisease(q); if (!d) return null;
   const db = publicClient()!;
-  const { data } = await db.from("research_gaps").select("*").or(`from_name.eq.${d.name},to_name.eq.${d.name}`).limit(50);
+  const { data } = await db.from("research_gaps").select("*").or(`from_id.eq.${d.id},to_id.eq.${d.id}`).limit(50);
   const treatments = await edgesAround(d.id, "treats", "in");
-  const approved = treatments.filter((t) => (t.from_props as { approved?: boolean })?.approved);
+  // Approved for THIS disease (Open Targets max clinical stage = APPROVAL), not merely approved for something.
+  const approved = treatments.filter((t) => (t.edge_props as TreatProps)?.approved_for_indication);
   return {
     data: { weak_edges: data ?? [], has_approved_treatment: approved.length > 0, approved_count: approved.length, treatment_candidates: treatments.length },
     evidence: flatEvidence(treatments), retrieved_at: now(),

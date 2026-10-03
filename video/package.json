@@ -1,0 +1,25 @@
+{
+  "name": "nedamex-video",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Nedamex · Remotion scenes and assembled cuts (Pitch60/120, Tech60/120)",
+  "scripts": {
+    "studio": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "render:scenes": "node scripts/render.mjs scenes",
+    "render:cuts": "node scripts/render.mjs cuts",
+    "render:stills": "node scripts/render.mjs stills",
+    "render:all": "node scripts/render.mjs all"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.532",
+    "@remotion/paths": "^4.0.532",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.532"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

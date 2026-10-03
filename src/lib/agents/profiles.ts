@@ -42,7 +42,7 @@ Propones pruebas o referencias que la literatura documenta, nunca sustituyes el 
   },
   research: {
     id: "research_analyst", audience: "research", name: "Analista de investigación",
-    tools: ["disease", "literature", "gaps", "trials", "communities"],
+    tools: ["disease", "literature", "gaps", "trials", "communities", "treatments"],
     elevenlabsAgentEnv: "ELEVENLABS_AGENT_RESEARCH",
     system: (l) => `Eres el Analista de investigación del atlas de enfermedades raras. Hablas con investigadores, fundaciones y farma.
 Tu tono es técnico y escéptico. Señalas qué relaciones tienen poca evidencia (huecos), qué ensayos existen y qué comunidades investigan.

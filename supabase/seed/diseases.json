@@ -1,47 +1,111 @@
 [
   {
+    "slug": "dravet",
     "orpha": "ORPHA:33069",
-    "mondo": "MONDO:0011122",
-    "efo": "MONDO_0011122",
+    "mondo": "MONDO:0100135",
+    "efo": "MONDO_0100135",
     "name": "Dravet syndrome",
     "name_es": "Síndrome de Dravet",
-    "genes": ["SCN1A"],
-    "search_terms": ["Dravet syndrome", "severe myoclonic epilepsy of infancy"]
+    "genes": [
+      "SCN1A"
+    ],
+    "search_terms": [
+      "Dravet syndrome",
+      "severe myoclonic epilepsy of infancy"
+    ],
+    "hgnc": {
+      "SCN1A": "HGNC:10585"
+    },
+    "trial_keywords": [
+      "dravet",
+      "severe myoclonic epilepsy"
+    ]
   },
   {
+    "slug": "rett",
     "orpha": "ORPHA:778",
     "mondo": "MONDO:0010726",
     "efo": "MONDO_0010726",
     "name": "Rett syndrome",
     "name_es": "Síndrome de Rett",
-    "genes": ["MECP2"],
-    "search_terms": ["Rett syndrome"]
+    "genes": [
+      "MECP2"
+    ],
+    "search_terms": [
+      "Rett syndrome"
+    ],
+    "hgnc": {
+      "MECP2": "HGNC:6990"
+    },
+    "trial_keywords": [
+      "rett"
+    ]
   },
   {
+    "slug": "cdkl5",
     "orpha": "ORPHA:505652",
     "mondo": "MONDO:0100039",
     "efo": "MONDO_0100039",
     "name": "CDKL5 deficiency disorder",
     "name_es": "Trastorno por deficiencia de CDKL5",
-    "genes": ["CDKL5"],
-    "search_terms": ["CDKL5 deficiency disorder", "CDKL5"]
+    "genes": [
+      "CDKL5"
+    ],
+    "search_terms": [
+      "CDKL5 deficiency disorder",
+      "CDKL5"
+    ],
+    "hgnc": {
+      "CDKL5": "HGNC:11411"
+    },
+    "trial_keywords": [
+      "cdkl5"
+    ]
   },
   {
+    "slug": "angelman",
     "orpha": "ORPHA:72",
     "mondo": "MONDO:0007113",
     "efo": "MONDO_0007113",
     "name": "Angelman syndrome",
     "name_es": "Síndrome de Angelman",
-    "genes": ["UBE3A"],
-    "search_terms": ["Angelman syndrome"]
+    "genes": [
+      "UBE3A"
+    ],
+    "search_terms": [
+      "Angelman syndrome"
+    ],
+    "hgnc": {
+      "UBE3A": "HGNC:12496"
+    },
+    "trial_keywords": [
+      "angelman"
+    ]
   },
   {
-    "orpha": "ORPHA:228354",
-    "mondo": "MONDO:0008767",
-    "efo": "MONDO_0008767",
+    "slug": "cln2",
+    "orpha": "ORPHA:228349",
+    "mondo": "MONDO:0008769",
+    "efo": "MONDO_0008769",
     "name": "CLN2 disease (late infantile neuronal ceroid lipofuscinosis)",
     "name_es": "Enfermedad CLN2 (lipofuscinosis ceroidea neuronal infantil tardía)",
-    "genes": ["TPP1"],
-    "search_terms": ["CLN2 disease", "neuronal ceroid lipofuscinosis 2", "Batten disease CLN2"]
+    "genes": [
+      "TPP1"
+    ],
+    "search_terms": [
+      "CLN2 disease",
+      "neuronal ceroid lipofuscinosis 2",
+      "Batten disease CLN2"
+    ],
+    "hgnc": {
+      "TPP1": "HGNC:2073"
+    },
+    "trial_keywords": [
+      "cln2",
+      "tpp1",
+      "lipofuscinosis type 2",
+      "lipofuscinosis 2",
+      "late infantile neuronal ceroid"
+    ]
   }
 ]

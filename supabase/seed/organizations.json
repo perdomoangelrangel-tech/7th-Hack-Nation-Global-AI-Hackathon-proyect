@@ -7,8 +7,8 @@
   { "name": "Loulou Foundation", "country": "UK", "url": "https://www.louloufoundation.org", "kind": "research", "diseases": ["ORPHA:505652"] },
   { "name": "Angelman Syndrome Foundation", "country": "US", "url": "https://www.angelman.org", "kind": "patient_org", "diseases": ["ORPHA:72"] },
   { "name": "Foundation for Angelman Syndrome Therapeutics (FAST)", "country": "US", "url": "https://cureangelman.org", "kind": "research", "diseases": ["ORPHA:72"] },
-  { "name": "Batten Disease Support and Research Association", "country": "US", "url": "https://bdsrafoundation.org", "kind": "patient_org", "diseases": ["ORPHA:228354"] },
-  { "name": "NORD · National Organization for Rare Disorders", "country": "US", "url": "https://rarediseases.org", "kind": "patient_org", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228354"] },
-  { "name": "EURORDIS · Rare Diseases Europe", "country": "EU", "url": "https://www.eurordis.org", "kind": "patient_org", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228354"] },
-  { "name": "Buffalo Initiative", "country": "US", "url": "https://solve.mit.edu/solutions/92088", "kind": "research", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228354"] }
+  { "name": "Batten Disease Support and Research Association", "country": "US", "url": "https://bdsrafoundation.org", "kind": "patient_org", "diseases": ["ORPHA:228349"] },
+  { "name": "NORD · National Organization for Rare Disorders", "country": "US", "url": "https://rarediseases.org", "kind": "patient_org", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228349"] },
+  { "name": "EURORDIS · Rare Diseases Europe", "country": "EU", "url": "https://www.eurordis.org", "kind": "patient_org", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228349"] },
+  { "name": "Buffalo Initiative", "country": "US", "url": "https://solve.mit.edu/solutions/92088", "kind": "research", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228349"] }
 ]

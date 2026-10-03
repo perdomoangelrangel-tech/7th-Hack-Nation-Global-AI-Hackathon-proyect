@@ -1,4 +1,7 @@
 /**
+ * LOCAL FALLBACK ONLY. Production ingestion = Supabase Edge Function `ingest` (supabase/functions/ingest),
+ * which has the current parsers (Open Targets drugAndClinicalCandidates, Monarch fallbacks, trial
+ * relevance filter, researcher community). See docs/DATA_SOURCES.md.
  * Ingesta completa. Uso:
  *   npm run ingest                      -> todas las fuentes, todas las enfermedades del seed
  *   npm run ingest -- --only=orphanet   -> una fuente

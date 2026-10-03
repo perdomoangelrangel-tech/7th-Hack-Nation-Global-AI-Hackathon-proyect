@@ -1,69 +1,105 @@
-# Rare Disease Atlas · evidence-first knowledge graph with voice agents
+# Nedamex
 
-> Hack-Nation 7th Global AI Hackathon · **Challenge 5: AI Atlas for Rare Diseases** (Buffalo Initiative × OpenAI)
->
-> One rule governs the whole system: **the AI knows nothing on its own. It can only say what the graph backs with a source and a date.**
+### Rare disease, mapped. Every answer traced to its source.
 
-Working name: *Atlas* (final name and logo pending). Spanish docs for the team live in `docs/`.
+**Hack-Nation 7th Global AI Hackathon · Challenge 5 · AI Atlas for Rare Diseases** (Buffalo Initiative × OpenAI)
 
-## What it does
+**[▶ Live demo](https://nedamex.vercel.app)** *(deploying)* · [Videos](#videos) · [Architecture](docs/ARCHITECTURE.md) · [Team workflow](docs/WORKFLOW.md)
 
-- **Ingests** seven open sources (Orphanet, HPO, Monarch, ClinVar, ClinicalTrials.gov, Open Targets, PubMed) plus curated patient organizations into a **property graph on Postgres** where *an edge without evidence cannot exist* (database trigger).
-- **Answers** questions for three audiences through **voice agents with personality** (ElevenLabs): a Family Guide (free), a Clinical Analyst and a Research Analyst (B2B for the health sector).
-- **Verifies** every sentence with a deterministic verifier: claims without an `evidence_id` returned by the tools in that turn are dropped and replaced by *"There is no evidence in our sources for that."*
-- Surfaces **treatments and management documented in the literature**, active trials, research gaps, and the patient / researcher community for each disease.
+> The AI knows nothing on its own. It can only say what the graph backs with a source and a date.
+> No source, no answer.
 
+## How it works
+
+```mermaid
+flowchart LR
+  S["Open sources<br/>Orphanet · HPO · Monarch · ClinVar<br/>ClinicalTrials.gov · Open Targets · PubMed"] -- "pg_cron + pg_net" --> I["Supabase Edge Function<br/>ingest"]
+  I --> G[("Evidence graph · Postgres<br/>entities · edges · evidence<br/>trigger: no edge without evidence")]
+  Q["Question<br/>voice or text · EN / ES"] --> T["Agent tools<br/>/api/tools/* · read-only"]
+  G --> T
+  T --> L["LLM draft<br/>JSON claims + evidence_ids"]
+  L --> V{"Deterministic verifier<br/>every claim cited?"}
+  V -- "yes" --> O["ElevenLabs voice answer<br/>citations · date · next steps"]
+  V -- "no" --> X["“There is no evidence in our sources for that.”"]
 ```
-sources ──ingest──▶ graph (entities · edges · evidence) ──tools──▶ agent ──▶ verifier ──▶ spoken answer + next steps
-```
 
-Full architecture with diagrams: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · data sources: [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) · research & business model: [`docs/RESEARCH.md`](docs/RESEARCH.md) · agents: [`docs/AGENTS.md`](docs/AGENTS.md).
+| Guarantee | Enforced by |
+|---|---|
+| No relation without a source | Postgres trigger: an edge can't be `active` without ≥ 1 `evidence` row |
+| No sentence without a citation | `src/lib/verifier.ts`, deterministic with no LLM, unit-tested |
+| Every fact carries its date | `evidence.retrieved_at` is shown with each answer |
+| Not medical advice | disclaimer on every answer + referral to a specialist |
+| Privacy | no patient data is sold; trial contact only with explicit consent |
+
+## Three audiences
+
+| Audience | Voice agent | What they get | Access |
+|---|---|---|---|
+| Families & patients | **Family Guide** (warm, no jargon) | plain explanation, documented treatments, nearby trials, support groups | Free |
+| Clinicians | **Clinical Analyst** (precise, cites ORPHA/HP/NCT) | phenotype-based differential (HPO), variants, cited literature | B2B |
+| Researchers & pharma | **Research Analyst** (skeptical, shows gaps) | evidence map, research gaps, researcher community, trials | B2B + researcher portal |
 
 ## Stack
 
-Next.js 16 (App Router) on Vercel · Supabase (Postgres + pgvector, Auth, RLS) · OpenAI / Claude for drafting · ElevenLabs Agents for voice · Blender → GLB for the 3D graph view (later).
+| Layer | Tech | Role |
+|---|---|---|
+| Data | **Supabase** (Postgres, pgvector, RLS, Edge Functions, pg_cron, pg_net) | evidence graph + scheduled ingestion |
+| Web & API | **Next.js 16** on **Vercel** | landing, `/atlas`, `/api/ask`, `/api/tools/*` |
+| Voice | **ElevenLabs Agents** | three personas calling our tools as server tools |
+| LLM | **OpenAI** / **Claude** | drafting JSON claims only from retrieved evidence |
+| Researcher portal | **Lovable** | B2B portal on the same Supabase (anon key + RLS) |
+| Video | Remotion | submission videos (`video/`) |
 
-## Quick start (VS Code)
+## Videos
+
+| Demo | Tech | Team |
+|---|---|---|
+| *coming soon* | *coming soon* | *coming soon* |
+
+## Quick start
 
 ```bash
-git clone <repo> && cd rare-atlas
-npm run setup            # copies .env.example → .env, installs, typechecks, lints
-# 1. Fill .env with Supabase URL + keys (Project Settings → API)
-# 2. Apply migrations: `supabase link --project-ref <ref> && npm run db:push`
-#    or paste supabase/migrations/0001_graph.sql then 0002_users.sql in the SQL Editor.
-npm run ingest           # loads the 5 demo diseases from the 7 sources (idempotent)
-npm run dev              # http://localhost:3000  ·  /atlas  ·  /api/health
+git clone https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect nedamex && cd nedamex
+npm run setup        # .env from .env.example, install, typecheck, lint
+# fill .env with your Supabase URL + keys, then apply supabase/migrations/*.sql in order
+npm run dev          # http://localhost:3000 · /atlas · /api/health
+npm test             # deterministic verifier tests
 ```
 
-Without `OPENAI_API_KEY` the `/api/ask` endpoint runs in a deterministic demo mode built straight from the evidence, so the whole flow works end to end before any model key is set.
+Without `OPENAI_API_KEY`, `/api/ask` runs in a deterministic demo mode built straight from the evidence.
+Ingestion runs inside Supabase (Edge Function `ingest`, scheduled by pg_cron). `npm run ingest` is a local fallback.
 
 ## Repo map
 
 ```
-docs/                      architecture, data sources, research, agents (Mermaid diagrams render on GitHub)
-supabase/migrations/       0001_graph.sql (graph + evidence trigger + RLS) · 0002_users.sql (orgs, conversations, consents)
-supabase/seed/             diseases.json (5 monogenic demo diseases) · organizations.json
-scripts/ingest/            graph.ts (idempotent writer) · sources/*.ts (one module per source) · index.ts (runner)
-src/lib/graph.ts           read-only graph queries → { data, evidence[] }
-src/lib/verifier.ts        deterministic verifier (+ tests)
-src/lib/agents/profiles.ts the three agent personalities (behavior only, zero medical knowledge in prompts)
-src/app/api/tools/[tool]   agent tools: disease · trials · treatments · literature · communities · gaps · phenotype-match
-src/app/api/ask            retrieve → draft → verify → persist
-src/app/                   landing with video slots · /atlas product UI
-.github/workflows/         ci.yml (lint · test · build) · ingest.yml (daily graph refresh)
+src/app/             landing · /atlas · /api/ask · /api/tools/[tool] · /api/health
+src/lib/             graph.ts (graph reads) · verifier.ts (+ tests) · agents/ (three personas)
+supabase/            migrations (graph, evidence trigger, RLS) · functions/ingest · seed/
+scripts/ingest/      local ingestion fallback
+video/               Remotion scenes for the submission videos
+docs/                architecture · data sources · research · agents · workflow
+.claude/             Claude Code subagents, slash commands, QA kit
 ```
 
-## Deploy
+## Docs
 
-1. Push to GitHub → import the repo in Vercel (framework auto-detected, `vercel.json` sets function timeouts).
-2. Add the variables from `.env.example` in Vercel → Project → Settings → Environment Variables.
-3. Add `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` as GitHub Actions secrets for the daily ingest.
-4. In ElevenLabs, register `/api/tools/*` as server tools with header `x-atlas-key` = `ATLAS_TOOLS_KEY`.
+[Architecture](docs/ARCHITECTURE.md) · [Data sources](docs/DATA_SOURCES.md) · [Research & business model](docs/RESEARCH.md) · [Agents](docs/AGENTS.md) · [Team workflow](docs/WORKFLOW.md) · [Design](DESIGN.md) · [Claude Code guide](CLAUDE.md)
+*(ARCHITECTURE, DATA_SOURCES, RESEARCH and AGENTS are in Spanish; the diagrams render on GitHub.)*
 
-## Scaling
+## Scales by design
 
-The seed list becomes the output of Orphadata's classification endpoint (5,000+ monogenic diseases); ingestion is idempotent and queued (`ingest_jobs`, `FOR UPDATE SKIP LOCKED`); Postgres carries the graph to ~10M edges before a dedicated graph DB is worth it, behind the same tool contract. Multi-tenant B2B is already in the schema (`organizations`, `memberships`, RLS).
+5 demo diseases today → 5,000+ monogenic diseases by swapping the seed for Orphadata's classification. Ingestion is idempotent by canonical ID (ORPHA, HGNC, HP, NCT, PMID). Postgres carries the graph to ~10M edges behind the same tool contract, and the schema is already multi-tenant B2B (organizations + RLS).
 
 ## Not medical advice
 
-Every answer ends with a disclaimer and routes to a specialist. We never sell patient data; trial contact happens only with explicit consent (`trial_contact_consents`).
+Nedamex shows sourced information, not diagnoses or treatment recommendations. Every answer ends with a disclaimer and points to a doctor or a center of expertise. We never sell patient data, and trial contact happens only with explicit consent.
+
+Data: Orphanet (CC BY 4.0) · HPO · Monarch Initiative (CC BY 4.0) · ClinVar, PubMed, ClinicalTrials.gov (public domain) · Open Targets (CC0).
+
+## Team
+
+| Name | Role |
+|---|---|
+| [Name] | [Role] |
+| [Name] | [Role] |
+| [Name] | [Role] |

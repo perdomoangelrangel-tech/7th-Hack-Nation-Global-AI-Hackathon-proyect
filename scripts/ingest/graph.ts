@@ -1,6 +1,7 @@
 /**
- * Helpers de escritura al grafo. Idempotentes: correr dos veces no duplica.
- * Solo este archivo escribe en entities/edges/evidence; las fuentes lo usan.
+ * LOCAL FALLBACK ONLY. Production ingestion is the Supabase Edge Function `ingest`
+ * (supabase/functions/ingest, invoked by pg_net, scheduled by pg_cron); see docs/DATA_SOURCES.md.
+ * Graph write helpers. Idempotent: running twice does not duplicate.
  */
 import { createClient } from "@supabase/supabase-js";
 
@@ -47,14 +48,12 @@ export class Graph {
     const key = `${e.type}:${e.canonicalId}`;
     const hit = this.cache.get(key);
     if (hit) return hit;
-    const { data, error } = await this.db
-      .from("entities")
-      .upsert(
-        { type: e.type, canonical_id: e.canonicalId, name: e.name, props: e.props ?? {}, updated_at: new Date().toISOString() },
-        { onConflict: "type,canonical_id" },
-      )
-      .select("id")
-      .single();
+    // Same writer as the Edge Function: props are merged (existing || new), never wiped.
+    const { error: upErr } = await this.db.rpc("ingest_upsert", {
+      p_entities: [{ type: e.type, canonical_id: e.canonicalId, name: e.name, props: e.props ?? {} }], p_edges: [], p_aliases: [],
+    });
+    if (upErr) throw upErr;
+    const { data, error } = await this.db.from("entities").select("id").eq("type", e.type).eq("canonical_id", e.canonicalId).single();
     if (error) throw error;
     this.cache.set(key, data.id);
     this.stats.entities++;
