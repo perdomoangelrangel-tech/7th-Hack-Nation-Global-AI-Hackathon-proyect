@@ -28,8 +28,8 @@ export interface GraphCanvasProps {
 
 export interface GraphCommand { kind: "zoomIn" | "zoomOut" | "fit"; n: number }
 
-/** Node radius budget (UX_WAVE4: nodeVal 2–8, no giant spheres hiding each other). */
-export const nodeSize = (size: number) => Math.min(8, Math.max(2, size));
+/** Node radius budget (WAVE 5B: 6–14 px at fit zoom; layouts set sizes per ring). */
+export const nodeSize = (size: number) => Math.min(18, Math.max(3, size));
 
 export const endId = (v: unknown) => (typeof v === "object" && v ? String((v as { id: string }).id) : String(v));
 export const trim = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);

@@ -13,7 +13,9 @@ const T = {
   en: { cta: "Extract with OpenAI", again: "Extract again", loading: "Reading the abstract…", error: "Could not extract right now.", entities: "Entities", claims: "Claims from the paper", none: "Nothing extractable in this abstract.", review: "AI-extracted · needs expert review", dictReview: "Name match, no AI · needs expert review", contradicts: "evidence against", supports: "supports", inAtlas: "in the atlas", isNew: "not in the atlas", ai: "Extracted by OpenAI", tpl: "Dictionary pass from atlas names (no AI)", saved: "saved to the graph as dotted edges", dropped: "dropped by the checks (not verbatim in the paper, not about the claim, or wrong entity types)" },
   es: { cta: "Extraer con OpenAI", again: "Extraer de nuevo", loading: "Leyendo el resumen…", error: "No se pudo extraer ahora.", entities: "Entidades", claims: "Afirmaciones del artículo", none: "Nada extraíble en este resumen.", review: "Extraído por IA · revisar con un experto", dictReview: "Coincidencia de nombres, sin IA · revisar con un experto", contradicts: "evidencia en contra", supports: "apoya", inAtlas: "en el atlas", isNew: "no está en el atlas", ai: "Extraído por OpenAI", tpl: "Búsqueda por diccionario del atlas (sin IA)", saved: "guardado en el grafo como aristas punteadas", dropped: "descartadas por las verificaciones (no literal en el artículo, no trata de la afirmación o tipos incorrectos)" },
 };
-const REL: Record<string, string> = { causes: "causes", has_phenotype: "has sign", has_variant: "has variant", treats: "tested for", participates_in: "takes part in", researches: "researches" };
+/** What kind of treatment evidence the quote is (never "treats": a question for an expert). */
+const QUAL: Record<string, string> = { reported_response: "reported response in some patients", clinical_trial: "tested in a clinical trial", preclinical: "lab or animal study", proposed: "proposed, not tested", approved_indication: "the paper says it is approved — ask an expert" };
+const REL: Record<string, string> = { causes: "causes", has_phenotype: "has sign", has_variant: "has variant", studied_for: "was studied for", participates_in: "takes part in", researches: "researches" };
 
 export function ExtractPanel({ pmid, locale = "en", onExtracted, className = "", apiBase }: Props) {
   const t = T[locale];
@@ -68,7 +70,7 @@ function Result({ data, t }: { data: ExtractResult; t: (typeof T)["en"] }) {
           <ul className="mt-1 space-y-2">
             {data.claims.map((c, i) => (
               <li key={i} className="border-l-[3px] border-dotted border-brand pl-3 text-sm">
-                <p className="text-ink"><strong>{c.subject}</strong> {REL[c.relation] ?? c.relation} <strong>{c.object}</strong>
+                <p className="text-ink"><strong>{c.subject}</strong> {REL[c.relation] ?? c.relation} <strong>{c.object}</strong>{c.qualifier && c.qualifier !== "none" && QUAL[c.qualifier] && <span className="text-ink-2"> ({QUAL[c.qualifier]})</span>}
                   <span className={`ml-2 chip !text-[10px] ${c.polarity === "contradicts" ? "!border-amber text-amber" : ""}`}>{t[c.polarity]}</span></p>
                 <p className="mt-0.5 text-xs text-ink-2">“<mark className="bg-brand-soft text-ink rounded px-0.5">{c.quote}</mark>”</p>
                 <p className="text-[11px] text-ink-3 mt-0.5">{data.mode === "openai" ? t.review : t.dictReview} · {Math.round(c.confidence * 100)}%</p>

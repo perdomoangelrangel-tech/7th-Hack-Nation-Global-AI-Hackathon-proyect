@@ -53,7 +53,7 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   const byEdgeId = new Map(edges.map((e) => [e.id, e]));
   const outIdx = new Map<string, Edge[]>(); const inIdx = new Map<string, Edge[]>();
   for (const e of edges) {
-    if (e.kind === "proposed") continue; // community drafts never feed the analysis
+    if (e.kind === "proposed" || e.kind === "extracted") continue; // drafts and AI-extracted claims (needs review) never feed the analysis
     const ko = `${e.relation}|${e.from}`, ki = `${e.relation}|${e.to}`;
     outIdx.set(ko, [...(outIdx.get(ko) ?? []), e]); inIdx.set(ki, [...(inIdx.get(ki) ?? []), e]);
   }

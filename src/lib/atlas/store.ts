@@ -165,7 +165,7 @@ function subtitle(e: Entity, disease: string, l: Locale) {
 /* ------------------------------------------------------------------ */
 /* Vista del grafo                                                     */
 /* ------------------------------------------------------------------ */
-export interface GNode { id: string; type: EntityType; name: string; cluster: string | null; color: string | null; size: number; focus?: boolean; props?: Record<string, unknown>; /** links diseases of different mechanism clusters */ bridge?: boolean; /** community draft node (proposals layer) — never evidence */ draft?: boolean }
+export interface GNode { id: string; type: EntityType; name: string; cluster: string | null; color: string | null; size: number; focus?: boolean; props?: Record<string, unknown>; /** links diseases of different mechanism clusters */ bridge?: boolean; /** community draft node (proposals layer) — never evidence */ draft?: boolean; /** layout label node (Route sector header or Constellation region), not an entity */ header?: string }
 /** `proposed` = community draft (never evidence); added client-side by the proposals layer. */
 export interface GLink { id: string; source: string; target: string; relation: string; kind: Edge["kind"] | "proposed"; confidence: number; label?: string; /** crosses two mechanism clusters */ bridge?: boolean }
 export interface GraphView { focus: string; nodes: GNode[]; links: GLink[]; clusters: { id: string; label: string; color: string; diseases: string[] }[] }
@@ -178,7 +178,10 @@ export function graphView(focus: string, l: Locale): GraphView | null {
   const nodes = new Map<string, GNode>(); const links = new Map<string, GLink>();
   const addNode = (id: string, size = 4) => {
     const e = byId.get(id); if (!e || nodes.has(id)) return;
-    nodes.set(id, { id, type: e.type, name: nameOf(e, l), cluster: e.type === "disease" ? A?.disease_cluster[id] ?? null : null, color: e.type === "disease" ? color(id) : null, size, focus: id === focus });
+    // Small props the Route layout ranks by (information content, asset kind / status) — never shown as claims.
+    const p = e.props as Record<string, unknown>;
+    const props = e.type === "phenotype" ? { ic: Number(p.ic ?? 0) } : e.type === "trial" ? { asset_kind: p.asset_kind ?? null, status: p.status ?? null } : undefined;
+    nodes.set(id, { id, type: e.type, name: nameOf(e, l), cluster: e.type === "disease" ? A?.disease_cluster[id] ?? null : null, color: e.type === "disease" ? color(id) : null, size, focus: id === focus, ...(props ? { props } : {}) });
   };
   const addLink = (e: Edge, bridge = crossCluster(e)) => {
     if (!nodes.has(e.from) || !nodes.has(e.to)) return;
@@ -211,7 +214,8 @@ export function graphView(focus: string, l: Locale): GraphView | null {
   // Síntomas: los más informativos de la enfermedad foco + los que comparte con sus vecinas.
   const phen = (atlas().out.get(focus) ?? []).filter((e) => e.relation === "has_phenotype")
     .sort((a, b) => b.confidence * Number(byId.get(b.to)?.props.ic ?? 0) - a.confidence * Number(byId.get(a.to)?.props.ic ?? 0));
-  for (const e of phen.slice(0, 7)) { addNode(e.to, 3); addLink(e); }
+  // Up to 16 (the Route view shows the top 8 and "+N more").
+  for (const e of phen.slice(0, 16)) { addNode(e.to, 3); addLink(e); }
   for (const n of neighbors) for (const e of (atlas().out.get(n) ?? []).filter((x) => x.relation === "has_phenotype" && nodes.has(x.to))) addLink(e);
   // Mechanism (variant-effect class, INFERRED by the data lane): focus + neighbours, then every on-screen disease that
   // shares one of those mechanisms — "same symptoms, opposite mechanism" becomes visible. String compare: the relation is
@@ -225,10 +229,18 @@ export function graphView(focus: string, l: Locale): GraphView | null {
     addNode(e.from, 4); addLink(e);
   }
   // Activos reutilizables: historia natural / registros / biomarcadores de foco y vecinas.
+  // Focus: reusable assets first, then active trials (up to 12 → "Studies & assets" sector with "+N more").
+  const ACTIVE_ST = new Set(["RECRUITING", "NOT_YET_RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]);
+  const REUSABLE = ["natural_history", "registry", "biomarker_study"];
   for (const d of [focus, ...neighbors]) {
-    const assets = (atlas().in.get(d) ?? []).filter((e) => e.relation === "studies" && ["natural_history", "registry", "biomarker_study"].includes(String(e.props.asset_kind)));
-    for (const e of assets.slice(0, d === focus ? 3 : 2)) { addNode(e.from, 3.5); addLink(e); }
+    const studies = (atlas().in.get(d) ?? []).filter((e) => e.relation === "studies" && byId.get(e.from)?.type === "trial");
+    const reusable = studies.filter((e) => REUSABLE.includes(String(e.props.asset_kind)));
+    const active = d === focus ? studies.filter((e) => !REUSABLE.includes(String(e.props.asset_kind)) && ACTIVE_ST.has(String(byId.get(e.from)?.props.status))) : [];
+    for (const e of [...reusable, ...active].slice(0, d === focus ? 12 : 2)) { addNode(e.from, 3.5); addLink(e); }
   }
+  // Treatments in the evidence for the focus (approved first) — a question for experts, never a recommendation.
+  const treats = (atlas().in.get(focus) ?? []).filter((e) => e.relation === "treats").sort((a, b) => Number(!!b.props.approved) - Number(!!a.props.approved));
+  for (const e of treats.slice(0, 10)) { addNode(e.from, 3.5); addLink(e); }
   // Puentes: investigadores que ya trabajan en la foco y en una vecina.
   for (const b of (A?.bridges ?? []).filter((x) => x.kind === "investigator" && x.diseases.includes(focus) && x.diseases.some((d) => neighbors.includes(d))).slice(0, 4)) {
     addNode(b.entity, 3.5);
@@ -430,7 +442,10 @@ export type Journey = NonNullable<ReturnType<typeof journey>>;
 /** Todas las enfermedades (para el selector inicial y la página de inicio). */
 export function diseaseList(l: Locale) {
   const A = atlas().snap.analytics;
-  return diseases().map((d) => ({ id: d.id, name: nameOf(d, l), cluster: A?.disease_cluster[d.id] ?? null, color: A?.clusters.find((c) => c.id === A.disease_cluster[d.id])?.color ?? null, centrality: A?.centrality[d.id] ?? 0 }))
+  return diseases().map((d) => {
+    const c = A?.clusters.find((x) => x.id === A.disease_cluster[d.id]);
+    return { id: d.id, name: nameOf(d, l), canonical_id: d.canonical_id, cluster: c?.id ?? null, cluster_label: c?.label ?? null, color: c?.color ?? null, centrality: A?.centrality[d.id] ?? 0 };
+  })
     .sort((a, b) => b.centrality - a.centrality);
 }
 

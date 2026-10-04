@@ -73,7 +73,8 @@ export function HeroModel({ replay = 0, onReady, parallax = 0.12 }: HeroModelPro
     introAction.reset().setEffectiveWeight(1).play();
     const onFinished = (e: { action: THREE.AnimationAction }) => {
       if (e.action !== introAction) return;
-      idleAction?.reset().fadeIn(0.5).play();
+      // resume the loop where it was (never a visible restart from frame 0)
+      if (idleAction) { idleAction.enabled = true; idleAction.paused = false; idleAction.fadeIn(0.5).play(); }
       introAction.fadeOut(0.5);
     };
     mixer.addEventListener("finished", onFinished);

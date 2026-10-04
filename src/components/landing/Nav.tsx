@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
-import { programHref, site } from "@/lib/site";
+import { site } from "@/lib/site";
 
 const LINKS = [
   { href: "#how", label: "How it works" },
@@ -21,7 +21,7 @@ export function Nav() {
             <a key={l.href} href={l.href} className="hidden rounded-full px-3 py-1.5 hover:bg-brand-mist hover:text-brand-ink md:inline-block">{l.label}</a>
           ))}
           <a href={site.github} target="_blank" rel="noreferrer" className="hidden rounded-full px-3 py-1.5 hover:bg-brand-mist hover:text-brand-ink sm:inline-block">GitHub</a>
-          <Link href={programHref()} className="ml-1 rounded-full bg-brand-deep px-4 py-2 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
+          <Link href={site.appUrl} className="ml-1 rounded-full bg-brand-deep px-4 py-2 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
         </nav>
       </div>
     </header>

@@ -175,38 +175,42 @@ for i in range(N_PETALS):
 REST = snapshot_rest(list(C.objects))
 
 # ------------------------------------------------------------------ animation
-def ease_keys(ob, track, path, frames_values):
-    push_track(ob, track, [(f, {path: v}) for f, v in frames_values])
+def ease_keys(ob, track, path, frames_values, spin=False):
+    """spin=True: constant angular velocity (LINEAR) — rings and orbits never ease at the loop seam."""
+    push_track(ob, track, [(f, {path: v}) for f, v in frames_values], linear={path} if spin else ())
 
 
 V = lambda *a: Vector(a)  # noqa: E731
 E = lambda x, y, z: Vector((x, y, z))  # noqa: E731
 
 # Appear (36 f): pop in, layered
-ease_keys(POP_CORE, "Appear", "scale", [(0, V(0, 0, 0)), (12, V(1.12, 1.12, 1.12)), (18, V(0.97, 0.97, 0.97)), (22, V(1, 1, 1)), (36, V(1, 1, 1))])
-ease_keys(POP_HALO, "Appear", "scale", [(0, V(0, 0, 0)), (6, V(0, 0, 0)), (20, V(1.08, 1.08, 1.08)), (26, V(1, 1, 1)), (36, V(1, 1, 1))])
-ease_keys(POP_ORBITS, "Appear", "scale", [(0, V(0, 0, 0)), (10, V(0, 0, 0)), (26, V(1.05, 1.05, 1.05)), (32, V(1, 1, 1)), (36, V(1, 1, 1))])
-ease_keys(POP_PETALS, "Appear", "scale", [(0, V(0, 0, 0)), (14, V(0, 0, 0)), (28, V(1.1, 1.1, 1.1)), (34, V(1, 1, 1)), (36, V(1, 1, 1))])
+# Appear lives far from the loop clips (frames 500+): while Blender bakes Idle/Listen/Think/Speak, the parents must
+# not be at Appear's scale 0 (a zero-scale parent bakes garbage child poses). The export slides every clip to t = 0.
+A0 = 500
+ease_keys(POP_CORE, "Appear", "scale", [(A0 + 0, V(0, 0, 0)), (A0 + 12, V(1.12, 1.12, 1.12)), (A0 + 18, V(0.97, 0.97, 0.97)), (A0 + 22, V(1, 1, 1)), (A0 + 36, V(1, 1, 1))])
+ease_keys(POP_HALO, "Appear", "scale", [(A0 + 0, V(0, 0, 0)), (A0 + 6, V(0, 0, 0)), (A0 + 20, V(1.08, 1.08, 1.08)), (A0 + 26, V(1, 1, 1)), (A0 + 36, V(1, 1, 1))])
+ease_keys(POP_ORBITS, "Appear", "scale", [(A0 + 0, V(0, 0, 0)), (A0 + 10, V(0, 0, 0)), (A0 + 26, V(1.05, 1.05, 1.05)), (A0 + 32, V(1, 1, 1)), (A0 + 36, V(1, 1, 1))])
+ease_keys(POP_PETALS, "Appear", "scale", [(A0 + 0, V(0, 0, 0)), (A0 + 14, V(0, 0, 0)), (A0 + 28, V(1.1, 1.1, 1.1)), (A0 + 34, V(1, 1, 1)), (A0 + 36, V(1, 1, 1))])
 
 # Idle (120 f loop): breathing core, blinking eyes, halo turns one helix period, nodes orbit at different speeds
 ease_keys(CORE, "Idle", "scale", [(0, V(1, 1, 1)), (60, V(1.025, 1.025, 1.025)), (120, V(1, 1, 1))])
 for eye in eyes:
     s = eye.scale.copy()
     ease_keys(eye, "Idle", "scale", [(0, s), (74, s), (77, E(s.x, s.y, s.z * 0.12)), (80, s), (120, s)])
-ease_keys(HALO, "Idle", "rotation_euler", [(f, E(0, 0, (TAU / TWISTS) * f / 120)) for f in range(0, 121, 10)])
+ease_keys(HALO, "Idle", "rotation_euler", [(f, E(0, 0, (TAU / TWISTS) * f / 120)) for f in range(0, 121, 10)], spin=True)
 for spin, ph, turns in orbit_spinners:
-    ease_keys(spin, "Idle", "rotation_euler", [(f, E(0, 0, ph + turns * TAU * f / 120)) for f in range(0, 121, 10)])
+    ease_keys(spin, "Idle", "rotation_euler", [(f, E(0, 0, ph + turns * TAU * f / 120)) for f in range(0, 121, 10)], spin=True)
 
 # Listen (60 f loop): leans in, halo turns toward the user, petals breathe, eyes open wider
 ease_keys(STATE_CORE, "Listen", "rotation_euler", [(0, E(math.radians(-7), 0, 0)), (30, E(math.radians(-9), 0, math.radians(2))), (60, E(math.radians(-7), 0, 0))])
 ease_keys(STATE_HALO, "Listen", "rotation_euler", [(0, E(math.radians(20), 0, 0)), (30, E(math.radians(24), 0, 0)), (60, E(math.radians(20), 0, 0))])
 ease_keys(STATE_PETALS, "Listen", "scale", [(0, V(1.04, 1.04, 1.04)), (30, V(1.1, 1.1, 1.1)), (60, V(1.04, 1.04, 1.04))])
-ease_keys(STATE_EYES, "Listen", "scale", [(0, V(1.12, 1.12, 1.12)), (60, V(1.12, 1.12, 1.12))])
+ease_keys(STATE_EYES, "Listen", "scale", [(0, V(1.12, 1.12, 1.12)), (30, V(1.15, 1.15, 1.15)), (60, V(1.12, 1.12, 1.12))])  # widened, gently alive (a constant channel would be optimised away)
 ease_keys(STATE_ORBITS, "Listen", "scale", [(0, V(0.9, 0.9, 0.9)), (30, V(0.86, 0.86, 0.86)), (60, V(0.9, 0.9, 0.9))])
 
 # Think (60 f loop): halo + orbits speed up, gaze drifts up, a slow wobble
-ease_keys(STATE_HALO, "Think", "rotation_euler", [(f, E(0, 0, (TAU / TWISTS) * 2 * f / 60)) for f in range(0, 61, 5)])
-ease_keys(STATE_ORBITS, "Think", "rotation_euler", [(f, E(0, 0, TAU * f / 60)) for f in range(0, 61, 5)])
+ease_keys(STATE_HALO, "Think", "rotation_euler", [(f, E(0, 0, (TAU / TWISTS) * 2 * f / 60)) for f in range(0, 61, 5)], spin=True)
+ease_keys(STATE_ORBITS, "Think", "rotation_euler", [(f, E(0, 0, TAU * f / 60)) for f in range(0, 61, 5)], spin=True)
 ease_keys(STATE_EYES, "Think", "location", [(0, E(0.018, 0.0, 0.03)), (30, E(-0.012, 0.0, 0.034)), (60, E(0.018, 0.0, 0.03))])
 ease_keys(STATE_CORE, "Think", "rotation_euler", [(0, E(0, math.radians(4), 0)), (30, E(0, math.radians(-4), 0)), (60, E(0, math.radians(4), 0))])
 
@@ -221,7 +225,7 @@ for p, i in petals:
     keys[-1] = (30, keys[0][1])
     ease_keys(p, "Speak", "scale", keys)
 ease_keys(STATE_CORE, "Speak", "scale", [(0, V(1, 1, 1)), (8, V(1.035, 1.035, 1.035)), (15, V(1, 1, 1)), (23, V(1.03, 1.03, 1.03)), (30, V(1, 1, 1))])
-ease_keys(STATE_EYES, "Speak", "scale", [(0, E(1.05, 1.0, 0.78)), (30, E(1.05, 1.0, 0.78))])
+ease_keys(STATE_EYES, "Speak", "scale", [(0, E(1.05, 1.0, 0.78)), (15, E(1.06, 1.0, 0.72)), (30, E(1.05, 1.0, 0.78))])  # smiling squint
 
 scene.frame_start, scene.frame_end = 0, 120
 exportables = [o for o in C.objects]
@@ -263,7 +267,7 @@ if RENDER:
     if SHEET:  # QA contact sheet of the states
         out_dir = ARGS[ARGS.index("--sheet") + 1] if len(ARGS) > ARGS.index("--sheet") + 1 else HERE
         setup_cycles(scene, samples=24, width=360, height=360, transparent=False)
-        for state, frame in (("Appear", 8), ("Appear", 16), ("Idle", 76), ("Listen", 15), ("Think", 20), ("Speak", 6)):
+        for state, frame in (("Appear", A0 + 8), ("Appear", A0 + 16), ("Idle", 76), ("Listen", 15), ("Think", 20), ("Speak", 6)):
             solo({state, "Idle"} if state != "Appear" else {state})
             scene.frame_set(frame)
             scene.render.filepath = os.path.join(out_dir, f"agent_{state}_{frame}.png")
@@ -278,12 +282,12 @@ if "--reel" in ARGS:
     setup_cycles(scene, samples=32, width=720, height=720, transparent=True)
     i = 0
     for state, frames in (
-        ({"Appear", "Idle"}, range(0, 37)),
+        ({"Appear", "Idle"}, range(A0, A0 + 37)),
         ({"Idle"}, range(37, 97)),
         ({"Listen", "Idle"}, range(0, 90)),
         ({"Think", "Idle"}, range(0, 90)),
         ({"Speak", "Idle"}, list(range(0, 30)) * 3),
-        ({"Appear", "Idle"}, range(36, -1, -1)),
+        ({"Appear", "Idle"}, range(A0 + 36, A0 - 1, -1)),
     ):
         solo(state)
         i = render_frames(scene, frames, frames_dir, i)

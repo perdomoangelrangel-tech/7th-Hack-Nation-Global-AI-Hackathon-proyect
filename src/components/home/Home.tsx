@@ -8,9 +8,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
-import { BadgeCheck, Check, ChevronRight, Footprints, HeartHandshake, Info, Languages, Microscope, Play, Search, Target, UserRound, X, type LucideIcon } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { BadgeCheck, ChevronRight, Footprints, Info, Languages, Play, Search, X, type LucideIcon } from "lucide-react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { SearchHit } from "@/lib/atlas/store";
 import { dict, type Locale } from "@/lib/i18n";
@@ -19,17 +19,22 @@ import { usePrefs } from "@/lib/prefs";
 import { Logo } from "@/components/brand/Logo";
 import { SearchBox } from "@/components/atlas/SearchBox";
 import { api } from "@/components/atlas/api";
-import { EXAMPLES, ROLE_ORDER, homeCopy } from "./copy";
+import { useEmbed } from "@/components/atlas/useEmbed";
+import { EXAMPLES, homeCopy } from "./copy";
 import { atlasHref, readMemory, writeMemory, type HomeMemory } from "./memory";
+import { PendingHint, PendingStatus } from "./Pending";
+import { RoleChooser } from "./RoleChooser";
 import { HelpButton, Tour } from "./Tour";
 
-const ROLE_ICON: Record<PersonaId, LucideIcon> = { devon: UserRound, maria: HeartHandshake, osei: Microscope, priya: Target };
 const STEP_ICON: LucideIcon[] = [Search, Footprints, BadgeCheck];
 
-interface Props { initialLocale: Locale; stats: { diseases: number; sources: number }; maria: string; diseaseNames: Record<string, string> }
+/** `embed`: the server saw ?embed=1; inside any frame useEmbed() also turns it on after mount (Lovable has its own header). */
+interface Props { initialLocale: Locale; stats: { diseases: number; sources: number }; maria: string; diseaseNames: Record<string, string>; embed?: boolean }
 
-export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
+export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedParam = false }: Props) {
   const router = useRouter();
+  const embed = useEmbed() || embedParam;
+  const [pending, startTransition] = useTransition();
   const { prefs } = usePrefs();
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const [role, setRole] = useState<PersonaId | null>(null);
@@ -43,12 +48,14 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
     const id = requestAnimationFrame(() => { const m = readMemory(); setMemory(m); if (m.role) setRole(m.role); });
     return () => cancelAnimationFrame(id);
   }, []);
+  // QA-39: the demo path is the most clicked one — have it ready before the click.
+  useEffect(() => { router.prefetch(atlasHref({ p: "maria", d: maria, l: locale })); }, [router, maria, locale]);
 
   const pickRole = (p: PersonaId) => { setRole(p); writeMemory({ role: p }); };
   const open = (d: string, c?: string) => {
     const p = role ?? "maria";
     writeMemory({ role: p, disease: d });
-    router.push(atlasHref({ p, d, c, l: locale }));
+    startTransition(() => router.push(atlasHref({ p, d, c, l: locale })));
   };
   // Every hit carries the disease that opens the graph (a mechanism cluster: its lead disease + the cluster id).
   const onPick = (h: SearchHit) => { if (h.disease) open(h.disease, (h.type as string) === "cluster" ? h.id : undefined); };
@@ -70,7 +77,7 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
         <Image src="/models/nexmed-hero.png" alt="" aria-hidden width={720} height={720} priority
           className="pointer-events-none select-none absolute -right-40 top-10 w-[560px] md:w-[720px] max-w-none opacity-15" />
 
-        <header className="relative z-10 mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
+        {!embed && <header className="relative z-10 mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Link href="/" className="rounded-lg" aria-label={`${homeLabel(locale)}`}><Logo size="sm" /></Link>
           <span className="flex-1" />
           <HelpButton label={c.help} />
@@ -78,11 +85,11 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
             className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-paper/80 px-3 text-sm font-medium text-ink-2 hover:bg-brand-soft">
             <Languages aria-hidden size={18} strokeWidth={1.75} />{locale === "en" ? "ES" : "EN"}
           </button>
-        </header>
+        </header>}
 
         <main className="relative z-10 mx-auto max-w-6xl px-4 pb-10 sm:px-6">
           {/* Hero + search */}
-          <section className="mx-auto max-w-3xl pt-8 text-center md:pt-14">
+          <section className={`mx-auto max-w-3xl text-center ${embed ? "pt-6" : "pt-8 md:pt-14"}`}>
             <h1 className="serif text-[2rem] leading-tight text-brand-ink md:text-[2.5rem]">{c.title}</h1>
             <p className="mx-auto mt-4 max-w-2xl text-base text-ink-2 md:text-lg">{c.lead}</p>
             <div className="mx-auto mt-7 max-w-2xl text-left"><SearchBox t={t} locale={locale} onPick={onPick} /></div>
@@ -93,17 +100,18 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
               ))}
             </div>
             {exampleMiss && <p role="status" className="mt-2 text-sm text-amber">{c.example_none(exampleMiss)}</p>}
+            <PendingStatus pending={pending} label={c.opening} />
           </section>
 
           {/* Welcome back */}
           <AnimatePresence>
             {resumeName && memory.disease && (
               <motion.div initial={{ opacity: 0, y: motionTokens.distance.sm }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={springs.gentle}
-                className="mx-auto mt-8 flex max-w-2xl items-center gap-3 rounded-2xl border border-line bg-paper/90 p-3 pl-4 shadow-[var(--shadow-soft)]">
-                <span className="min-w-0 flex-1 text-sm text-ink-2"><span className="font-semibold text-ink">{c.welcome_back}</span> · {resumeName}</span>
+                className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-paper/90 p-3 pl-4 shadow-[var(--shadow-soft)]">
+                <span className="min-w-[10rem] flex-1 text-sm text-ink-2"><span className="font-semibold text-ink">{c.welcome_back}</span> · {resumeName}</span>
                 <Link href={atlasHref({ p: memory.role ?? "maria", d: memory.disease, l: locale })}
-                  className="inline-flex min-h-10 items-center gap-1 rounded-full bg-brand-deep px-4 text-sm font-semibold text-paper hover:bg-brand-ink">
-                  {c.continue_with(resumeName)}<ChevronRight aria-hidden size={16} />
+                  className="inline-flex min-h-10 min-w-0 max-w-full items-center gap-1 rounded-full bg-brand-deep px-4 text-sm font-semibold text-paper hover:bg-brand-ink">
+                  <span className="truncate">{c.continue_with(resumeName)}</span><ChevronRight aria-hidden size={16} /><PendingHint label={c.opening} />
                 </Link>
                 <button type="button" aria-label={c.dismiss} onClick={() => { writeMemory({ disease: undefined }); setMemory((m) => ({ ...m, disease: undefined })); }}
                   className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-3 hover:bg-brand-soft"><X aria-hidden size={18} /></button>
@@ -123,16 +131,7 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
                 {role ? c.roles[role].greeting : c.greeting_default}
               </motion.p>
             </AnimatePresence>
-            <RoleCards locale={locale} role={role} onPick={pickRole} />
-            <AnimatePresence>
-              {role && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 text-right">
-                  <Link href={atlasHref({ p: role, l: locale })} className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-medium text-brand-deep hover:bg-brand-soft">
-                    {c.explore_as(c.roles[role].persona.replace(/^(e\.g\.|p\. ej\.)\s*/, ""))}<ChevronRight aria-hidden size={16} />
-                  </Link>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <RoleChooser locale={locale} role={role} onPick={pickRole} />
           </section>
 
           {/* Primary path: Maria's case */}
@@ -140,7 +139,7 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
             <Link href={atlasHref({ p: "maria", d: maria, l: locale })} aria-label={c.maria_aria}
               onClick={() => writeMemory({ role: "maria", disease: maria })}
               className="inline-flex min-h-12 items-center gap-2.5 rounded-full bg-brand-deep px-6 text-base font-semibold text-paper shadow-[var(--shadow-soft)] transition-colors hover:bg-brand-ink">
-              <Play aria-hidden size={18} strokeWidth={2} fill="currentColor" />{c.maria_cta}
+              <Play aria-hidden size={18} strokeWidth={2} fill="currentColor" />{c.maria_cta}<PendingHint label={c.opening} />
             </Link>
           </div>
 
@@ -171,44 +170,3 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
 }
 
 function homeLabel(l: Locale) { return l === "es" ? "Inicio de Nedamex" : "Nedamex home"; }
-
-/** 4 big role cards as one radiogroup (arrows move + select). Selected card is lifted and outlined. */
-function RoleCards({ locale, role, onPick }: { locale: Locale; role: PersonaId | null; onPick: (p: PersonaId) => void }) {
-  const c = homeCopy[locale];
-  const refs = useRef<Partial<Record<PersonaId, HTMLButtonElement | null>>>({});
-  const onKey = (e: KeyboardEvent, i: number) => {
-    const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-    if (!d) return;
-    e.preventDefault();
-    const next = ROLE_ORDER[(i + d + ROLE_ORDER.length) % ROLE_ORDER.length];
-    onPick(next); refs.current[next]?.focus();
-  };
-  return (
-    <LayoutGroup>
-      <div role="radiogroup" aria-labelledby="who-title" className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {ROLE_ORDER.map((id, i) => {
-          const r = c.roles[id];
-          const Icon = ROLE_ICON[id];
-          const on = role === id;
-          return (
-            <motion.button layout key={id} ref={(el) => { refs.current[id] = el; }} type="button" role="radio" aria-checked={on}
-              tabIndex={on || (!role && i === 0) ? 0 : -1} onClick={() => onPick(id)} onKeyDown={(e) => onKey(e, i)}
-              transition={springs.snappy} whileTap={{ scale: motionTokens.scale.subtle }}
-              className={`relative flex flex-col rounded-[var(--radius)] border bg-paper p-4 sm:p-5 text-left shadow-[var(--shadow-soft)] transition-colors ${on ? "border-brand-deep ring-2 ring-brand/30" : "border-line hover:border-brand-light"}`}>
-              <span className="flex items-start gap-3 sm:flex-col sm:gap-0">
-                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-colors ${on ? "bg-brand-deep text-paper" : "bg-brand-soft text-brand-deep"}`}><Icon aria-hidden size={24} strokeWidth={1.75} /></span>
-                <span className="min-w-0 sm:mt-4">
-                  <span className="block text-lg font-semibold leading-snug text-ink">{r.title}</span>
-                  <span className="block text-sm text-ink-3">{r.persona}</span>
-                </span>
-              </span>
-              {on && <motion.span layoutId="role-check" aria-hidden className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-brand-deep text-paper" transition={springs.snappy}><Check size={14} strokeWidth={2.5} /></motion.span>}
-              <span className="mt-3 block text-[15px] text-ink-2 sm:mb-4">{r.get}</span>
-              <span className="mt-3 block border-t border-line pt-3 text-sm italic text-ink-3 sm:mt-auto">{r.example}</span>
-            </motion.button>
-          );
-        })}
-      </div>
-    </LayoutGroup>
-  );
-}

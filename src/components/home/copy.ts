@@ -12,12 +12,12 @@ interface HomeCopy {
   try_label: string;
   who: string; who_hint: string; greeting_default: string;
   maria_cta: string; maria_aria: string;
-  explore_as: (name: string) => string;
   steps: [string, string, string];
   steps_label: string;
   footer: (d: number, s: number) => string;
   welcome_back: string; continue_with: (name: string) => string; dismiss: string;
   help: string; lang_aria: string; example_label: string;
+  here_as: string; you_get: string; you_ask: string; continue_as: (name: string) => string; change_role: string; opening: string;
   example_none: (q: string) => string;
   roles: Record<PersonaId, RoleCopy>;
 }
@@ -36,12 +36,12 @@ export const homeCopy: Record<Locale, HomeCopy> = {
     greeting_default: "Pick the one closest to you — the atlas changes what it shows first.",
     maria_cta: "Try Maria's case: STXBP1 — 60 seconds",
     maria_aria: "Try Maria's case: open the STXBP1 route as a patient group leader",
-    explore_as: (name) => `Explore the atlas as ${name}`,
     steps: ["Search", "Follow your route", "Tap any line to see the proof"],
     steps_label: "How it works",
     footer: (d, s) => `Not medical advice · ${d} diseases · ${s} open sources`,
     welcome_back: "Welcome back", continue_with: (name) => `Continue with ${name}`, dismiss: "Dismiss",
     help: "Help", lang_aria: "Cambiar a español", example_label: "Example searches",
+    here_as: "You're here as", you_get: "What you get", you_ask: "A question you can ask", continue_as: (name) => `Continue as ${name}`, change_role: "Change role", opening: "Opening your route…",
     example_none: (q) => `No match for “${q}” yet.`,
     roles: {
       devon: { title: "Patient or caregiver", persona: "e.g. Devon", get: "Understand it in plain words and find people like you", example: "“Is there a community for my exact diagnosis?”", greeting: "Take your time. We'll start with plain words and people like you." },
@@ -58,12 +58,12 @@ export const homeCopy: Record<Locale, HomeCopy> = {
     greeting_default: "Elige el más cercano a ti — el atlas cambia lo que muestra primero.",
     maria_cta: "Prueba el caso de Maria: STXBP1 — 60 segundos",
     maria_aria: "Prueba el caso de Maria: abre la ruta de STXBP1 como líder de un grupo de pacientes",
-    explore_as: (name) => `Explorar el atlas como ${name}`,
     steps: ["Busca", "Sigue tu ruta", "Toca cualquier línea para ver la prueba"],
     steps_label: "Cómo funciona",
     footer: (d, s) => `No es consejo médico · ${d} enfermedades · ${s} fuentes abiertas`,
     welcome_back: "Bienvenido de nuevo", continue_with: (name) => `Continuar con ${name}`, dismiss: "Descartar",
     help: "Ayuda", lang_aria: "Switch to English", example_label: "Búsquedas de ejemplo",
+    here_as: "Estás aquí como", you_get: "Lo que obtienes", you_ask: "Una pregunta que puedes hacer", continue_as: (name) => `Continuar como ${name}`, change_role: "Cambiar de rol", opening: "Abriendo tu ruta…",
     example_none: (q) => `Aún no hay resultados para «${q}».`,
     roles: {
       devon: { title: "Paciente o cuidador", persona: "p. ej. Devon", get: "Entenderla en palabras simples y encontrar personas como tú", example: "«¿Hay una comunidad para mi diagnóstico exacto?»", greeting: "Tómate tu tiempo. Empezamos con palabras simples y personas como tú." },

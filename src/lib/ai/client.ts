@@ -1,8 +1,8 @@
 /**
  * Nedamex's single door to OpenAI (server only).
  *
- * - Models: OPENAI_MODEL (default gpt-4o) for drafting/extraction, OPENAI_MODEL_FAST (default gpt-4o-mini)
- *   for tie-breaks and short explanations.
+ * - Models: OPENAI_MODEL (default gpt-4o-mini) for drafting/extraction, OPENAI_MODEL_FAST (default gpt-4o-mini)
+ *   for tie-breaks and short explanations. Set OPENAI_MODEL to a larger model to trade speed for depth.
  * - Structured Outputs: a zod schema is turned into a strict JSON Schema for the Responses API, and the
  *   reply is validated again with zod. Model output is JSON only, never free text.
  * - Timeouts + bounded retries. Any failure returns `{ mode: "deterministic" }` so the caller uses its
@@ -15,7 +15,7 @@ import { z } from "zod";
 
 export type AiMode = "openai" | "deterministic";
 
-export const MODEL = () => process.env.OPENAI_MODEL || "gpt-4o";
+export const MODEL = () => process.env.OPENAI_MODEL || "gpt-4o-mini";
 export const MODEL_FAST = () => process.env.OPENAI_MODEL_FAST || "gpt-4o-mini";
 
 /** Minimal surface Nedamex needs from a model: JSON text that should match `jsonSchema`. */
