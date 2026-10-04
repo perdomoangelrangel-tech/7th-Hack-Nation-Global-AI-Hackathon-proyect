@@ -204,7 +204,7 @@ describe("matchmaking + intro draft", async () => {
 describe("10× view", async () => {
   const { tenX } = await import("./tenx");
   const t = tenX(buildJourney(g, STXBP1, "maria", "en")!);
-  it("labels every duration as an assumption with a rationale and cites the Nexmed phases it can", () => {
+  it("labels every duration as an assumption with a rationale and cites the Nedamex phases it can", () => {
     for (const p of t.phases) { expect(p.typical.rationale).toMatch(/Assumption|assumption/); expect(p.nexmed.rationale.length).toBeGreaterThan(10); }
     expect(t.phases.filter((p) => p.discovery).every((p) => p.nexmed.cite && p.nexmed.cite.edges.length > 0)).toBe(true);
     expect(t.assumption_note).toMatch(/assumptions/);

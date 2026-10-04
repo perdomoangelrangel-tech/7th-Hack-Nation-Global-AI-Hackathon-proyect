@@ -13,11 +13,19 @@ export type VoiceProvider = "elevenlabs" | "browser";
 let serverVoiceDown = false;
 export const elevenAvailable = () => !serverVoiceDown;
 
+/** Ask once whether the server has an ElevenLabs key, so a keyless deploy never logs a 503 in the console. */
+let ttsCheck: Promise<boolean> | null = null;
+function ttsAvailable(): Promise<boolean> {
+  ttsCheck ??= fetch("/api/voice/agents").then((r) => (r.ok ? r.json() : null)).then((j) => j?.ttsAvailable !== false).catch(() => true);
+  return ttsCheck;
+}
+
 export interface FetchSpeechOpts { persona: PersonaId; locale: Locale; rate?: number; voiceId?: string; signal?: AbortSignal }
 
 /** Returns an object URL for ElevenLabs mp3, or null when the caller must use browser speech. */
 export async function fetchSpeech(text: string, o: FetchSpeechOpts): Promise<string | null> {
   if (serverVoiceDown) return null;
+  if (!(await ttsAvailable())) { serverVoiceDown = true; return null; }
   try {
     const r = await fetch("/api/speak", {
       method: "POST", headers: { "content-type": "application/json" }, signal: o.signal,

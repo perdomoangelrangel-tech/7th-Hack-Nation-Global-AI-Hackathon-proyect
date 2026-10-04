@@ -1,6 +1,13 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import Image from "next/image";
+import Link from "next/link";
+import { preload } from "react-dom";
+import { HERO_POSTER } from "@/components/three/heroPoster";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
+import { StoryPlayer } from "@/components/landing/StoryPlayer";
 import { neighborhood } from "@/components/landing/neighborhood";
 import { Logo } from "@/components/brand/Logo";
 import { Hero3D } from "@/components/three/Hero3D";
@@ -13,6 +20,11 @@ import { programHref, site, toEmbed } from "@/lib/site";
 export const revalidate = 3600;
 
 const MODE_ORDER: PersonaId[] = ["devon", "maria", "osei", "priya"];
+// Blender glyph icon per mode (public/models/glyphs, built by blender/build_glyphs.py --icons).
+const MODE_GLYPH: Record<PersonaId, string> = { devon: "investigator", maria: "organization", osei: "study", priya: "treatment" };
+// Website narration from the voice lane (ElevenLabs). The player shows up as soon as the file is in public/audio.
+const STORY = { src: "/audio/nedamex-story-en.mp3", vtt: "/audio/nedamex-story-en.vtt" };
+const publicFile = (url: string) => existsSync(join(process.cwd(), "public", url));
 const MARIA_DISEASE = "disease:ORPHA:599373"; // STXBP1-related developmental and epileptic encephalopathy
 
 // Hack-Nation Challenge 05 brief (the only source for these figures).
@@ -25,10 +37,10 @@ const FACTS = [
 ];
 
 const STEPS = [
-  { title: "Open sources", body: "Orphanet, HPO, Monarch, ClinVar, Reactome, ClinicalTrials.gov, PubMed, Open Targets, NIH RePORTER. Every row keeps its URL and the date we read it.", tone: "light" as const },
-  { title: "Evidence graph", body: "Diseases, genes, variants, symptoms, pathways, trials, papers, treatments, patient groups and researchers. Each edge carries its source, relation, confidence and contradicting evidence.", tone: "brand" as const },
-  { title: "Mechanism clusters", body: "Louvain communities over shared symptoms (weighted by how informative they are), Reactome pathways and genes — diseases that may share biology even when their names differ.", tone: "deep" as const },
-  { title: "Action", body: "For each mode: the connection, a reusable asset and what differs, a collaborator, and a next step this week. When there is no route, Nexmed says so.", tone: "ink" as const },
+  { title: "Open sources", body: "Orphanet, HPO, Monarch, ClinVar, Reactome, ClinicalTrials.gov, PubMed, Open Targets, NIH RePORTER. Every row keeps its URL and the date we read it.", tone: "light" as const, glyph: "study" },
+  { title: "Evidence graph", body: "Diseases, genes, variants, symptoms, pathways, trials, papers, treatments, patient groups and researchers. Each edge carries its source, relation type and confidence — and contradicting evidence when there is any.", tone: "brand" as const, glyph: "gene" },
+  { title: "Mechanism clusters", body: "Louvain communities over shared symptoms (weighted by how informative they are), Reactome pathways and genes — diseases that may share biology even when their names differ.", tone: "deep" as const, glyph: "pathway" },
+  { title: "Action", body: `For each mode: the connection, a reusable asset and what differs, a collaborator, and a next step this week. When there is no route, ${site.name} says so.`, tone: "ink" as const, glyph: "organization" },
 ];
 
 const MODE_COPY: Record<string, string> = {
@@ -40,17 +52,17 @@ const MODE_COPY: Record<string, string> = {
 
 const KINDS: { kind: OrbKind; title: string; body: string; line: string }[] = [
   { kind: "observed", title: "Observed", body: "A source states it. Solid line.", line: "kind-observed" },
-  { kind: "inferred", title: "Inferred", body: "Nexmed analysis, with its score and basis. Dashed line.", line: "kind-inferred" },
+  { kind: "inferred", title: "Inferred", body: `${site.name} analysis, with its score and basis. Dashed line.`, line: "kind-inferred" },
   { kind: "extracted", title: "AI-extracted", body: "OpenAI pulled it from a cited paper. Dotted line — needs expert review.", line: "kind-extracted" },
   { kind: "proposed", title: "Community draft", body: "Proposed by a family or researcher. Ghost line — never counted as evidence.", line: "kind-proposed" },
 ];
 
 const BUILT = [
+  { name: "Vercel", what: "this website, the Nedamex app (/atlas) and its API" },
+  { name: "Supabase", what: "the evidence graph (Postgres)" },
   { name: "OpenAI", what: "extraction from papers, grounded explanations" },
   { name: "ElevenLabs", what: "a voice for every agent" },
-  { name: "Supabase", what: "the Postgres evidence graph" },
-  { name: "Blender", what: "every 3D element on this page" },
-  { name: "Next.js · Vercel", what: "the app" },
+  { name: "Blender", what: "the 3D hero, voice guide and graph glyphs" },
 ];
 
 function fmt(n: number) {
@@ -87,6 +99,7 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
 }
 
 export default async function Home() {
+  preload(HERO_POSTER.src, { as: "image", fetchPriority: "high", imageSrcSet: HERO_POSTER.srcSet, imageSizes: HERO_POSTER.sizes });
   await loadAtlas();
   const s = stats();
   const idx = atlas();
@@ -102,6 +115,7 @@ export default async function Home() {
     return snap.sources[id]?.name ?? (id === "atlas_analysis" ? `${site.name} analysis` : id);
   };
   const updated = s.generated_at ? new Date(s.generated_at).toISOString().slice(0, 10) : null;
+  const stepStats = [`${s.sources} sources`, `${fmt(s.edges)} edges`, `${s.clusters} clusters`, "4 modes"];
   const counters = [
     { n: s.diseases, t: "diseases" },
     { n: s.genes, t: "genes" },
@@ -112,9 +126,9 @@ export default async function Home() {
   ];
   // Real submission URLs from env; otherwise the storyboard drafts, labelled as drafts.
   const videos = ([
-    ["Demo", "The product, end to end", site.videos.demo, site.draftVideos.demo],
-    ["Technical walkthrough", "Graph, verifier, agents, how it scales", site.videos.tech, site.draftVideos.tech],
-    ["Team", "Who we are and why this problem", site.videos.team, site.draftVideos.team],
+    ["Pitch", "Who we are, the problem and the ask", site.videos.pitch, site.draftVideos.pitch],
+    ["Demo", "Maria's case, end to end", site.videos.demo, site.draftVideos.demo],
+    ["Functionality", "Graph, evidence, verifier, agents, how it scales", site.videos.functionality, site.draftVideos.functionality],
   ] as const).map(([title, purpose, url, draft]) => ({ title, purpose, url: url || draft.src, poster: url ? undefined : draft.poster, draft: !url }));
 
   return (
@@ -134,12 +148,13 @@ export default async function Home() {
                 One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <a href={site.programUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open Nexmed</a>
-                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">See Maria&apos;s journey</a>
+                <Link href={programHref()} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
+                <a href="#videos" className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">Watch the pitch</a>
               </div>
-              <p className="mt-5 text-sm text-ink-3">Free and open. Information with sources — not medical advice.</p>
+              <p className="mt-5 text-sm text-ink-3">Information with sources — not medical advice.</p>
+              {publicFile(STORY.src) && <StoryPlayer src={STORY.src} vtt={publicFile(STORY.vtt) ? STORY.vtt : undefined} />}
             </div>
-            <Hero3D alt="A DNA double helix grows out of a small forest on a blue disc and opens into a network of connected nodes — the Nexmed evidence graph." className="mx-auto w-full max-w-[560px]" />
+            <Hero3D alt={`A DNA double helix grows out of a small forest on a blue disc and opens into a network of connected nodes — the ${site.name} evidence graph.`} className="mx-auto w-full max-w-[560px]" />
           </div>
           {/* Live counters */}
           <div className="relative border-y border-line bg-paper/80">
@@ -160,7 +175,7 @@ export default async function Home() {
         {/* The problem */}
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="problem">
           <p className="eyebrow">The problem</p>
-          <h2 id="problem" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The knowledge exists. It is scattered across thousands of places.</h2>
+          <h2 id="problem" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The knowledge exists. It is scattered across databases, papers and registries.</h2>
           <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {FACTS.map((f) => (
               <li key={f.t} className="card p-5">
@@ -184,8 +199,9 @@ export default async function Home() {
               {STEPS.map((st, i) => (
                 <li key={st.title} className="relative rounded-xl border border-line bg-paper p-5 shadow-[var(--shadow-soft)]">
                   <div className="flex items-center gap-3">
-                    <NodeOrb size={26} tone={st.tone} float />
+                    <Image src={`/models/glyphs/${st.glyph}.png`} alt="" width={64} height={64} className="float-y -my-3 -ml-3 select-none" />
                     <span className="mono text-xs text-ink-3">0{i + 1}</span>
+                    <span className="ml-auto rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-deep">{stepStats[i]}</span>
                   </div>
                   <h3 className="mt-4 text-lg font-bold text-brand-ink">{st.title}</h3>
                   <p className="mt-2 text-sm text-ink-2">{st.body}</p>
@@ -207,7 +223,7 @@ export default async function Home() {
                 <p className="eyebrow">Inside the atlas</p>
                 <h2 id="inside-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">One disease, in its neighbourhood.</h2>
                 <p className="mt-3 text-ink-2">
-                  A live slice around <span className="font-semibold text-brand-ink">{hood.centerName}</span>: the gene behind it, the pathways and variants that gene touches, the symptoms, trials, papers, patient groups and researchers — and the diseases Nexmed infers may share its mechanism.
+                  A live slice around <span className="font-semibold text-brand-ink">{hood.centerName}</span>: the gene behind it, the pathways and variants that gene touches, the symptoms, trials, papers, patient groups and researchers — and the diseases {site.name} infers may share its mechanism.
                 </p>
                 <ul className="mt-5 grid grid-cols-2 gap-2 text-sm text-ink-2">
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "disease")}</span> inferred neighbours <span className="text-ink-3">(dashed)</span></li>
@@ -215,8 +231,8 @@ export default async function Home() {
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "trial" || t === "study")}</span> trials &amp; papers</li>
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "organization" || t === "investigator")}</span> groups &amp; researchers</li>
                 </ul>
-                <p className="mt-4 text-xs text-ink-3">Each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
-                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in Nexmed →</a>
+                <p className="mt-4 text-xs text-ink-3">In the 3D view each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
+                <Link href={programHref({ p: "maria", d: MARIA_DISEASE })} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in {site.name} →</Link>
               </div>
             </div>
           </section>
@@ -227,14 +243,14 @@ export default async function Home() {
           <p className="eyebrow">Four modes, one graph</p>
           <h2 id="modes-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The same evidence, ordered for who is asking.</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {MODE_ORDER.map((id) => PERSONAS[id]).map((p, i) => (
-              <a key={p.id} href={programHref(`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`)} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
-                <NodeOrb size={30} tone={(["light", "brand", "deep", "ink"] as const)[i % 4]} />
+            {MODE_ORDER.map((id) => PERSONAS[id]).map((p) => (
+              <Link key={p.id} href={programHref({ p: p.id, d: p.id === "maria" ? MARIA_DISEASE : undefined })} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
+                <Image src={`/models/glyphs/${MODE_GLYPH[p.id]}.png`} alt="" width={84} height={84} className="-m-4 select-none" />
                 <h3 className="mt-4 text-lg font-bold text-brand-ink">{p.mode.en}</h3>
                 <p className="text-xs text-ink-3">{p.role.en}</p>
                 <p className="mt-3 flex-1 text-sm text-ink-2">{MODE_COPY[p.id]}</p>
                 <span className="mt-4 text-sm font-semibold text-brand-deep group-hover:underline">Open in {p.mode.en} mode →</span>
-              </a>
+              </Link>
             ))}
           </div>
         </section>
@@ -270,9 +286,9 @@ export default async function Home() {
 
         {/* Voice guide */}
         <section id="guide" className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="guide-title">
-          <p className="eyebrow">Talk to Nexmed</p>
+          <p className="eyebrow">Talk to {site.name}</p>
           <h2 id="guide-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">A voice guide in every mode — that only says what it can cite.</h2>
-          <p className="mt-3 max-w-2xl text-ink-2">Each mode has its own ElevenLabs voice agent. It answers from the graph, shows the edges behind each sentence, and tells you when there is no evidence.</p>
+          <p className="mt-3 max-w-2xl text-ink-2">Each mode has its own ElevenLabs voice agent. It answers only from the graph, through the same tools the app uses, and says so when there is no evidence.</p>
           <div className="mt-8"><GuidePreview /></div>
         </section>
 
@@ -283,8 +299,8 @@ export default async function Home() {
             <h2 id="tenx-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">From {fmt(s.diseases)} diseases to all of them.</h2>
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">Every rare disease</h3><p className="mt-2 text-sm text-ink-2">The same ingestion runs per ORPHA code. Scaling to the ~10,000 known diseases is a loop, not a rewrite.</p></div>
-              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">New papers, reviewed</h3><p className="mt-2 text-sm text-ink-2">OpenAI extracts claims from new literature as dotted, needs-review edges — experts confirm before they count.</p></div>
-              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">Communities as co-authors</h3><p className="mt-2 text-sm text-ink-2">Patient groups propose links and collaborations as ghost drafts that researchers can turn into evidence.</p></div>
+              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">New papers, reviewed</h3><p className="mt-2 text-sm text-ink-2">OpenAI extracts claims from new papers as dotted edges labelled “needs expert review” — never shown as established fact.</p></div>
+              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">Communities as co-authors</h3><p className="mt-2 text-sm text-ink-2">Patient groups propose links and collaborations as ghost drafts — visible to researchers, never counted as evidence.</p></div>
             </div>
           </div>
         </section>
@@ -303,7 +319,7 @@ export default async function Home() {
         <section id="videos" className="border-t border-line bg-brand-mist" aria-labelledby="videos-title">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
             <p className="eyebrow">See it</p>
-            <h2 id="videos-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Three minutes of Nexmed.</h2>
+            <h2 id="videos-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Pitch, demo and how it works.</h2>
             <div className="mt-8 grid gap-5 md:grid-cols-3">
               {videos.map((v) => (
                 <figure key={v.title} className="overflow-hidden rounded-xl border border-line bg-paper shadow-[var(--shadow-soft)]">
@@ -346,7 +362,7 @@ export default async function Home() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:px-6 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
             <Logo size="md" byline />
-            <p className="mt-4 text-ink-2">{site.name} is a product of {site.company}.</p>
+            <p className="mt-4 text-ink-2">{site.name} — the AI atlas for rare diseases.</p>
             <p className="mt-2 text-ink-3">Information with sources, not medical advice. Always talk to your care team before acting on anything you read here.</p>
           </div>
           <div>
@@ -358,7 +374,7 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Project</p>
             <ul className="mt-3 space-y-1">
-              <li><a href={site.programUrl} className="text-brand-deep hover:underline">Open Nexmed</a></li>
+              <li><Link href={programHref()} className="text-brand-deep hover:underline">Open {site.name}</Link></li>
               <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
               <li className="text-ink-3">{site.challenge}</li>
             </ul>

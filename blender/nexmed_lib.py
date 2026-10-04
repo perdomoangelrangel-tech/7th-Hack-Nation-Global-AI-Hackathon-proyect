@@ -463,3 +463,38 @@ def fade_shadow(png_path, cx=0.5, cy=0.2, rx=0.46, ry=0.2, strength=0.9):
     img.save()
     bpy.data.images.remove(img)
     print(f"[nexmed] faded shadow edge in {os.path.basename(png_path)}")
+
+
+# ---------------------------------------------------------------- video (frames -> ffmpeg)
+
+def render_frames(scene, frames, out_dir, start_index=0):
+    """Render the given frame numbers (any order) to out_dir/f_0000.png ...; returns next index."""
+    os.makedirs(out_dir, exist_ok=True)
+    idx = start_index
+    for f in frames:
+        scene.frame_set(f)
+        scene.render.filepath = os.path.join(out_dir, f"f_{idx:04d}.png")
+        bpy.ops.render.render(write_still=True)
+        idx += 1
+    return idx
+
+
+def encode_mp4(frames_dir, out_path, fps=30, background="F3F8FC", size=None):
+    """Composite transparent PNG frames over the page colour and encode H.264 (yuv420p, web-safe)."""
+    import shutil
+    import subprocess
+    ffmpeg = shutil.which("ffmpeg") or shutil.which("ffmpeg.exe")
+    if not ffmpeg:
+        print("[nexmed] ffmpeg not found; frames left in", frames_dir)
+        return None
+    first = os.path.join(frames_dir, "f_0000.png")
+    img = bpy.data.images.load(first, check_existing=False)
+    w, h = size or tuple(img.size)
+    bpy.data.images.remove(img)
+    cmd = [ffmpeg, "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"color=c=0x{background}:s={w}x{h}:r={fps}",
+           "-framerate", str(fps), "-i", os.path.join(frames_dir, "f_%04d.png"),
+           "-filter_complex", "[0][1]overlay=shortest=1,format=yuv420p", "-c:v", "libx264", "-crf", "20", "-preset", "slow",
+           "-movflags", "+faststart", out_path]
+    subprocess.run(cmd, check=True)
+    print(f"[nexmed] video {out_path} ({os.path.getsize(out_path) / 1024:.0f} KB)")
+    return out_path

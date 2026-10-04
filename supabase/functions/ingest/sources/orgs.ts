@@ -17,7 +17,7 @@ export function orgs(ctx: Ctx, d: SeedDisease) {
       relation: o.kind === "research" ? "researches" : "supports",
       confidence: 0.9, confidenceBasis: "curated",
       props: { kind: o.kind },
-      evidence: [{ source: "patient_orgs", externalId: slug(o.name), url: o.url, quote: `${o.name} · ${o.country} · ${o.kind}` }],
+      evidence: [{ source: "patient_orgs", externalId: slug(o.name), url: o.disease_urls?.[d.orpha] ?? o.url, quote: `${o.name} · ${o.country} · ${o.kind}` }],
     });
     n++;
   }

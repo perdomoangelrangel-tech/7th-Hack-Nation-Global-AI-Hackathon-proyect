@@ -20,7 +20,7 @@ export const TYPE_COLOR: Record<string, string> = {
 export type LinkKind = "observed" | "inferred" | "extracted" | "proposed";
 export const KIND_STYLE: Record<LinkKind, { color: string; dash: number[] | null; opacity: number }> = {
   observed: { color: "#3a86bf", dash: null, opacity: 0.55 },      // solid · a source states it
-  inferred: { color: "#1f5f94", dash: [6, 4], opacity: 0.8 },     // dashed · Nexmed analysis
+  inferred: { color: "#1f5f94", dash: [6, 4], opacity: 0.8 },     // dashed · Nedamex analysis
   extracted: { color: "#6d5bd0", dash: [1.5, 3], opacity: 0.85 }, // dotted · AI-extracted, needs review
   proposed: { color: "#8ea3b6", dash: [3, 5], opacity: 0.35 },    // ghost · community draft, never evidence
 };

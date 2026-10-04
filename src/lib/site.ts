@@ -2,7 +2,7 @@
 const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
 
 export const site = {
-  name: "Nexmed",            // product
+  name: "Nedamex",           // product (WAVE 3: the product is called Nedamex too)
   company: "Nedamex",        // company behind the product (footer, legal, metadata, agent tags)
   logo: "/brand/nexmed-logo.png",
   tagline: "The rare disease atlas where every connection shows its source.",
@@ -12,18 +12,18 @@ export const site = {
   challenge: "Hack-Nation 7 · Challenge 05 · AI Atlas for Rare Diseases · Buffalo Initiative × OpenAI",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? (vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000"),
   github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect",
-  /** The Nexmed program (Lovable app). Every website CTA lands here. Plan B: this deployment's unlisted /atlas. */
-  programUrl: (process.env.NEXT_PUBLIC_PROGRAM_URL ?? "https://nedamex-research.lovable.app").replace(/\/$/, ""),
+  /** The Nedamex app (MVP). WAVE 4: same domain, /atlas on Vercel. Every website CTA lands here. */
+  programUrl: (process.env.NEXT_PUBLIC_PROGRAM_URL ?? "/atlas").replace(/\/$/, ""),
   /** Submission videos: real URLs from env; until then the storyboard drafts in public/videos (shown with a "Draft" label). */
   videos: {
+    pitch: process.env.NEXT_PUBLIC_VIDEO_PITCH ?? process.env.NEXT_PUBLIC_VIDEO_TEAM ?? "",
     demo: process.env.NEXT_PUBLIC_VIDEO_DEMO ?? "",
-    tech: process.env.NEXT_PUBLIC_VIDEO_TECH ?? "",
-    team: process.env.NEXT_PUBLIC_VIDEO_TEAM ?? "",
+    functionality: process.env.NEXT_PUBLIC_VIDEO_FUNCTIONALITY ?? process.env.NEXT_PUBLIC_VIDEO_TECH ?? "",
   },
   draftVideos: {
+    pitch: { src: "/videos/Team60-draft.mp4", poster: "/videos/Team60-draft.jpg" },
     demo: { src: "/videos/Demo60-draft.mp4", poster: "/videos/Demo60-draft.jpg" },
-    tech: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
-    team: { src: "/videos/Team60-draft.mp4", poster: "/videos/Team60-draft.jpg" },
+    functionality: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
   },
   /** Team cards. Placeholders until the team fills them in — never invent people. */
   team: [
@@ -42,9 +42,10 @@ export const site = {
   ],
 };
 
-/** Link into the Nexmed program, e.g. programHref("/atlas?p=maria&d=disease:ORPHA:599373"). */
-export function programHref(path = "/") {
-  return `${site.programUrl}${path.startsWith("/") ? path : `/${path}`}`;
+/** Link into the Nedamex app: programHref() → "/atlas", programHref({ p: "maria", d: "disease:ORPHA:599373" }) → "/atlas?p=maria&d=…". */
+export function programHref(params: Record<string, string | undefined> = {}) {
+  const q = Object.entries(params).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v!).replace(/%3A/gi, ":")}`).join("&");
+  return q ? `${site.programUrl}?${q}` : site.programUrl;
 }
 
 export function toEmbed(url: string) {

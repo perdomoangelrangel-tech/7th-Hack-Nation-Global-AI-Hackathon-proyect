@@ -21,8 +21,11 @@ export interface NoneFound { title: string; detail: string; missing_evidence: st
 
 export interface VariantEffect { gene: string; lof_fraction: number; missense_fraction: number; n: number; edge: string }
 
+export type LeadStrength = "strong" | "possible" | "weak";
 export interface NeighborCard {
   disease: string; name: string; score: number; same_cluster: boolean; edge: string;
+  /** Shown on the route instead of the raw score (UX_WAVE4 §3); the score itself stays for the evidence drawer. */
+  strength: { level: LeadStrength; label: string; basis: string; informative_symptoms: number };
   shared: { phenotypes: { id: string; name: string }[]; pathways: { id: string; name: string }[]; genes: string[] };
   variant_effect: { self: VariantEffect | null; other: VariantEffect | null; match: boolean | null };
   strategy: string; needs_review: string[]; cite: Cite;
@@ -115,12 +118,12 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
              `Señal de mecanismo compartido (${shared.genes.length ? `gen ${shared.genes.join(", ")}` : `vía ${shared.pathways[0].name}`}): vale la pena comparar lo estudiado en ${name(nd)}.`)
       : tr(l, `Shared symptoms, no shared pathway or gene in our sources: a lead for comparison, not proof of a shared mechanism.`,
              `Síntomas compartidos, sin vía ni gen en común en nuestras fuentes: una pista para comparar, no prueba de un mecanismo compartido.`);
-    const needs_review = [tr(l, "Inferred by Nexmed from observed symptom/pathway edges — an expert must confirm it.", "Inferido por Nexmed a partir de aristas observadas de síntomas/vías — debe confirmarlo un experto.")];
+    const needs_review = [tr(l, "Inferred by Nedamex from observed symptom/pathway edges — an expert must confirm it.", "Inferido por Nedamex a partir de aristas observadas de síntomas/vías — debe confirmarlo un experto.")];
     if (match === false && self && oth) needs_review.push(tr(l,
       `Different variant effect (${self.gene} ${pct(self.lof_fraction)} truncating vs ${oth.gene} ${pct(oth.lof_fraction)}): mechanism-based endpoints may not transfer.`,
       `Efecto de variante distinto (${self.gene} ${pct(self.lof_fraction)} truncantes vs ${oth.gene} ${pct(oth.lof_fraction)}): los endpoints de mecanismo podrían no trasladarse.`));
     return {
-      disease: nd, name: name(nd), score: e.confidence, edge: e.id,
+      disease: nd, name: name(nd), score: e.confidence, edge: e.id, strength: leadStrength(shared, x?.shared_phenotypes ?? [], l),
       same_cluster: !!A && A.disease_cluster[e.from] === A.disease_cluster[e.to],
       shared, variant_effect: { self, other: oth, match }, strategy, needs_review,
       cite: cite(g, [e.id, ...(x?.supporting_edges ?? []).slice(0, 12), ...(self ? [self.edge] : []), ...(oth ? [oth.edge] : [])]),
@@ -351,7 +354,7 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
   /* ---------------- Summary (progressive reveal: one line per question) ---------------- */
   const summary: JourneyV2["summary"] = {
     connections: lead
-      ? { text: tr(l, `${dn} shares ${lead.shared.phenotypes.length} symptoms${lead.shared.pathways.length ? " and a pathway" : ""} with ${lead.name} (inferred, score ${lead.score.toFixed(2)}).`, `${dn} comparte ${lead.shared.phenotypes.length} síntomas${lead.shared.pathways.length ? " y una vía" : ""} con ${lead.name} (inferido, puntuación ${lead.score.toFixed(2)}).`), cite: cite(g, [lead.edge]) }
+      ? { text: tr(l, `${dn} shares ${lead.shared.phenotypes.length} symptoms${lead.shared.pathways.length ? " and a pathway" : ""} with ${lead.name} · ${lead.strength.label}.`, `${dn} comparte ${lead.shared.phenotypes.length} síntomas${lead.shared.pathways.length ? " y una vía" : ""} con ${lead.name} · ${lead.strength.label}.`), cite: cite(g, [lead.edge]) }
       : { text: none_connections!.title, cite: cite(g, []) },
     assets: sharedOwn
       ? { text: tr(l, `${own.filter((a) => a.shared_with.length).length} studies already enroll ${dn} with a neighbor; ${reusable.length} more could be reused.`, `${own.filter((a) => a.shared_with.length).length} estudios ya incluyen ${dn} con una vecina; ${reusable.length} más podrían reutilizarse.`), cite: sharedOwn.cite }
@@ -419,3 +422,23 @@ function gapCard(x: Gap, dn: string, l: Locale): GapCard {
 }
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+/** Informative = information content ≥ 0.4 (above the median of shared symptoms in the atlas). */
+export const INFORMATIVE_IC = 0.4;
+
+/**
+ * Lead strength (UX_WAVE4 §3), deterministic and explainable:
+ *   Strong   — shares a gene or a Reactome pathway AND ≥ 3 informative symptoms
+ *   Possible — shares ≥ 5 informative symptoms
+ *   Weak     — anything else
+ */
+export function leadStrength(shared: { pathways: unknown[]; genes: unknown[] }, phenotypes: { ic: number }[], l: Locale = "en"): NeighborCard["strength"] {
+  const inf = phenotypes.filter((p) => p.ic >= INFORMATIVE_IC).length;
+  const mech = shared.pathways.length > 0 || shared.genes.length > 0;
+  const level: LeadStrength = mech && inf >= 3 ? "strong" : inf >= 5 ? "possible" : "weak";
+  const label = { strong: tr(l, "Strong lead", "Pista fuerte"), possible: tr(l, "Possible lead", "Pista posible"), weak: tr(l, "Weak lead", "Pista débil") }[level];
+  const basis = tr(l,
+    `${inf} informative shared symptoms, ${shared.pathways.length} shared pathways, ${shared.genes.length} shared genes. Strong = gene or pathway + ≥3 informative symptoms; Possible = ≥5 informative symptoms; otherwise Weak.`,
+    `${inf} síntomas informativos compartidos, ${shared.pathways.length} vías compartidas, ${shared.genes.length} genes compartidos. Fuerte = gen o vía + ≥3 síntomas informativos; Posible = ≥5 síntomas informativos; si no, Débil.`);
+  return { level, label, basis, informative_symptoms: inf };
+}

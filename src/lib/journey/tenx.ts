@@ -1,7 +1,7 @@
 /**
- * The 10× view: milestone "launch a shared natural-history study", typical route vs Nexmed route.
+ * The 10× view: milestone "launch a shared natural-history study", typical route vs Nedamex route.
  * Every duration is an ASSUMPTION with its rationale (no source measures these times for this disease).
- * Nexmed only shortens discovery (who shares our mechanism, what exists, who bridges us); it does not
+ * Nedamex only shortens discovery (who shares our mechanism, what exists, who bridges us); it does not
  * shorten protocol, ethics or recruitment — the view says so instead of inflating the gain.
  */
 import type { JourneyV2 } from "./build";
@@ -39,7 +39,7 @@ export function tenX(j: JourneyV2): TenX {
       id: "neighbors", discovery: true,
       label: A("Find diseases that share our mechanism", "Encontrar enfermedades que comparten nuestro mecanismo"),
       typical: { min: 26, max: 52, rationale: A("Assumption: without a cross-disease map, families hear about related diagnoses through conferences, clinicians and case reports, one at a time.", "Supuesto: sin un mapa entre enfermedades, las familias conocen diagnósticos relacionados por congresos, clínicos y casos publicados, uno a la vez.") },
-      nexmed: { min: 0.2, max: 1, what: nb ? A(`The atlas already links ${d} to ${nb.name} (inferred, ${nb.score.toFixed(2)}).`, `El atlas ya relaciona ${d} con ${nb.name} (inferido, ${nb.score.toFixed(2)}).`) : A("No supported neighbor — the atlas says so on day one.", "Sin vecina respaldada — el atlas lo dice el primer día."),
+      nexmed: { min: 0.2, max: 1, what: nb ? A(`The atlas already links ${d} to ${nb.name} (inferred · ${nb.strength.label}).`, `El atlas ya relaciona ${d} con ${nb.name} (inferido · ${nb.strength.label}).`) : A("No supported neighbor — the atlas says so on day one.", "Sin vecina respaldada — el atlas lo dice el primer día."),
         rationale: A("Assumption: a search plus a week for an expert to sanity-check the inferred link.", "Supuesto: una búsqueda y una semana para que un experto revise el vínculo inferido."), cite: nb?.cite ?? null },
     },
     {
@@ -62,7 +62,7 @@ export function tenX(j: JourneyV2): TenX {
       typical: { min: 26, max: 52, rationale: A("Assumption: protocol, consent, ethics review and site setup.", "Supuesto: protocolo, consentimiento, revisión ética y puesta en marcha del sitio.") },
       nexmed: shared
         ? { min: 8, max: 26, what: A(`Joining ${shared.nct}, which already enrolls ${d}, may avoid writing a new protocol.`, `Sumarse a ${shared.nct}, que ya incluye ${d}, puede evitar escribir un protocolo nuevo.`), rationale: A("Assumption: an amendment or enrollment in an existing study, if the team agrees. Must be validated with the study team.", "Supuesto: una enmienda o inscripción en un estudio existente, si el equipo acepta. Debe validarse con el equipo del estudio."), cite: shared.cite }
-        : { min: 26, max: 52, what: A("Unchanged: Nexmed does not shorten ethics or protocol work.", "Sin cambio: Nexmed no acorta el trabajo ético ni de protocolo."), rationale: A("Same assumption as the typical route.", "Mismo supuesto que la ruta típica."), cite: null },
+        : { min: 26, max: 52, what: A("Unchanged: Nedamex does not shorten ethics or protocol work.", "Sin cambio: Nedamex no acorta el trabajo ético ni de protocolo."), rationale: A("Same assumption as the typical route.", "Mismo supuesto que la ruta típica."), cite: null },
     },
   ];
   const sum = (ps: Phase[], k: "typical" | "nexmed") => [ps.reduce((s, p) => s + p[k].min, 0), ps.reduce((s, p) => s + p[k].max, 0)] as [number, number];

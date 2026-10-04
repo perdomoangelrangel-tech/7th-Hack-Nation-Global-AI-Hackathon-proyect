@@ -26,7 +26,7 @@ export type SourceId =
   | "nexmed_analysis" | "openai_extraction" | "community";
 
 /**
- * observed: a source states it (solid line). inferred: Nexmed analysis computed it from observed edges (dashed).
+ * observed: a source states it (solid line). inferred: Nedamex analysis computed it from observed edges (dashed).
  * extracted: OpenAI pulled it from a cited paper, needs expert review (dotted). proposed: community draft, never evidence (ghost).
  */
 export type EdgeKind = "observed" | "inferred" | "extracted" | "proposed";
@@ -72,6 +72,10 @@ export interface Cluster {
   diseases: string[];          // Entity.id
   shared_pathways: { id: string; name: string; diseases: number }[];
   shared_phenotypes: { id: string; name: string; ic: number; diseases: number }[];
+  /** Orphanet classification groups shared by >= half of the members (>= 2), e.g. "Lysosomal disease". */
+  orphanet_groups?: { orpha: string; name: string; diseases: number }[];
+  /** Search terms for the cluster: its label + those groups' names and Orphanet synonyms ("lysosomal storage disease"). */
+  aliases?: string[];
 }
 
 export interface SimilarityExplanation {
