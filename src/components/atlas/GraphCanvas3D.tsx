@@ -15,6 +15,7 @@ import SpriteText from "three-spritetext";
 import type { GLink, GNode } from "@/lib/atlas/store";
 import { CANVAS, KIND_STYLE, TYPE_COLOR, kindOf } from "./colors";
 import { endId, trim, type GraphCanvasProps } from "./graphProps";
+import { useGlyphGeometries } from "@/components/three/glyphs";
 
 type N = NodeObject<GNode>;
 type L = LinkObject<GNode, GLink>;
@@ -64,6 +65,8 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState<string | null>(null);
   const [spin, setSpin] = useState(false);
+  // Blender glyphs per entity type (brand lane); procedural primitives until loaded / if loading fails.
+  const glyphs = useGlyphGeometries();
   const settled = useRef(false);
   const stopFramed = useRef(false);
 
@@ -92,9 +95,11 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     const r = radiusOf(n);
     const group = new THREE.Group();
     const mat = new THREE.MeshLambertMaterial({ color, transparent: true, opacity: n.draft ? 0.35 : 1, wireframe: !!n.draft });
-    const mesh = new THREE.Mesh(geo[n.type] ?? geo.default, mat);
-    mesh.scale.setScalar(r);
-    if (n.type === "trial") mesh.rotation.x = Math.PI;
+    // Diseases stay spheres (cluster color + centrality read best); other types use the glyph when available.
+    const glyph = !isDisease ? glyphs?.[n.type] : undefined;
+    const mesh = new THREE.Mesh(glyph ?? geo[n.type] ?? geo.default, mat);
+    mesh.scale.setScalar(glyph ? r * 1.7 : r);
+    if (n.type === "trial" && !glyph) mesh.rotation.x = Math.PI;
     const haloSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color, transparent: true, opacity: isDisease ? 0.28 : 0, depthWrite: false }));
     haloSprite.scale.setScalar(r * 5);
     const ringSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: ring, color: new THREE.Color(n.bridge ? CANVAS.bridge : CANVAS.ink), transparent: true, opacity: 0, depthWrite: false }));
@@ -115,9 +120,9 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     label.renderOrder = 10;
     group.add(haloSprite, mesh, ringSprite, label);
     nodeParts.current.get(String(n.id))?.mat.dispose();
-    nodeParts.current.set(String(n.id), { group, mesh, mat, halo: haloSprite, ring: ringSprite, label, base: r });
+    nodeParts.current.set(String(n.id), { group, mesh, mat, halo: haloSprite, ring: ringSprite, label, base: glyph ? r * 1.7 : r });
     return group;
-  }, []);
+  }, [glyphs]);
 
   const linkObject = useCallback((l: L) => {
     const s = KIND_STYLE[kindOf(l.kind)];

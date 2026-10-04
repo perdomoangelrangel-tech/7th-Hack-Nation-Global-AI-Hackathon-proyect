@@ -14,13 +14,14 @@ import type { Draft } from "./proposals";
 import { externalUrl } from "./links";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { ExplainButton } from "@/components/ai/ExplainButton";
+import { ExtractPanel } from "@/components/ai/ExtractPanel";
 import { api } from "./api";
 
 type Detail = NonNullable<ReturnType<typeof edgeDetail>>;
 
 const SOURCE_NAME: Record<string, string> = {
   orphanet: "Orphanet", hpo: "HPO", monarch: "Monarch", clinvar: "ClinVar", ctgov: "ClinicalTrials.gov", opentargets: "Open Targets",
-  reactome: "Reactome", pubmed: "PubMed", nih_reporter: "NIH RePORTER", patient_orgs: "Patient org (official site)", atlas_analysis: "Nexmed analysis", openai_extraction: "OpenAI extraction",
+  reactome: "Reactome", pubmed: "PubMed", nih_reporter: "NIH RePORTER", patient_orgs: "Patient org (official site)", atlas_analysis: "Nedamex analysis", nexmed_analysis: "Nedamex analysis", community: "Nedamex community drafts (not evidence)", fda: "FDA", openai_extraction: "OpenAI extraction",
 };
 
 export function KindBadge({ kind, t }: { kind: string; t: Dict }) {
@@ -36,7 +37,7 @@ export function KindBadge({ kind, t }: { kind: string; t: Dict }) {
 
 const KIND_SENTENCE: Record<LinkKind, { en: string; es: string }> = {
   observed: { en: "A cited source states this connection.", es: "Una fuente citada afirma esta conexión." },
-  inferred: { en: "Nexmed computed this from observed edges. It is a hypothesis for experts to test, not a finding.", es: "Nexmed lo calculó a partir de aristas observadas. Es una hipótesis para que la prueben expertos, no un hallazgo." },
+  inferred: { en: "Nedamex computed this from observed edges. It is a hypothesis for experts to test, not a finding.", es: "Nedamex lo calculó a partir de aristas observadas. Es una hipótesis para que la prueben expertos, no un hallazgo." },
   extracted: { en: "An AI model extracted this from the cited paper. An expert has not reviewed it yet.", es: "Un modelo de IA lo extrajo del artículo citado. Aún no lo ha revisado un experto." },
   proposed: { en: "A community member proposed this. It is a draft, not evidence.", es: "Lo propuso un miembro de la comunidad. Es un borrador, no evidencia." },
 };
@@ -134,7 +135,8 @@ export function EdgeInspector({ edgeId, t, locale, persona, onClose, onFocusDise
             </ul>
             {/* ai lane: verified plain-language explanation of this edge (simple language follows usePrefs()). */}
             <div className="mt-3"><ExplainButton edgeIds={[d.edge.id]} persona={persona} locale={locale} onHighlight={onHighlight} /></div>
-            {/* TODO(ai merge): <ExtractPanel pmid={ev.external_id} locale={locale} /> for PubMed evidence once it is on main. */}
+            {/* ai lane: OpenAI extraction from the first cited PubMed paper (results are "needs expert review"). */}
+            {(() => { const pm = d.edge.evidence.find((ev) => ev.source === "pubmed"); return pm ? <div className="mt-3"><ExtractPanel pmid={pm.external_id} locale={locale} /></div> : null; })()}
           </section>
 
           <section>
