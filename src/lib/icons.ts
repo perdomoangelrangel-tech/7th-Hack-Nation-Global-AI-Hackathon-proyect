@@ -61,6 +61,7 @@ export const NODE_ICON: Record<EntityType | "registry" | "funding", LucideIcon> 
   gene: Dna,
   variant: Asterisk,
   pathway: Waypoints,
+  mechanism: Sigma,
   phenotype: Droplet,
   trial: FlaskConical,
   registry: ClipboardList,
@@ -73,7 +74,7 @@ export const NODE_ICON: Record<EntityType | "registry" | "funding", LucideIcon> 
 
 /** Human labels for node types (singular), shared by legend, search groups and chips. */
 export const NODE_LABEL: Record<EntityType | "registry" | "funding", string> = {
-  disease: "Disease", gene: "Gene", variant: "Variant", pathway: "Mechanism", phenotype: "Symptom", trial: "Study",
+  disease: "Disease", gene: "Gene", variant: "Variant", pathway: "Mechanism", mechanism: "Variant effect", phenotype: "Symptom", trial: "Study",
   registry: "Registry", study: "Paper", organization: "Patient group", investigator: "Researcher", treatment: "Treatment", funding: "Funding",
 };
 
