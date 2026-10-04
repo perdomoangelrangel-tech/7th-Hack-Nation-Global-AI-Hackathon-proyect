@@ -45,7 +45,7 @@ export default async function AtlasPage({ searchParams }: { searchParams: Promis
     en: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.en, mode: x.mode.en })),
     es: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.es, mode: x.mode.es })),
   };
-  return <><AtlasApp initialDisease={initialDisease} initialPersona={initialPersona} initialLocale={initialLocale} initialEdge={initialEdge} personas={personas} stats={stats()} maria={MARIA} /><Tour locale={initialLocale} auto /></>;
+  return <><AtlasApp initialDisease={initialDisease} initialPersona={initialPersona} initialLocale={initialLocale} initialEdge={initialEdge} personas={personas} stats={stats()} maria={MARIA} /><Tour locale={initialLocale} auto={!initialDisease} /></>;
 }
 
 function noRouteSources() {

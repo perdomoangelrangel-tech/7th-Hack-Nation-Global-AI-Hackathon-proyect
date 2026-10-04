@@ -22,6 +22,7 @@ const AUTO_DELAY_MS = 1200; // let the route and the map appear first
 
 export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; auto?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
   const [stop, setStop] = useState(0);
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const c = tourCopy[locale];
@@ -33,6 +34,8 @@ export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; 
     setLocale(l === "es" || l === "en" ? l : initialLocale);
     setStop(0);
     if (!ref.current?.open) ref.current?.showModal();
+    // Focus "Next" ourselves; browsers block autofocus inside a cross-origin frame (the Lovable embed).
+    if (window.self === window.top) nextRef.current?.focus();
   }, [initialLocale]);
   const close = useCallback(() => { ref.current?.close(); writeMemory({ tourSeen: true }); }, []);
 
@@ -73,7 +76,7 @@ export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; 
           ) : (
             <button type="button" onClick={close} className="min-h-10 rounded-full px-3 text-sm font-medium text-ink-3 hover:bg-brand-soft">{c.skip}</button>
           )}
-          <button type="button" autoFocus onClick={() => (stop < last ? setStop(stop + 1) : close())}
+          <button type="button" ref={nextRef} onClick={() => (stop < last ? setStop(stop + 1) : close())}
             className="inline-flex min-h-10 items-center gap-1 rounded-full bg-brand-deep px-4 text-sm font-semibold text-paper hover:bg-brand-ink">
             {stop < last ? <>{c.next}<ChevronRight aria-hidden size={16} /></> : c.done}
           </button>
