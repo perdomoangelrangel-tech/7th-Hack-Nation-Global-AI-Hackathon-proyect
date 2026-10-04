@@ -112,3 +112,15 @@ describe("pubmed", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("extract · quote must be about the claim", () => {
+  it("drops a verbatim quote that names neither side", async () => {
+    setLlmClient(fakeLlm({
+      entities: [{ mention: "GENE2", type: "gene" }, { mention: "Beta disease", type: "disease" }],
+      claims: [{ subject: "GENE2", relation: "causes", object: "Beta disease", polarity: "supports", quote: "We report 12 patients.", confidence: 0.9 }],
+    }).client);
+    const r = await extract(idx, { paper });
+    expect(r.claims).toHaveLength(0);
+    expect(r.dropped.map((d) => d.reason)).toContain("quote_not_about_claim");
+  });
+});

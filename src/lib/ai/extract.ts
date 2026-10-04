@@ -148,6 +148,12 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
       dropped.push({ text: `${c.subject} ${c.relation} ${c.object}`, reason: known ? "wrong_entity_types" : "unknown_entity" });
       continue;
     }
+    // The quote must be about this claim: object named in it; subject in it or in the title (the paper's topic).
+    const named = (q: string, e: ExtractedEntity, m: string) => contains(q, m) || contains(q, e.mention) || (!!e.label && contains(q, e.label));
+    if (!named(c.quote, o, object) || !(named(c.quote, s, subject) || named(title, s, subject))) {
+      dropped.push({ text: `${subject} ${c.relation} ${object}: ${c.quote.slice(0, 120)}`, reason: "quote_not_about_claim" });
+      continue;
+    }
     const entity_ids = [s.entity_id, o.entity_id];
     claims.push({ subject, relation: c.relation, object, polarity: c.polarity, quote: squash(c.quote), confidence: clamp(c.confidence), entity_ids, graphable: entity_ids.every(Boolean) });
   }
