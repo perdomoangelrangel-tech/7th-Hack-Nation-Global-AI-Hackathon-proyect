@@ -4,10 +4,14 @@
  * Patient groups → Studies — with synonym resolution visible ("Munc18-1" → STXBP1) and the matching text highlighted.
  * Mechanism clusters come back too ("lysosomal storage" → the cluster and its diseases). Keyboard: arrows, Enter, Esc.
  * When local search finds nothing, the server asks /api/reconcile (ai lane) for the closest atlas entity — labeled as such.
+ * Empty box on focus (WAVE 5B): "Browse diseases" — every disease grouped by mechanism cluster with its ORPHA code — plus
+ * quick chips; results have type filters; footer actions "Request a disease" / "Suggest a source" open the co-creation
+ * dialog (action lane) as a community request, never evidence.
  */
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Command, Search } from "lucide-react";
+import { Command, FilePlus2, Link2, Search } from "lucide-react";
+import { openCoCreate } from "@/components/journey/events";
 import type { SearchHit } from "@/lib/atlas/store";
 import type { Dict, Locale } from "@/lib/i18n";
 import { motionTokens, springs } from "@/lib/motion";
@@ -15,6 +19,10 @@ import { api } from "./api";
 import { TypeIcon } from "./icons";
 
 type Hit = SearchHit & { reconciled?: boolean };
+interface DiseaseRow { id: string; name: string; canonical_id?: string; cluster: string | null; cluster_label?: string | null; color: string | null }
+const QUICK = ["STXBP1", "Dravet", "hand wringing", "Munc18-1"];
+/** Type filters for results (keys of GROUPS; "all" = no filter). */
+const FILTERS = ["all", "diseases", "mechanisms", "genes", "symptoms", "groups", "studies"] as const;
 
 /** Fixed group order (UX_WAVE4 S1). `max` = rows shown before "Show N more". */
 const GROUPS: { key: string; types: string[]; max: number }[] = [
@@ -34,6 +42,8 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
+  const [diseases, setDiseases] = useState<DiseaseRow[] | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
 
@@ -65,12 +75,32 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
   }, []);
 
+  // Browse list: loaded once, the first time the box opens empty.
+  const browsing = open && q.trim().length < 2;
+  useEffect(() => {
+    if (!browsing || diseases) return;
+    fetch(api(`/api/atlas/diseases?l=${locale}`)).then((r) => r.json()).then((j: { diseases: DiseaseRow[] }) => setDiseases(j.diseases)).catch(() => setDiseases([]));
+  }, [browsing, diseases, locale]);
+  const browseGroups = useMemo(() => {
+    const m = new Map<string, { label: string; color: string | null; rows: DiseaseRow[] }>();
+    for (const d of diseases ?? []) {
+      const k = d.cluster ?? "none";
+      if (!m.has(k)) m.set(k, { label: d.cluster_label ?? t.search_group.diseases, color: d.color, rows: [] });
+      m.get(k)!.rows.push(d);
+    }
+    return [...m.values()].map((g) => ({ ...g, rows: g.rows.sort((a, b) => a.name.localeCompare(b.name)) })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [diseases, t]);
+  const request = (kind: "disease" | "source") => {
+    openCoCreate("evidence", { title: `${kind === "disease" ? "Disease request" : "Source suggestion"}: ${q.trim()}`.replace(/: $/, ": ") });
+    setOpen(false);
+  };
+
   const shown = useMemo(() => (q.trim().length < 2 ? [] : hits), [q, hits]);
   // Group, cap each group, and flatten in display order for keyboard navigation.
-  const groups = useMemo(() => GROUPS.map((g) => {
+  const groups = useMemo(() => GROUPS.filter((g) => filter === "all" || g.key === filter).map((g) => {
     const all = shown.filter((h) => g.types.includes(h.type));
     return { ...g, all, rows: expanded.has(g.key) ? all : all.slice(0, g.max) };
-  }).filter((g) => g.all.length), [shown, expanded]);
+  }).filter((g) => g.all.length), [shown, expanded, filter]);
   const flat = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
   const synonym = shown.find((h) => h.via_synonym && !h.reconciled);
   const empty = q.trim().length >= 2 && searched === q && hits.length === 0;
@@ -85,7 +115,7 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
           id={`${listId}-in`} ref={input} value={q} autoComplete="off" spellCheck={false}
           role="combobox" aria-autocomplete="list" aria-expanded={open && flat.length > 0} aria-controls={listId} aria-activedescendant={open && flat[active] ? `${listId}-${active}` : undefined}
           placeholder={t.search_placeholder}
-          onChange={(e) => setQ(e.target.value)} onFocus={() => shown.length > 0 && setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onChange={(e) => setQ(e.target.value)} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); setActive((a) => Math.min(a + 1, flat.length - 1)); }
             else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
@@ -98,13 +128,40 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
       </div>
       <p className="sr-only" role="status" aria-live="polite">{open && q.trim().length >= 2 ? `${shown.length} results` : ""}</p>
       <AnimatePresence>
-        {open && (flat.length > 0 || empty) && (
+        {open && (browsing || flat.length > 0 || empty || shown.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: -motionTokens.distance.xs }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             transition={springs.instant}
             className="absolute z-40 mt-2 w-full max-h-[70vh] overflow-auto rounded-xl border border-line bg-paper shadow-xl shadow-ink/10 py-1"
           >
-            {empty ? (
+            {browsing ? (
+              <div className="py-1">
+                <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2 pb-1">
+                  <span className="text-[11px] uppercase tracking-widest text-ink-3 mr-1">{t.search_try_label}</span>
+                  {QUICK.map((x) => <button key={x} type="button" onMouseDown={(e) => { e.preventDefault(); setQ(x); }} className="chip hover:bg-brand-soft">{x}</button>)}
+                </div>
+                <p className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-widest text-ink-3">{t.search_browse}</p>
+                {!diseases ? <p className="px-3 py-2 text-sm text-ink-3">…</p> : (
+                  <ul aria-label={t.search_browse}>
+                    {browseGroups.map((g) => (
+                      <li key={g.label}>
+                        <p className="flex items-center gap-2 px-3 pt-2 pb-0.5 text-xs font-medium text-ink-2"><span className="w-2 h-2 rounded-full" style={{ background: g.color ?? undefined }} aria-hidden />{g.label}</p>
+                        <ul>
+                          {g.rows.map((d) => (
+                            <li key={d.id}>
+                              <button type="button" onMouseDown={(e) => { e.preventDefault(); pick({ id: d.id, type: "disease", name: d.name, matched: d.name, via_synonym: false, disease: d.id, sub: d.canonical_id ?? "" }); }}
+                                className="flex w-full items-center gap-3 px-3 py-1.5 text-left hover:bg-brand-soft">
+                                <TypeIcon type="disease" size={14} /><span className="flex-1 text-sm text-ink truncate">{d.name}</span><span className="text-[11px] text-ink-3 tabular-nums">{d.canonical_id}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : empty ? (
               <div className="px-4 py-3 text-sm">
                 <p className="text-ink-2">{t.search_empty.replace("{q}", q.trim())}</p>
                 {/* S1 → S7: the honest no-route page (what we searched · what is missing · how to help). */}
@@ -112,6 +169,15 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
                   className="mt-1 inline-block text-xs font-medium text-brand-deep hover:underline">{t.search_no_route}</a>
               </div>
             ) : (
+              <>
+              <div role="group" aria-label={t.search_filter} className="flex flex-wrap gap-1 px-3 pt-2 pb-1">
+                {FILTERS.map((f) => (
+                  <button key={f} type="button" aria-pressed={filter === f} onMouseDown={(e) => { e.preventDefault(); setFilter(f); setActive(0); }}
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] border ${filter === f ? "border-brand-deep bg-brand-soft text-ink" : "border-line text-ink-2 hover:bg-brand-mist"}`}>
+                    {f === "all" ? t.search_all : t.search_group[f]}
+                  </button>
+                ))}
+              </div>
               <ul id={listId} role="listbox" aria-label={t.search_placeholder}>
                 {synonym && (
                   <li role="presentation" className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-widest text-ink-3">
@@ -153,7 +219,13 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
                   </Fragment>
                 ))}
               </ul>
+              </>
             )}
+            {/* Footer: ask for what is missing (community requests, never evidence). */}
+            <div className="mt-1 flex flex-wrap gap-2 border-t border-line px-3 py-2">
+              <button type="button" onMouseDown={(e) => { e.preventDefault(); request("disease"); }} className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-xs text-ink-2 hover:bg-brand-mist"><FilePlus2 aria-hidden size={14} strokeWidth={1.75} />{t.search_request_disease}</button>
+              <button type="button" onMouseDown={(e) => { e.preventDefault(); request("source"); }} className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-xs text-ink-2 hover:bg-brand-mist"><Link2 aria-hidden size={14} strokeWidth={1.75} />{t.search_suggest_source}</button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

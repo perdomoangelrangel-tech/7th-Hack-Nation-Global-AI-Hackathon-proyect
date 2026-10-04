@@ -49,7 +49,9 @@ export function useGraphMode(persona?: string) {
   }, [prefs.reduceMotion]);
 
   const webgl = reason !== "no-webgl";
-  const personaDefault: GraphMode = persona === "devon" || persona === "maria" ? "2d" : "3d";
+  // WAVE 5B: 2D is the default for every role; 3D is optional (same fixed coordinates).
+  void persona;
+  const personaDefault: GraphMode = "2d";
   const mode: GraphMode = !webgl ? "2d" : choice ?? (reason ? "2d" : personaDefault);
   const setMode = useCallback((m: GraphMode) => {
     setChoice(m);
