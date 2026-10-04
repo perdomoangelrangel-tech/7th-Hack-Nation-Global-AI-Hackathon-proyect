@@ -38,6 +38,12 @@ const phaseText = (e: Edge, es: boolean) => {
 };
 const sourcesOf = (e: Edge, es: boolean) => [...new Set(e.evidence.map((v) => SOURCE_LABEL[v.source] ?? v.source))].join(es ? " y " : " and ");
 
+/** Open Targets drug types, in Spanish (unknown types are quoted as the source writes them). */
+const DRUG_TYPE_ES: Record<string, string> = {
+  "small molecule": "una molécula pequeña", antibody: "un anticuerpo", protein: "una proteína", enzyme: "una enzima",
+  oligonucleotide: "un oligonucleótido", "antisense oligonucleotide": "un oligonucleótido antisentido", gene: "una terapia génica", cell: "una terapia celular",
+};
+
 /** Resolve "treatment:CHEMBL…", "CHEMBL…" or an exact treatment name. */
 export function findTreatment(idx: AtlasIndex, id: string): Entity | null {
   const q = id.trim();
@@ -60,7 +66,7 @@ export function medicineFacts(idx: AtlasIndex, t: Entity, l: Locale): Fact[] {
   if (mechs.length || p.drug_type) push({
     kind: "treatment", status: "observed", nodes: [t.id], edges: [], evidence_ids: otEvidence.slice(0, 3),
     text: es
-      ? `${t.name}${p.drug_type ? ` es un ${p.drug_type.toLowerCase()}` : ""}${mechs.length ? `; Open Targets indica que actúa como ${mechs.join(", ")}` : ""}.`
+      ? `${t.name}${p.drug_type ? ` es ${DRUG_TYPE_ES[p.drug_type.toLowerCase()] ?? `un medicamento de tipo «${p.drug_type}»`}` : ""}${mechs.length ? `; Open Targets indica que actúa como ${mechs.join(", ")}` : ""}.`
       : `${t.name}${p.drug_type ? ` is a ${p.drug_type.toLowerCase()}` : ""}${mechs.length ? `; Open Targets lists its mechanism as ${mechs.join(", ")}` : ""}.`,
     simple: es ? `${t.name} es un medicamento${mechs.length ? ` que actúa sobre ${mechs[0].toLowerCase()}` : ""}.` : `${t.name} is a medicine${mechs.length ? ` that works as a ${mechs[0].toLowerCase()}` : ""}.`,
   });
