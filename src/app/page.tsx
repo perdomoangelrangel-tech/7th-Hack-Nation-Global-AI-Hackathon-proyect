@@ -1,133 +1,318 @@
 import Link from "next/link";
-import { site } from "@/lib/site";
-import { FlowDiagram } from "@/components/FlowDiagram";
-import { VideoSlot } from "@/components/VideoSlot";
+import { Nav } from "@/components/landing/Nav";
+import { GuidePreview } from "@/components/landing/GuidePreview";
+import { Logo } from "@/components/brand/Logo";
+import { Hero3D } from "@/components/three/Hero3D";
+import { NodeOrb, type OrbKind } from "@/components/three/NodeOrb";
+import { atlas, loadAtlas, stats } from "@/lib/atlas/store";
+import type { Edge } from "@/lib/atlas/types";
+import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
+import { site, toEmbed } from "@/lib/site";
 
-const SOURCES = ["Orphanet", "HPO", "Monarch", "ClinVar", "ClinicalTrials.gov", "Open Targets", "PubMed"];
+export const revalidate = 3600;
 
-const AUDIENCES = [
-  { title: "Familias", who: "pacientes y cuidadores · gratis", desc: "Una guía cálida que explica la enfermedad, los tratamientos documentados, los ensayos cercanos y los grupos de apoyo.", agent: "Guía de familias", tone: "teal" },
-  { title: "Clínicas", who: "médicos y genetistas · B2B", desc: "Un analista que ordena diferenciales por fenotipo (HPO), variantes relevantes y literatura, con códigos y citas.", agent: "Analista clínico", tone: "navy" },
-  { title: "Investigación", who: "fundaciones, farma, CROs · B2B", desc: "Un analista que muestra el mapa de evidencia, los huecos de investigación y la comunidad que ya trabaja en cada enfermedad.", agent: "Analista de investigación", tone: "navy" },
+const MODE_ORDER: PersonaId[] = ["devon", "maria", "osei", "priya"];
+const MARIA_DISEASE = "disease:ORPHA:599373"; // STXBP1-related developmental and epileptic encephalopathy
+
+// Hack-Nation Challenge 05 brief (the only source for these figures).
+const FACTS = [
+  { n: "~10,000", t: "rare diseases are known" },
+  { n: "~80%", t: "have a genetic cause" },
+  { n: "~5,000", t: "are monogenic — one gene" },
+  { n: "~350M", t: "people live with one" },
+  { n: "<5%", t: "have an approved treatment" },
 ];
 
-const NUMBERS = [
-  { n: "4.7 años", t: "tarda en promedio un diagnóstico confirmado", s: "EURORDIS, 10,453 pacientes" },
-  { n: "95%", t: "de las enfermedades raras no tiene tratamiento aprobado", s: "Buffalo Initiative" },
-  { n: "300M+", t: "personas viven con una enfermedad rara", s: "Rare Diseases International" },
+const STEPS = [
+  { title: "Open sources", body: "Orphanet, HPO, Monarch, ClinVar, Reactome, ClinicalTrials.gov, PubMed, Open Targets, NIH RePORTER. Every row keeps its URL and the date we read it.", tone: "light" as const },
+  { title: "Evidence graph", body: "Diseases, genes, variants, symptoms, pathways, trials, papers, treatments, patient groups and researchers. Each edge carries its source, relation, confidence and contradicting evidence.", tone: "brand" as const },
+  { title: "Mechanism clusters", body: "Louvain communities over shared symptoms (weighted by how informative they are), Reactome pathways and genes — diseases that may share biology even when their names differ.", tone: "deep" as const },
+  { title: "Action", body: "For each mode: the connection, a reusable asset and what differs, a collaborator, and a next step this week. When there is no route, Nexmed says so.", tone: "ink" as const },
 ];
 
-export default function Home() {
+const MODE_COPY: Record<string, string> = {
+  devon: "Plain-language answers about the diagnosis, documented treatments, trials and patient groups — read aloud.",
+  maria: "From her disease to a shared mechanism, a reusable registry or trial, the researcher who bridges both, and a step for this week.",
+  osei: "Mechanism clusters, similarity explanations with their evidence, counterexamples and evidence gaps.",
+  priya: "Unmet need, reusable assets and who already works on the mechanism — with every claim traceable.",
+};
+
+const KINDS: { kind: OrbKind; title: string; body: string; line: string }[] = [
+  { kind: "observed", title: "Observed", body: "A source states it. Solid line.", line: "kind-observed" },
+  { kind: "inferred", title: "Inferred", body: "Nexmed analysis, with its score and basis. Dashed line.", line: "kind-inferred" },
+  { kind: "extracted", title: "AI-extracted", body: "OpenAI pulled it from a cited paper. Dotted line — needs expert review.", line: "kind-extracted" },
+  { kind: "proposed", title: "Community draft", body: "Proposed by a family or researcher. Ghost line — never counted as evidence.", line: "kind-proposed" },
+];
+
+const BUILT = [
+  { name: "OpenAI", what: "extraction from papers, grounded explanations" },
+  { name: "ElevenLabs", what: "a voice for every agent" },
+  { name: "Supabase", what: "the Postgres evidence graph" },
+  { name: "Blender", what: "every 3D element on this page" },
+  { name: "Next.js · Vercel", what: "the app" },
+];
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("en-US").format(n);
+}
+
+function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: string; to: string; sourceName: string; label: string }) {
+  const ev = edge.evidence[0];
+  const inferred = edge.kind === "inferred";
+  const p = edge.props as { phenotype_score?: number; pathway_score?: number };
   return (
-    <main>
-      {/* Nav */}
-      <header className="sticky top-0 z-20 backdrop-blur bg-paper/80 border-b border-line">
-        <div className="mx-auto max-w-6xl px-5 h-14 flex items-center justify-between">
-          <span className="font-semibold tracking-tight">
-            <span className="inline-block w-5 h-5 rounded-md border border-dashed border-ink-3 align-[-3px] mr-2" aria-hidden title="logo pendiente" />
-            {site.name}
-          </span>
-          <nav className="flex items-center gap-5 text-sm text-ink-2">
-            <a href="#flujo" className="hover:text-ink">Cómo funciona</a>
-            <a href="#videos" className="hover:text-ink">Videos</a>
-            <a href={site.github} className="hover:text-ink" target="_blank" rel="noreferrer">GitHub</a>
-            <Link href="/atlas" className="rounded-full bg-navy text-paper px-4 py-1.5 font-medium">Abrir el atlas</Link>
-          </nav>
-        </div>
-      </header>
+    <article className="rounded-xl border border-line bg-paper p-4 shadow-[var(--shadow-soft)]">
+      <p className="eyebrow">{label}</p>
+      <p className="mt-2 text-[0.95rem] font-semibold text-brand-ink">
+        {from} <span className="font-normal text-ink-3">→ {edge.relation.replace(/_/g, " ")} →</span> {to}
+      </p>
+      <div className={`mt-3 w-16 ${inferred ? "kind-inferred" : "kind-observed"}`} aria-hidden />
+      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-ink-3">Kind</dt><dd className="text-ink-2">{edge.kind}</dd>
+        <dt className="text-ink-3">Confidence</dt>
+        <dd className="text-ink-2">
+          {edge.confidence.toFixed(inferred ? 3 : 2)}
+          {inferred && p.phenotype_score !== undefined && <span className="text-ink-3"> · symptoms {p.phenotype_score} · pathways {p.pathway_score ?? 0}</span>}
+        </dd>
+        <dt className="text-ink-3">Source</dt>
+        <dd className="text-ink-2">
+          {ev?.url ? <a href={ev.url} target="_blank" rel="noreferrer" className="text-brand-deep underline decoration-brand-light underline-offset-2 hover:decoration-brand-deep">{sourceName}</a> : sourceName}
+          {ev?.external_id && <span className="mono ml-1.5 text-xs text-ink-3">{ev.external_id}</span>}
+        </dd>
+        {ev?.retrieved_at && (<><dt className="text-ink-3">Read on</dt><dd className="text-ink-2">{ev.retrieved_at.slice(0, 10)}</dd></>)}
+      </dl>
+    </article>
+  );
+}
 
-      {/* Hero */}
-      <section className="mx-auto max-w-6xl px-5 pt-16 pb-12 grid lg:grid-cols-[1.1fr_.9fr] gap-10 items-center">
-        <div>
-          <p className="chip mb-5">{site.challenge}</p>
-          <h1 className="serif text-5xl md:text-6xl leading-[1.05] text-navy">
-            Cada respuesta rara, <br /><span className="text-teal">con su fuente.</span>
-          </h1>
-          <p className="mt-6 text-lg text-ink-2 max-w-xl">
-            Un atlas que conecta enfermedades, genes, síntomas, tratamientos, ensayos y comunidades en un grafo
-            construido solo con bases de datos verificadas. Agentes de voz con personalidad lo explican a cada público.
-            Si no hay evidencia, lo dicen.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/atlas" className="rounded-full bg-teal text-white px-6 py-3 font-medium">Probar el atlas</Link>
-            <a href="#videos" className="rounded-full border border-line px-6 py-3 font-medium hover:bg-paper-2">Ver el demo</a>
-          </div>
-          <ul className="mt-8 flex flex-wrap gap-2" aria-label="Fuentes de datos">
-            {SOURCES.map((s) => <li key={s} className="chip"><span className="w-1.5 h-1.5 rounded-full bg-teal" aria-hidden />{s}</li>)}
-          </ul>
-        </div>
+export default async function Home() {
+  await loadAtlas();
+  const s = stats();
+  const { snap, byId } = atlas();
+  const name = (id: string) => byId.get(id)?.name ?? id.split(":").slice(1).join(":");
+  const causes = snap.edges.find((e) => e.to === MARIA_DISEASE && e.relation === "causes" && e.kind === "observed");
+  const similar = snap.edges.filter((e) => e.relation === "similar_to" && (e.from === MARIA_DISEASE || e.to === MARIA_DISEASE)).sort((a, b) => b.confidence - a.confidence)[0];
+  const srcName = (e?: Edge) => {
+    const id = e?.evidence[0]?.source;
+    if (!id) return "—";
+    return snap.sources[id]?.name ?? (id === "atlas_analysis" ? `${site.name} analysis` : id);
+  };
+  const updated = s.generated_at ? new Date(s.generated_at).toISOString().slice(0, 10) : null;
+  const counters = [
+    { n: s.diseases, t: "diseases" },
+    { n: s.genes, t: "genes" },
+    { n: s.edges, t: "sourced edges" },
+    { n: s.evidence, t: "evidence records" },
+    { n: s.clusters, t: "mechanism clusters" },
+    { n: s.sources, t: "open sources" },
+  ];
+  const videos = [
+    { title: "Demo", url: site.videos.demo },
+    { title: "Technical walkthrough", url: site.videos.tech },
+    { title: "Team", url: site.videos.team },
+  ].filter((v) => v.url);
 
-        {/* Ilustración: respuesta con evidencia vs sin evidencia */}
-        <div className="card p-5 space-y-3" aria-label="Ejemplo de respuesta">
-          <p className="text-xs uppercase tracking-widest text-ink-3">Guía de familias · ejemplo</p>
-          <p className="text-sm text-ink-2 italic">&ldquo;¿Qué tratamientos hay para el síndrome de Rett?&rdquo;</p>
-          <div className="evidence pl-3 py-1">
-            <p className="text-sm">Trofinetide aparece como tratamiento aprobado para el síndrome de Rett.</p>
-            <p className="text-xs text-ink-3 mt-1">Open Targets · CHEMBL · consultado hoy</p>
-          </div>
-          <div className="evidence pl-3 py-1">
-            <p className="text-sm">Hay 6 ensayos activos reclutando en 4 países.</p>
-            <p className="text-xs text-ink-3 mt-1">ClinicalTrials.gov · NCT… · consultado hoy</p>
-          </div>
-          <div className="no-evidence pl-3 py-2 rounded-r-md">
-            <p className="text-sm">No hay evidencia en nuestras fuentes sobre dietas que curen la enfermedad, así que no lo incluyo.</p>
-          </div>
-          <p className="text-xs text-ink-3">Esto es información con fuentes, no un diagnóstico. Llévalo a tu médico o a un centro experto.</p>
-        </div>
-      </section>
-
-      {/* Problema en números */}
-      <section className="border-y border-line bg-paper-2">
-        <div className="mx-auto max-w-6xl px-5 py-10 grid md:grid-cols-3 gap-8">
-          {NUMBERS.map((x) => (
-            <div key={x.n}>
-              <p className="serif text-4xl text-navy">{x.n}</p>
-              <p className="text-ink-2 mt-1">{x.t}</p>
-              <p className="text-xs text-ink-3 mt-1">{x.s}</p>
+  return (
+    <>
+      <Nav />
+      <main id="main">
+        {/* Hero */}
+        <section className="relative overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_55%_at_75%_45%,var(--brand-soft),transparent_70%),linear-gradient(180deg,var(--brand-mist),var(--paper)_75%)]" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-10 pt-10 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:gap-10 lg:pb-16 lg:pt-14">
+            <div>
+              <p className="chip">Hack-Nation 7 · Challenge 05 · OpenAI × Buffalo Initiative</p>
+              <h1 className="display mt-5 text-[2.6rem] font-semibold leading-[1.02] text-brand-ink sm:text-6xl lg:text-7xl">
+                Rare disease, <span className="text-brand-deep">connected.</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-lg text-ink-2 sm:text-xl">
+                One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href="/atlas" className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open the atlas</Link>
+                <Link href={`/atlas?p=maria&d=${MARIA_DISEASE}`} className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">See Maria&apos;s journey</Link>
+              </div>
+              <p className="mt-5 text-sm text-ink-3">Free and open. Information with sources — not medical advice.</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <Hero3D alt="A DNA double helix grows out of a small forest on a blue disc and opens into a network of connected nodes — the Nexmed evidence graph." className="mx-auto w-full max-w-[560px]" />
+          </div>
+          {/* Live counters */}
+          <div className="relative border-y border-line bg-paper/80">
+            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+              <ul className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
+                {counters.map((c) => (
+                  <li key={c.t}>
+                    <p className="display text-3xl font-semibold text-brand-ink">{fmt(c.n)}</p>
+                    <p className="text-sm text-ink-3">{c.t}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-ink-3">Live from the atlas{updated ? ` · snapshot ${updated}` : ""}. Coverage grows as diseases are ingested.</p>
+            </div>
+          </div>
+        </section>
 
-      {/* Flujo */}
-      <section id="flujo" className="mx-auto max-w-6xl px-5 py-16">
-        <h2 className="serif text-3xl text-navy">Ninguna respuesta llega sin pasar por el verificador</h2>
-        <p className="mt-3 text-ink-2 max-w-2xl">La IA no tiene conocimiento propio. Solo puede decir lo que el grafo respalda con una fuente y una fecha; un verificador determinista elimina cualquier frase sin cita antes de convertirla en voz.</p>
-        <div className="card mt-8 p-4 md:p-8"><FlowDiagram /></div>
-      </section>
+        {/* The problem */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="problem">
+          <p className="eyebrow">The problem</p>
+          <h2 id="problem" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The knowledge exists. It is scattered across thousands of places.</h2>
+          <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {FACTS.map((f) => (
+              <li key={f.t} className="card p-5">
+                <p className="display text-3xl font-semibold text-brand-deep">{f.n}</p>
+                <p className="mt-1 text-sm text-ink-2">{f.t}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-ink-3">Source: Hack-Nation Challenge 05 brief.</p>
+        </section>
 
-      {/* Públicos */}
-      <section className="mx-auto max-w-6xl px-5 pb-16">
-        <h2 className="serif text-3xl text-navy">Tres públicos, tres voces, un mismo grafo</h2>
-        <div className="mt-8 grid md:grid-cols-3 gap-5">
-          {AUDIENCES.map((a) => (
-            <article key={a.title} className="card p-6">
-              <p className="text-xs uppercase tracking-widest text-ink-3">{a.who}</p>
-              <h3 className="mt-2 text-xl font-semibold">{a.title}</h3>
-              <p className="mt-2 text-ink-2 text-sm">{a.desc}</p>
-              <p className="mt-4 chip"><span className={`w-2 h-2 rounded-full ${a.tone === "teal" ? "bg-teal" : "bg-navy"}`} aria-hidden />{a.agent}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+        {/* How it works */}
+        <section id="how" className="border-y border-line bg-brand-mist" aria-labelledby="how-title">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <p className="eyebrow">How it works</p>
+            <h2 id="how-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">From open data to a next step you can take this week.</h2>
+            <ol className="relative mt-10 grid gap-5 md:grid-cols-4">
+              <svg aria-hidden className="pointer-events-none absolute left-0 right-0 top-[30px] hidden h-2 w-full md:block" preserveAspectRatio="none" viewBox="0 0 100 2">
+                <line x1="12" y1="1" x2="88" y2="1" stroke="var(--brand-light)" strokeWidth="0.6" className="flow-dash" vectorEffect="non-scaling-stroke" />
+              </svg>
+              {STEPS.map((st, i) => (
+                <li key={st.title} className="relative rounded-xl border border-line bg-paper p-5 shadow-[var(--shadow-soft)]">
+                  <div className="flex items-center gap-3">
+                    <NodeOrb size={26} tone={st.tone} float />
+                    <span className="mono text-xs text-ink-3">0{i + 1}</span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-brand-ink">{st.title}</h3>
+                  <p className="mt-2 text-sm text-ink-2">{st.body}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-8 max-w-3xl text-ink-2">
+              The AI has no knowledge of its own here. It can only say what the graph supports: a deterministic verifier drops every sentence that does not cite an edge before it is shown or spoken.
+            </p>
+          </div>
+        </section>
 
-      {/* Videos */}
-      <section id="videos" className="border-t border-line bg-paper-2">
-        <div className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="serif text-3xl text-navy">Videos de la entrega</h2>
-          <p className="mt-2 text-ink-2">Las URLs se configuran en <code className="text-xs">NEXT_PUBLIC_VIDEO_*</code>; mientras tanto se muestran los espacios.</p>
-          <div className="mt-8 grid md:grid-cols-3 gap-5">
-            <VideoSlot index={1} title="Demo" purpose="El producto funcionando de principio a fin" url={site.videos.demo} />
-            <VideoSlot index={2} title="Técnico" purpose="Grafo, verificador, agentes y cómo escala" url={site.videos.tech} />
-            <VideoSlot index={3} title="Equipo" purpose="Quiénes somos y por qué este problema" url={site.videos.team} />
+        {/* Modes */}
+        <section id="modes" className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="modes-title">
+          <p className="eyebrow">Four modes, one graph</p>
+          <h2 id="modes-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The same evidence, ordered for who is asking.</h2>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {MODE_ORDER.map((id) => PERSONAS[id]).map((p, i) => (
+              <Link key={p.id} href={`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
+                <NodeOrb size={30} tone={(["light", "brand", "deep", "ink"] as const)[i % 4]} />
+                <h3 className="mt-4 text-lg font-bold text-brand-ink">{p.mode.en}</h3>
+                <p className="text-xs text-ink-3">{p.role.en}</p>
+                <p className="mt-3 flex-1 text-sm text-ink-2">{MODE_COPY[p.id]}</p>
+                <span className="mt-4 text-sm font-semibold text-brand-deep group-hover:underline">Open in {p.mode.en} mode →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Every edge shows its source */}
+        <section id="evidence" className="border-y border-line bg-brand-mist" aria-labelledby="evidence-title">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1fr]">
+            <div>
+              <p className="eyebrow">Every edge shows its source</p>
+              <h2 id="evidence-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Observed is never confused with inferred.</h2>
+              <ul className="mt-8 space-y-4">
+                {KINDS.map((k) => (
+                  <li key={k.kind} className="flex items-start gap-4">
+                    <NodeOrb size={20} kind={k.kind} tone="brand" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <p className="font-bold text-brand-ink">{k.title}</p>
+                        <span aria-hidden className={`w-14 ${k.line}`} />
+                      </div>
+                      <p className="text-sm text-ink-2">{k.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="space-y-4">
+              {causes && <EdgeCard edge={causes} from={name(causes.from)} to={name(causes.to)} sourceName={srcName(causes)} label="A real edge from the atlas" />}
+              {similar && <EdgeCard edge={similar} from={name(similar.from)} to={name(similar.to)} sourceName={srcName(similar)} label="An inferred edge — and why" />}
+              <p className="text-xs text-ink-3">Read directly from the current snapshot. Open the atlas and click any line to inspect it the same way.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Voice guide */}
+        <section id="guide" className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="guide-title">
+          <p className="eyebrow">Talk to Nexmed</p>
+          <h2 id="guide-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">A voice guide in every mode — that only says what it can cite.</h2>
+          <p className="mt-3 max-w-2xl text-ink-2">Each mode has its own ElevenLabs voice agent. It answers from the graph, shows the edges behind each sentence, and tells you when there is no evidence.</p>
+          <div className="mt-8"><GuidePreview /></div>
+        </section>
+
+        {/* 10x */}
+        <section className="border-y border-line bg-brand-mist" aria-labelledby="tenx-title">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <p className="eyebrow">Where this goes</p>
+            <h2 id="tenx-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">From {fmt(s.diseases)} diseases to all of them.</h2>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">Every rare disease</h3><p className="mt-2 text-sm text-ink-2">The same ingestion runs per ORPHA code. Scaling to the ~10,000 known diseases is a loop, not a rewrite.</p></div>
+              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">New papers, reviewed</h3><p className="mt-2 text-sm text-ink-2">OpenAI extracts claims from new literature as dotted, needs-review edges — experts confirm before they count.</p></div>
+              <div className="card bg-paper p-5"><h3 className="font-bold text-brand-ink">Communities as co-authors</h3><p className="mt-2 text-sm text-ink-2">Patient groups propose links and collaborations as ghost drafts that researchers can turn into evidence.</p></div>
+            </div>
+          </div>
+        </section>
+
+        {/* Built with */}
+        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6" aria-labelledby="built-title">
+          <h2 id="built-title" className="eyebrow">Built with</h2>
+          <ul className="mt-4 flex flex-wrap gap-3">
+            {BUILT.map((b) => (
+              <li key={b.name} className="rounded-full border border-line bg-paper px-4 py-2 text-sm"><span className="font-bold text-brand-ink">{b.name}</span><span className="text-ink-3"> · {b.what}</span></li>
+            ))}
+          </ul>
+        </section>
+
+        {videos.length > 0 && (
+          <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6" aria-labelledby="videos-title">
+            <h2 id="videos-title" className="display text-3xl font-semibold text-brand-ink">Videos</h2>
+            <div className="mt-6 grid gap-5 md:grid-cols-3">
+              {videos.map((v) => (
+                <figure key={v.title} className="card overflow-hidden">
+                  <div className="aspect-video bg-brand-soft">
+                    {/\.mp4($|\?)/.test(v.url)
+                      ? <video src={v.url} controls preload="none" className="h-full w-full" />
+                      : <iframe src={toEmbed(v.url)} title={v.title} className="h-full w-full" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />}
+                  </div>
+                  <figcaption className="p-3 text-sm font-semibold text-brand-ink">{v.title}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+
+      <footer className="border-t border-line bg-paper">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:px-6 md:grid-cols-[1.2fr_1fr_1fr]">
+          <div>
+            <Logo size="md" byline />
+            <p className="mt-4 text-ink-2">{site.name} is a product of {site.company}.</p>
+            <p className="mt-2 text-ink-3">Information with sources, not medical advice. Always talk to your care team before acting on anything you read here.</p>
+          </div>
+          <div>
+            <p className="eyebrow">Data</p>
+            <ul className="mt-3 space-y-1 text-ink-2">
+              {site.licenses.map((l) => <li key={l.name}>{l.name} <span className="text-ink-3">· {l.license}</span></li>)}
+            </ul>
+          </div>
+          <div>
+            <p className="eyebrow">Project</p>
+            <ul className="mt-3 space-y-1">
+              <li><Link href="/atlas" className="text-brand-deep hover:underline">Open the atlas</Link></li>
+              <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
+              <li className="text-ink-3">{site.challenge}</li>
+            </ul>
           </div>
         </div>
-      </section>
-
-      <footer className="mx-auto max-w-6xl px-5 py-10 text-sm text-ink-3 flex flex-wrap gap-4 justify-between">
-        <p>{site.name} · {site.challenge}</p>
-        <p>Información con fuentes, no consejo médico. Nunca vendemos datos de pacientes.</p>
+        <p className="border-t border-line py-4 text-center text-xs text-ink-3">© {new Date().getFullYear()} {site.company}. 3D assets made in Blender from the {site.name} logo.</p>
       </footer>
-    </main>
+    </>
   );
 }
