@@ -69,6 +69,25 @@ export interface JourneyV2 {
   coverage: Coverage;
   no_route: NoneFound | null;
   disclaimer: string;
+  /** Patient mode (UX_WAVE4 S2): plain words, every sentence still cited. */
+  plain: PlainView;
+  /** Researcher mode: the causal gene, its variant effect and its Reactome pathways. */
+  mechanism: MechanismView;
+}
+
+export interface PlainView {
+  what_is_it: { text: string; signs: string[]; cite: Cite };
+  people_like_you: { groups: { id: string; name: string; url: string | null }[]; cite: Cite };
+  research_now: { studies: { id: string; nct: string; title: string; status: string; countries: string[]; url: string }[]; cite: Cite };
+  this_week: StepCard[];
+}
+export interface MechanismView {
+  gene: { id: string; symbol: string; edge: string } | null;
+  variant_effect: VariantEffect | null;
+  variant_call: string | null;
+  pathways: { id: string; name: string; edge: string; shared_with: { id: string; name: string }[] }[];
+  cluster_basis: string | null;
+  cite: Cite;
 }
 
 export const ORDER: Record<PersonaId, QuestionId[]> = {
@@ -370,6 +389,47 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
   };
 
   const cluster = A?.clusters.find((c) => c.id === A.disease_cluster[d]) ?? null;
+
+  /* ---------------- Patient plain view + Researcher mechanism view ---------------- */
+  const causeEdges = inOf(g, d).filter((e) => e.relation === "causes").sort((a, b) => Number(!!b.props.primary) - Number(!!a.props.primary));
+  const geneEdge = causeEdges[0];
+  const gene = geneEdge ? g.byId.get(geneEdge.from) : undefined;
+  const symbol = gene ? gene.name.split(" ")[0] : null;
+  const phenEdges = outOf(g, d).filter((e) => e.relation === "has_phenotype")
+    .sort((a, b) => freqRank(String(b.props.frequency ?? "")) - freqRank(String(a.props.frequency ?? "")) || Number(g.byId.get(b.to)?.props.ic ?? 0) - Number(g.byId.get(a.to)?.props.ic ?? 0));
+  const signs: string[] = []; const signEdges: string[] = [];
+  for (const e of phenEdges) {
+    const w = plainSign(g.byId.get(e.to), l);
+    if (w && !signs.includes(w)) { signs.push(w); signEdges.push(e.id); }
+    if (signs.length === 4) break;
+  }
+  const ownGroups = inOf(g, d).filter((e) => e.relation === "supports" && g.byId.get(e.from)?.props.kind !== "umbrella");
+  const recruiting = own.filter((a) => ["RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION"].includes(a.status)).slice(0, 4);
+  const plain: PlainView = {
+    what_is_it: {
+      text: tr(l,
+        `${fullNameOf(disease, l)} is a rare condition${symbol ? ` caused by changes in the ${symbol} gene` : ""}.${signs.length ? ` Doctors record signs such as ${listOf(signs, l)}.` : ""} Every child is different — ask your care team what applies to yours.`,
+        `${fullNameOf(disease, l)} es una condición rara${symbol ? ` causada por cambios en el gen ${symbol}` : ""}.${signs.length ? ` Los médicos registran signos como ${listOf(signs, l)}.` : ""} Cada niño es distinto — pregunta a tu equipo médico qué aplica al tuyo.`),
+      signs, cite: cite(g, [...(geneEdge ? [geneEdge.id] : []), ...signEdges]),
+    },
+    people_like_you: { groups: ownGroups.map((e) => ({ id: e.from, name: g.byId.get(e.from)!.name, url: (g.byId.get(e.from)!.props.url as string | undefined) ?? null })), cite: cite(g, ownGroups.map((e) => e.id)) },
+    research_now: { studies: recruiting.map((a) => ({ id: a.id, nct: a.nct, title: a.title, status: a.status, countries: a.countries, url: a.url })), cite: cite(g, recruiting.flatMap((a) => a.cite.edges.slice(0, 1))) },
+    this_week: thisWeek.slice(0, 3),
+  };
+  const pwEdges = gene ? outOf(g, gene.id).filter((e) => e.relation === "participates_in") : [];
+  const nbGenes = new Map(neighbors.map((n) => [n.disease, inOf(g, n.disease).filter((e) => e.relation === "causes").map((e) => e.from)]));
+  const mechanism: MechanismView = {
+    gene: gene && geneEdge ? { id: gene.id, symbol: symbol!, edge: geneEdge.id } : null,
+    variant_effect: ve(d),
+    variant_call: (A?.variant_effect[d]?.call as string | undefined) ?? null,
+    pathways: pwEdges.map((e) => ({
+      id: e.to, name: g.byId.get(e.to)?.name ?? e.to, edge: e.id,
+      shared_with: neighbors.filter((n) => (nbGenes.get(n.disease) ?? []).some((gid) => outOf(g, gid).some((x) => x.relation === "participates_in" && x.to === e.to))).map((n) => ({ id: n.disease, name: n.name })),
+    })).sort((a, b) => b.shared_with.length - a.shared_with.length).slice(0, 10),
+    cluster_basis: cluster?.label_basis ?? null,
+    cite: cite(g, [...(geneEdge ? [geneEdge.id] : []), ...(ve(d) ? [ve(d)!.edge] : []), ...pwEdges.slice(0, 10).map((e) => e.id)]),
+  };
+
   return {
     version: 2, persona, locale: l,
     disease: { id: d, name: dn, full_name: fullNameOf(disease, l), canonical_id: disease.canonical_id, definition: (disease.props.definition as string | undefined) ?? null,
@@ -384,8 +444,29 @@ export function buildJourney(g: GraphIndex, d: string, persona: PersonaId = "mar
     gaps, unmet_need, coverage,
     no_route: none_connections,
     disclaimer: DISCLAIMER[l],
+    plain, mechanism,
   };
 }
+
+const FREQ = ["very rare", "occasional", "frequent", "very frequent", "obligate"];
+function freqRank(f: string) { const x = f.toLowerCase(); for (let i = FREQ.length - 1; i >= 0; i--) if (x.startsWith(FREQ[i])) return i + 1; return 0; }
+
+/**
+ * A plain word for a symptom without inventing one: the broadest HPO ancestor that is still specific
+ * (annotated in < 5,000 diseases), e.g. "Focal impaired awareness seizure" → "seizures".
+ */
+export function plainSign(p: { name: string; props: Record<string, unknown> } | undefined, l: Locale): string | null {
+  if (!p) return null;
+  // Skip HPO category nodes and lab / imaging findings: a parent should read signs they can see.
+  const category = (n: string) => /^abnormal|^abnormality|morphology|physiology|^atypical|activity|concentration|\blevel\b|excretion|material|\brate\b|\b(mri|eeg|emg|csf|electroretinogram)\b|constitutional|^generalized abnormality/i.test(n);
+  const own = { name: p.name, name_es: p.props.name_es as string | undefined, n: Number(p.props.annotated_diseases ?? 0) };
+  // Broadest real symptom term (not an HPO "Abnormality of…" category) still annotated in < 5,000 diseases.
+  const pick = [own, ...((p.props.ancestors as { name: string; name_es?: string; n: number }[] | undefined) ?? [])]
+    .filter((a) => !category(a.name) && a.n < 5000).sort((a, b) => b.n - a.n)[0];
+  if (!pick) return null;
+  return (l === "es" ? pick.name_es ?? pick.name : pick.name).toLowerCase();
+}
+const listOf = (xs: string[], l: Locale) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} ${l === "es" ? "y" : "and"} ${xs[xs.length - 1]}`);
 
 export function coverageFor(g: GraphIndex, d: string): Coverage {
   const touching = [...outOf(g, d), ...inOf(g, d)];

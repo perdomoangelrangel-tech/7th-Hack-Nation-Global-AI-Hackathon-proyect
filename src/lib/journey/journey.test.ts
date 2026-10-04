@@ -103,7 +103,7 @@ describe("journey v2 · persona order", () => {
       expect(j).not.toBeNull();
       for (const s of j.next.steps) expect(s.cite.edges.length).toBeGreaterThan(0);
     }
-  });
+  }, 30_000); // whole-atlas sweep: generous timeout so CI load does not flake it
 });
 
 /* ------------------------- honest no-route case ------------------------- */
@@ -213,5 +213,56 @@ describe("10× view", async () => {
     expect(t.discovery.ratio[0]).toBeGreaterThanOrEqual(5);
     expect(t.total.nexmed[1]).toBeLessThanOrEqual(t.total.typical[1]);
     expect(t.validate_next.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("wave 4 · lead strength (UX_WAVE4 §3)", async () => {
+  const { leadStrength, INFORMATIVE_IC } = await import("./build");
+  const sym = (n: number, ic = INFORMATIVE_IC) => Array.from({ length: n }, () => ({ ic }));
+  it("Strong = shared gene or pathway + ≥3 informative symptoms", () => {
+    expect(leadStrength({ pathways: [1], genes: [] }, sym(3)).level).toBe("strong");
+    expect(leadStrength({ pathways: [], genes: ["X"] }, sym(3)).level).toBe("strong");
+  });
+  it("Possible = ≥5 informative symptoms without shared mechanism", () => {
+    expect(leadStrength({ pathways: [], genes: [] }, sym(5)).level).toBe("possible");
+    expect(leadStrength({ pathways: [1], genes: [] }, sym(2)).level).toBe("weak");
+  });
+  it("Weak otherwise; uninformative symptoms do not count", () => {
+    expect(leadStrength({ pathways: [], genes: [] }, sym(9, INFORMATIVE_IC - 0.01)).level).toBe("weak");
+    expect(leadStrength({ pathways: [], genes: [] }, sym(4)).label).toBe("Weak lead");
+  });
+  it("never shows a raw score in the route summary", () => {
+    const j = buildJourney(g, STXBP1, "maria", "en")!;
+    expect(j.summary.connections.text).not.toMatch(/score|0\.\d/);
+    expect(j.summary.connections.text).toMatch(/(Strong|Possible|Weak) lead/);
+  });
+});
+
+describe("wave 4 · mode variants", async () => {
+  const { clusterTable, clusterCsv } = await import("./clusters");
+  const j = buildJourney(g, STXBP1, "devon", "en")!;
+  it("Patient plain view: sourced sentence, no variant percentages, real groups and recruiting studies", () => {
+    expect(j.plain.what_is_it.text).toMatch(/STXBP1 gene/);
+    expect(j.plain.what_is_it.text).not.toMatch(/%|truncating|missense/);
+    for (const e of j.plain.what_is_it.cite.edges) expect(g.edgeById.has(e)).toBe(true);
+    expect(j.plain.what_is_it.signs.every((s) => !/^abnormal/i.test(s))).toBe(true);
+    expect(j.plain.people_like_you.groups.map((x) => x.name)).toContain("STXBP1 Foundation");
+    expect(j.plain.research_now.studies.every((s) => ["RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION"].includes(s.status))).toBe(true);
+    expect(j.plain.this_week.length).toBeLessThanOrEqual(3);
+  });
+  it("Researcher mechanism view: causal gene with its edge and Reactome pathways", () => {
+    expect(j.mechanism.gene?.symbol).toBe("STXBP1");
+    expect(g.edgeById.get(j.mechanism.gene!.edge)?.relation).toBe("causes");
+    expect(j.mechanism.pathways.length).toBeGreaterThan(0);
+    for (const p of j.mechanism.pathways) expect(g.edgeById.get(p.edge)?.relation).toBe("participates_in");
+  });
+  it("Pharma cluster table is ranked by unmet need and cites what it counts", () => {
+    const t = clusterTable(g, "en");
+    expect(t.rows.length).toBe(snap.analytics!.clusters.length);
+    for (let i = 1; i < t.rows.length; i++) expect(t.rows[i - 1].unmet_share).toBeGreaterThanOrEqual(t.rows[i].unmet_share);
+    for (const r of t.rows) for (const e of r.cite.edges) expect(g.edgeById.has(e)).toBe(true);
+    const csv = clusterCsv(t).split("\n");
+    expect(csv).toHaveLength(t.rows.length + 1);
+    expect(csv[0]).toContain("Approved treatment?");
   });
 });

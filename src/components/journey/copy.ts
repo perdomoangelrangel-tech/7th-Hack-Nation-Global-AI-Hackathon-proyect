@@ -52,6 +52,9 @@ const en = {
   groups: (n: number) => `${n} patient ${n === 1 ? "group" : "groups"}`,
   not_advice: "Not medical advice",
   partners: "Suggested partners",
+  patient_title: "What you need to know", patient_sub: "Plain answers — each one opens its source.",
+  patient_info: "Built only from sourced records. Underlined words have a short explanation. Ask your care team what applies to you.",
+  research_title: "Research view", research_sub: "Mechanism, similar diseases, counterexamples, gaps and people.",
 };
 
 const es: typeof en = {
@@ -105,6 +108,9 @@ const es: typeof en = {
   groups: (n: number) => `${n} ${n === 1 ? "grupo" : "grupos"} de pacientes`,
   not_advice: "No es consejo médico",
   partners: "Socios sugeridos",
+  patient_title: "Lo que necesitas saber", patient_sub: "Respuestas simples — cada una abre su fuente.",
+  patient_info: "Hecho solo con registros con fuente. Las palabras subrayadas tienen una explicación corta. Pregunta a tu equipo médico qué aplica en tu caso.",
+  research_title: "Vista de investigación", research_sub: "Mecanismo, enfermedades similares, contraejemplos, huecos y personas.",
 };
 
 export const journeyCopy = { en, es } satisfies Record<Locale, typeof en>;
