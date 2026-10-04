@@ -1,7 +1,10 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import Image from "next/image";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
+import { StoryPlayer } from "@/components/landing/StoryPlayer";
 import { neighborhood } from "@/components/landing/neighborhood";
 import { Logo } from "@/components/brand/Logo";
 import { Hero3D } from "@/components/three/Hero3D";
@@ -16,6 +19,9 @@ export const revalidate = 3600;
 const MODE_ORDER: PersonaId[] = ["devon", "maria", "osei", "priya"];
 // Blender glyph icon per mode (public/models/glyphs, built by blender/build_glyphs.py --icons).
 const MODE_GLYPH: Record<PersonaId, string> = { devon: "investigator", maria: "organization", osei: "study", priya: "treatment" };
+// Website narration from the voice lane (ElevenLabs). The player shows up as soon as the file is in public/audio.
+const STORY = { src: "/audio/nedamex-story-en.mp3", vtt: "/audio/nedamex-story-en.vtt" };
+const publicFile = (url: string) => existsSync(join(process.cwd(), "public", url));
 const MARIA_DISEASE = "disease:ORPHA:599373"; // STXBP1-related developmental and epileptic encephalopathy
 
 // Hack-Nation Challenge 05 brief (the only source for these figures).
@@ -143,6 +149,7 @@ export default async function Home() {
                 <a href="#videos" className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">Watch the pitch</a>
               </div>
               <p className="mt-5 text-sm text-ink-3">Information with sources — not medical advice.</p>
+              {publicFile(STORY.src) && <StoryPlayer src={STORY.src} vtt={publicFile(STORY.vtt) ? STORY.vtt : undefined} />}
             </div>
             <Hero3D alt={`A DNA double helix grows out of a small forest on a blue disc and opens into a network of connected nodes — the ${site.name} evidence graph.`} className="mx-auto w-full max-w-[560px]" />
           </div>
