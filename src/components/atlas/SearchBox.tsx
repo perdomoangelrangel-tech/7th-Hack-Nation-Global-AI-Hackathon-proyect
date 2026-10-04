@@ -10,6 +10,7 @@ import type { SearchHit } from "@/lib/atlas/store";
 import type { Dict, Locale } from "@/lib/i18n";
 import { motionTokens, springs } from "@/lib/motion";
 import { Shape } from "./AtlasRail";
+import { api } from "./api";
 
 type Hit = SearchHit & { reconciled?: boolean };
 
@@ -28,7 +29,7 @@ export function SearchBox({ t, locale, onPick, autoFocus }: { t: Dict; locale: L
     const c = new AbortController();
     const tm = setTimeout(async () => {
       try {
-        const j = await fetch(`/api/atlas/search?q=${encodeURIComponent(q)}&l=${locale}`, { signal: c.signal }).then((r) => r.json()) as { hits: Hit[] };
+        const j = await fetch(api(`/api/atlas/search?q=${encodeURIComponent(q)}&l=${locale}`), { signal: c.signal }).then((r) => r.json()) as { hits: Hit[] };
         setHits(j.hits as Hit[]); setSearched(q); setActive(0); setOpen(true);
       } catch { /* aborted or offline */ }
     }, 140);

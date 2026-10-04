@@ -14,6 +14,7 @@ import type { Draft } from "./proposals";
 import { externalUrl } from "./links";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { ExplainButton } from "@/components/ai/ExplainButton";
+import { api } from "./api";
 
 type Detail = NonNullable<ReturnType<typeof edgeDetail>>;
 
@@ -46,7 +47,7 @@ export function EdgeInspector({ edgeId, t, locale, persona, onClose, onFocusDise
   const reduce = useReducedMotion();
   useEffect(() => {
     const c = new AbortController();
-    fetch(`/api/atlas/edge?id=${encodeURIComponent(edgeId)}&l=${locale}`, { signal: c.signal })
+    fetch(api(`/api/atlas/edge?id=${encodeURIComponent(edgeId)}&l=${locale}`), { signal: c.signal })
       .then((r) => { if (!r.ok) throw new Error("missing"); return r.json(); }).then(setD)
       .catch((e: Error) => { if (e.name !== "AbortError") setMissing(true); });
     return () => c.abort();

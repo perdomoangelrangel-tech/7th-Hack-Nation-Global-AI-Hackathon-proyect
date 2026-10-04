@@ -27,6 +27,7 @@ import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
+import { api } from "./api";
 
 const Loading = () => <div className="absolute inset-0 grid place-items-center text-ink-3 text-sm" aria-busy>…</div>;
 const GraphCanvas = dynamic(() => import("./GraphCanvas"), { ssr: false, loading: Loading });
@@ -79,7 +80,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   // Focused disease data (or the initial constellation). If the user just chose it, narration starts on arrival.
   useEffect(() => {
     const c = new AbortController();
-    const q = (p: string) => fetch(p, { signal: c.signal }).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); });
+    const q = (p: string) => fetch(api(p), { signal: c.signal }).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); });
     const fail = (e: unknown) => { if ((e as Error).name !== "AbortError") setLoadError(true); };
     if (!focus) { q(`/api/atlas/constellation?l=${locale}`).then((v) => { setView(v); setLoadError(false); }).catch(fail); return () => c.abort(); }
     Promise.all([q(`/api/atlas/graph?d=${encodeURIComponent(focus)}&l=${locale}`), q(`/api/atlas/journey?d=${encodeURIComponent(focus)}&l=${locale}`)])
@@ -97,7 +98,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   useEffect(() => {
     if (!focus) return;
     const c = new AbortController();
-    const load = () => fetch(`/api/proposals?d=${encodeURIComponent(focus)}`, { signal: c.signal })
+    const load = () => fetch(api(`/api/proposals?d=${encodeURIComponent(focus)}`), { signal: c.signal })
       .then((r) => (r.ok ? r.json() : [])).then((j) => setDrafts(parseDrafts(j))).catch(() => {});
     void load();
     // The action lane fires `nexmed:proposal` after a draft is saved: show it right away.
