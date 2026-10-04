@@ -18,9 +18,12 @@ import { KindBadge, RecommendationBadge, StrengthBadge, weakestKind } from "@/co
 import { isNoRoute, useJourney, useUrlParam } from "@/components/journey/useJourney";
 import { TenXButton } from "@/components/journey/TenXButton";
 import { openCoCreate } from "@/components/journey/events";
+import { playSfx } from "@/lib/sfx";
 import { Partners } from "@/components/cocreate/Partners";
 import { PanelHeader, PanelState } from "@/components/ui/PanelHeader";
 import { PatientView } from "@/components/journey/PatientView";
+import { MedicineBankLink } from "@/components/journey/MedicineBankLink";
+import { SharedResearchers } from "@/components/journey/SharedResearchers";
 
 interface Props {
   j: Journey; t: Dict;
@@ -31,6 +34,7 @@ interface Props {
 }
 
 const PERSONA_IDS = ["devon", "maria", "osei", "priya"] as const;
+const START_MODES = ["challenge", "free", "none"] as const;
 type Hoverable = (nodes: string[], edges: string[]) => Record<string, () => void>;
 export const STEP_ICON: Record<QuestionId, LucideIcon> = { connections: GitCompareArrows, assets: Recycle, people: Handshake, next: Footprints };
 const DONE = 4;
@@ -52,10 +56,14 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
   const locale: Locale = lp ?? (t.q1 === dict.es.q1 ? "es" : "en");
   const persona = useUrlParam<PersonaId>("p", "maria", PERSONA_IDS, pp);
   // Mode variants (UX_WAVE4 S2): Patient = four plain cards · Researcher = tabs · Family & Pharma = the 1→4 stepper.
-  const mode = persona === "devon" ? "patient" : persona === "osei" ? "researcher" : "route";
+  // WAVE 6: ?mode=challenge = Maria's guided challenge — the 1→4 stepper for every role, "Next step", final "Your plan".
+  const challenge = useUrlParam<(typeof START_MODES)[number]>("mode", "none", START_MODES) === "challenge";
+  const mode = challenge ? "route" : persona === "devon" ? "patient" : persona === "osei" ? "researcher" : "route";
   const c = journeyCopy[locale];
   const { data, loading, error, retry } = useJourney(j.disease.id, persona, locale);
   const v2 = data && !isNoRoute(data) ? data : null;
+  // The challenge is Maria's script: always disease → shared mechanism → reusable asset → collaborator → next step.
+  const order: QuestionId[] = challenge ? ["connections", "assets", "people", "next"] : v2?.order ?? [];
   const [step, setStep] = useState(() => initialStep(j.disease.id));
   const [depth, setDepth] = useState(false);
   const reduce = useReducedMotion();
@@ -79,13 +87,18 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
     u.searchParams.set("step", step === DONE ? "done" : String(step + 1));
     window.history.replaceState(null, "", u.toString());
     if (!v2) return;
-    if (step < DONE) { const q = v2.order[step]; onHover(nodesFor(q, v2), v2.summary[q].cite.edges); if (announce.current) announce.current.textContent = c.announce(step + 1, 4, Q[q]); }
+    if (step < DONE) { const q = order[step]; onHover(nodesFor(q, v2), v2.summary[q].cite.edges); if (announce.current) announce.current.textContent = c.announce(step + 1, 4, Q[q]); }
     else { onHover([], []); if (announce.current) announce.current.textContent = c.ready; }
     // onHover/Q/c change identity every render; the step and the data are what matter here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, v2, mode]);
+  }, [step, v2, mode, challenge]);
 
-  const go = useCallback((n: number) => { setDepth(false); setStep(Math.max(0, Math.min(DONE, n))); }, []);
+  // `go` only runs from user input (Next/Back, a step row, ←/→), so the step sound never plays on load.
+  const go = useCallback((n: number) => {
+    const next = Math.max(0, Math.min(DONE, n));
+    if (next !== step) playSfx("step");
+    setDepth(false); setStep(next);
+  }, [step]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
@@ -146,12 +159,12 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
 
         {v2 && mode === "patient" && <PatientView x={v2} locale={locale} onInspect={onInspect} onHover={onHover} />}
         {v2 && mode === "researcher" && <ResearcherView x={v2} t={t} c={c} locale={locale} onInspect={onInspect} onFocusDisease={onFocusDisease} hoverable={hoverable} />}
-        {v2 && mode === "route" && step === DONE && <RouteReady x={v2} c={c} Q={Q} locale={locale} onInspect={onInspect} hoverable={hoverable} onReview={() => go(0)} reduce={!!reduce} />}
+        {v2 && mode === "route" && step === DONE && <RouteReady x={v2} c={c} Q={Q} locale={locale} onInspect={onInspect} hoverable={hoverable} onReview={() => go(0)} reduce={!!reduce} challenge={challenge} />}
 
         {v2 && mode === "route" && step < DONE && (
           <>
             <ol className="mt-3 space-y-2">
-              {v2.order.map((q, i) => {
+              {order.map((q, i) => {
                 const s = v2.summary[q];
                 const Icon = STEP_ICON[q];
                 const state = i < step ? "done" : i === step ? "current" : "todo";
@@ -187,6 +200,7 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
                                 {q === "next" && <Next x={v2} c={c} onInspect={onInspect} hoverable={hoverable} />}
                               </div>
                             )}
+                            {q === "people" && <SharedResearchers journey={v2} locale={locale} />}
                             {q === "people" && <Partners persona={persona} locale={locale} disease={v2.disease.id} journey={v2} defaultOpen onPropose={(d) => openCoCreate("collaboration", d)} />}
                           </div>
                         </motion.div>
@@ -198,7 +212,7 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
             </ol>
             <div className="mt-3 flex items-center justify-between">
               <button onClick={() => go(step - 1)} disabled={step === 0} className="inline-flex items-center gap-1 rounded-full border border-line px-3.5 py-2 text-sm text-ink-2 hover:bg-paper-2 disabled:opacity-40 min-h-10"><ChevronLeft size={16} aria-hidden />{c.back}</button>
-              <button onClick={() => go(step + 1)} className="inline-flex items-center gap-1 rounded-full bg-brand-deep px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink min-h-10">{step === 3 ? c.finish : c.next}<ChevronRight size={16} aria-hidden /></button>
+              <button onClick={() => go(step + 1)} className="inline-flex items-center gap-1 rounded-full bg-brand-deep px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink min-h-10">{step === 3 ? (challenge ? c.see_plan : c.finish) : challenge ? c.next_step : c.next}<ChevronRight size={16} aria-hidden /></button>
             </div>
           </>
         )}
@@ -210,7 +224,7 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
 
 /* ------------------------------ S4 · your route is ready ------------------------------ */
 
-function RouteReady({ x, c, Q, locale, onInspect, hoverable, onReview, reduce }: { x: JourneyV2; c: JourneyCopy; Q: Record<QuestionId, string>; locale: Locale; onInspect: (e: string) => void; hoverable: Hoverable; onReview: () => void; reduce: boolean }) {
+function RouteReady({ x, c, Q, locale, onInspect, hoverable, onReview, reduce, challenge = false }: { x: JourneyV2; c: JourneyCopy; Q: Record<QuestionId, string>; locale: Locale; onInspect: (e: string) => void; hoverable: Hoverable; onReview: () => void; reduce: boolean; challenge?: boolean }) {
   const [copied, setCopied] = useState(false);
   const share = () => {
     const u = new URL(window.location.href); u.searchParams.set("step", "done");
@@ -222,9 +236,9 @@ function RouteReady({ x, c, Q, locale, onInspect, hoverable, onReview, reduce }:
       className="mt-3 rounded-2xl border border-brand/50 bg-brand-mist p-4" aria-labelledby="route-ready">
       <div className="flex items-center gap-2">
         <motion.span initial={reduce ? false : { scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={springs.snappy}><CircleCheck size={22} className="text-brand-deep" aria-hidden /></motion.span>
-        <h3 id="route-ready" className="serif text-xl text-brand-ink">{c.ready}</h3>
+        <h3 id="route-ready" className="serif text-xl text-brand-ink">{challenge ? c.your_plan : c.ready}</h3>
       </div>
-      <p className="text-xs text-ink-3 mt-0.5">{c.ready_sub}</p>
+      <p className="text-xs text-ink-3 mt-0.5">{challenge ? c.your_plan_sub : c.ready_sub}</p>
       <ol className="mt-3 space-y-1.5">
         {(["connections", "assets", "people", "next"] as const).map((q) => {
           const s = x.summary[q]; const Icon = STEP_ICON[q];
@@ -240,9 +254,9 @@ function RouteReady({ x, c, Q, locale, onInspect, hoverable, onReview, reduce }:
         })}
       </ol>
       <div className="mt-4 grid gap-2">
-        <button onClick={() => openCoCreate("collaboration")} className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-deep px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-ink min-h-10"><Handshake size={16} aria-hidden />{c.propose_collab}</button>
+        <button onClick={() => openCoCreate("collaboration")} className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-deep px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-ink min-h-10"><Handshake size={16} aria-hidden />{challenge ? c.draft_collab : c.propose_collab}</button>
         <div className="grid grid-cols-2 gap-2">
-          <a href={plan} target="_blank" rel="noopener" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-3 py-2 text-sm text-ink-2 hover:bg-paper-2 min-h-10"><ListChecks size={15} aria-hidden />{c.save_plan}</a>
+          <a href={plan} target="_blank" rel="noopener" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-3 py-2 text-sm text-ink-2 hover:bg-paper-2 min-h-10"><ListChecks size={15} aria-hidden />{challenge ? c.print_plan : c.save_plan}</a>
           <button onClick={share} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-3 py-2 text-sm text-ink-2 hover:bg-paper-2 min-h-10"><Share2 size={15} aria-hidden />{copied ? c.copied : c.share}</button>
         </div>
         <TenXButton journey={x} locale={locale} icon={<FastForward size={15} aria-hidden />} full />
@@ -325,16 +339,24 @@ function Assets({ x, t, c, onInspect, hoverable }: { x: JourneyV2; t: Dict; c: J
         {x.assets.treatments.length === 0 && <p className="text-sm text-ink-3 mt-1">{t.none_found}</p>}
         <ul className="mt-1 space-y-1">
           {x.assets.treatments.map((tr) => (
-            <li key={tr.id}><button onClick={() => onInspect(tr.cite.edges[0])} {...hoverable([tr.id, x.disease.id], tr.cite.edges)} className="w-full text-left flex items-center gap-2 text-sm hover:bg-paper-2 rounded-lg px-2 py-1">
-              <span className="flex-1 truncate">{tr.name}</span>
-              {tr.approved ? <span className="chip !py-0 !text-[11px] !border-brand-deep text-brand-deep">{t.approved}</span> : <span className="text-[11px] text-ink-3">{tr.stage.replace(/_/g, " ").toLowerCase()}</span>}
-            </button></li>
+            <li key={tr.id} className="flex items-center gap-2">
+              <button onClick={() => onInspect(tr.cite.edges[0])} {...hoverable([tr.id, x.disease.id], tr.cite.edges)} className="min-w-0 flex-1 text-left flex items-center gap-2 text-sm hover:bg-paper-2 rounded-lg px-2 py-1">
+                <span className="flex-1 truncate">{tr.name}</span>
+                {tr.approved ? <span className="chip !py-0 !text-[11px] !border-brand-deep text-brand-deep">{t.approved}</span> : <span className="text-[11px] text-ink-3">{tr.stage.replace(/_/g, " ").toLowerCase()}</span>}
+              </button>
+              <MedicineBankLink id={tr.id} locale={x.locale} compact className="shrink-0" />
+            </li>
           ))}
         </ul>
         {x.assets.neighbor_approved.length > 0 && (
           <div className="mt-2 rounded-lg border border-dashed border-line p-3">
             <p className="text-xs text-ink-3">{t.approved_neighbor}</p>
-            {x.assets.neighbor_approved.map((tr) => <button key={tr.id + tr.disease} onClick={() => onInspect(tr.cite.edges[0])} {...hoverable([tr.id, tr.disease, x.disease.id], tr.cite.edges)} className="block text-sm mt-1 hover:underline text-left">{tr.name} · <span className="text-ink-3">{tr.disease_name}{tr.mechanism ? ` · ${tr.mechanism}` : ""}</span></button>)}
+            {x.assets.neighbor_approved.map((tr) => (
+              <p key={tr.id + tr.disease} className="mt-1 flex flex-wrap items-baseline gap-x-3">
+                <button onClick={() => onInspect(tr.cite.edges[0])} {...hoverable([tr.id, tr.disease, x.disease.id], tr.cite.edges)} className="text-sm hover:underline text-left">{tr.name} · <span className="text-ink-3">{tr.disease_name}{tr.mechanism ? ` · ${tr.mechanism}` : ""}</span></button>
+                <MedicineBankLink id={tr.id} locale={x.locale} compact />
+              </p>
+            ))}
           </div>
         )}
       </div>
@@ -554,6 +576,7 @@ function ResearcherView({ x, t, c, locale, onInspect, onFocusDisease, hoverable 
         {tab === "people" && (
           <>
             <People x={{ ...x, people: { ...x.people, collaborators: [...x.people.collaborators].sort((a, b) => Number(b.kind === "investigator") - Number(a.kind === "investigator")) } }} t={t} c={c} onInspect={onInspect} hoverable={hoverable} />
+            <SharedResearchers journey={x} locale={locale} max={6} />
             <Partners persona={x.persona} locale={locale} disease={x.disease.id} journey={x} onPropose={(d) => openCoCreate("collaboration", d)} />
           </>
         )}

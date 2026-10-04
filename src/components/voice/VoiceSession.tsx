@@ -19,7 +19,7 @@ export interface VoiceSessionProps {
   copy: VoiceCopy;
   onState: (s: LiveState, problem?: string) => void;
   onLine: (l: Line) => void;
-  /** Bumped by the dock to end the call. */
+  /** Bumped by the dock to end the call. (Transport: WebSocket — no LiveKit signal-stream console errors on hang-up.) */
   endSignal: number;
   muted: boolean;
   /** Filled with a live audio-level reader (0..1) for the AgentOrb. */
@@ -59,7 +59,7 @@ function Session({ agentId, persona, locale, disease, diseaseName, copy, onState
   useEffect(() => {
     const timer = setTimeout(() => {
       started.current = true;
-      api.current.startSession({ agentId, connectionType: "webrtc", dynamicVariables: vars.current });
+      api.current.startSession({ agentId, connectionType: "websocket", dynamicVariables: vars.current });
     }, 0);
     return () => {
       clearTimeout(timer);

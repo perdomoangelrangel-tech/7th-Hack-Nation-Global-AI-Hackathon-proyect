@@ -34,7 +34,9 @@ const GENERIC = new Set([
   "the", "and", "with", "for", "from", "that", "this", "what", "which", "who", "whom", "how", "are", "is", "my", "our", "your", "about", "does", "have", "has", "there", "else", "other", "works", "work", "tell", "me",
   "syndrome", "disease", "disorder", "deficiency", "type", "related", "linked", "associated", "developmental", "epileptic", "encephalopathy", "infancy", "late", "early", "onset", // "infantile"/"juvenile" are NOT generic: they tell CLN types apart
   "neuronal", "ceroid", "muscular", "atrophy", "dystrophy", "spinal", "storage", "epilepsy", "seizure", "seizures", "focal", "migrating", "child", "children", "childhood", "gene", "genes", "mechanism",
-  "treatment", "therapy", "drug", "study", "trial", "patient", "patients", "family", "families", "group", "rare",
+  "treatment", "therapy", "drug", "study", "trial",
+  // salt forms: "Fenfluramine hydrochloride" is "fenfluramine" to a user
+  "hydrochloride", "dihydrochloride", "hydrobromide", "mesylate", "maleate", "fumarate", "tartrate", "citrate", "succinate", "sulfate", "phosphate", "acetate", "besylate", "tosylate", "monohydrate", "patient", "patients", "family", "families", "group", "rare",
   "el", "la", "los", "las", "de", "del", "con", "para", "por", "que", "qué", "una", "uno", "mi", "su", "sobre", "hay", "tiene", "síndrome", "sindrome", "enfermedad", "trastorno", "deficiencia", "tipo",
 ]);
 
@@ -214,6 +216,21 @@ export function findDiseaseInText(idx: AtlasIndex, text: string): DiseaseResolut
   const fuzzy = reconcileOne(idx, text, { type: "disease" });
   if (fuzzy.entity_id && fuzzy.method === "fuzzy" && fuzzy.candidates[0].score >= 0.5 && (fuzzy.candidates[1]?.score ?? 0) < fuzzy.candidates[0].score) {
     return { disease: fuzzy.entity_id, via: { mention: text, entity_id: fuzzy.entity_id, type: "disease", method: "fuzzy", matched_synonym: null } };
+  }
+  return null;
+}
+
+/** A medicine named in free text ("How does fenfluramine work?"): same strict n-gram rules as diseases. */
+export function findTreatmentInText(idx: AtlasIndex, text: string): { entity_id: string; mention: string; method: MatchMethod } | null {
+  const words = text.replace(/[¿?¡!,;:"“”()[\]]/g, " ").split(/\s+/).map((w) => w.replace(/^[.'’]+|[.'’]+$/g, "")).filter(Boolean);
+  for (let size = Math.min(6, words.length); size >= 1; size--) {
+    for (let i = 0; i + size <= words.length; i++) {
+      const mention = words.slice(i, i + size).join(" ");
+      if (mention.length < 4 || (size === 1 && GENERIC.has(norm(mention)))) continue;
+      const padded = GENERIC.has(norm(words[i])) || GENERIC.has(norm(words[i + size - 1]));
+      const m = reconcileOne(idx, mention, { type: "treatment", strict: true });
+      if (m.entity_id && !(padded && m.method === "normalized")) return { entity_id: m.entity_id, mention, method: m.method };
+    }
   }
   return null;
 }

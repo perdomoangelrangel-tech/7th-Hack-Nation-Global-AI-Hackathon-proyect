@@ -26,7 +26,11 @@ export interface GraphCanvasProps {
   onBackground?: () => void;
 }
 
-export interface GraphCommand { kind: "zoomIn" | "zoomOut" | "fit"; n: number }
+/** `focus` = frame only `ids` (evidence highlight); the others act on the whole layout. */
+export interface GraphCommand { kind: "zoomIn" | "zoomOut" | "fit" | "reset" | "focus"; n: number; ids?: string[] }
+
+/** Double-click detection (react-force-graph has no node double-click event). */
+export const DOUBLE_CLICK_MS = 320;
 
 /** Node radius budget (WAVE 5B: 6–14 px at fit zoom; layouts set sizes per ring). */
 export const nodeSize = (size: number) => Math.min(18, Math.max(3, size));

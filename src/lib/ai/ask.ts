@@ -34,13 +34,22 @@ export function safetyNotice(flags: SafetyFlag[], l: Locale): string | null {
 
 
 /** focus (entity id) wins; otherwise the strict resolver over the question text. */
-export function resolveQuestion(idx: AtlasIndex, question: string, focus?: string | null): { disease: string; via: AskAnswer["resolved_via"] } | null {
+/**
+ * Which disease a chat turn is about: a disease/gene named in the question wins (the user changed topic), then the
+ * entity on screen (`focus`), then the most recent turn of the conversation that named one ("and trials?").
+ */
+export function resolveQuestion(idx: AtlasIndex, question: string, focus?: string | null, history: { role: string; text: string }[] = []): { disease: string; via: AskAnswer["resolved_via"] } | null {
+  const r = findDiseaseInText(idx, question);
+  if (r) return { disease: r.disease, via: r.via };
   if (focus) {
     const d = diseaseFor(idx, focus);
     if (d) return { disease: d, via: { mention: focus, entity_id: focus, type: idx.byId.get(focus)?.type ?? "disease", method: "focus", matched_synonym: null } };
   }
-  const r = findDiseaseInText(idx, question);
-  return r ? { disease: r.disease, via: r.via } : null;
+  for (const turn of [...history].reverse().slice(0, 10)) {
+    const h = findDiseaseInText(idx, turn.text);
+    if (h) return { disease: h.disease, via: { ...h.via, method: "history" as const } };
+  }
+  return null;
 }
 
 export function notFound(idx: AtlasIndex, question: string, persona: PersonaId, l: Locale, simple: boolean): AskAnswer {

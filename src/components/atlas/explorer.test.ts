@@ -137,3 +137,34 @@ describe("route radial layout", () => {
     expect(ns.filter((n) => !n.header)).toHaveLength(3);
   });
 });
+
+import { filterView, routeLayersFor } from "./radial";
+
+describe("layers and source filter", () => {
+  const N = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, name: id, cluster: null, color: null, size: 8, ...extra }) as never;
+  const L = (id: string, s: string, t: string, sources: string[]) => ({ id, source: s, target: t, relation: "x", kind: "observed" as const, confidence: 1, sources });
+  const v = { focus: "F", clusters: [], nodes: [N("F", "disease"), N("g", "gene"), N("p", "phenotype"), N("t", "trial"), N("h", "study", { header: "symptoms" })],
+    links: [L("1", "g", "F", ["orphanet"]), L("2", "F", "p", ["hpo"]), L("3", "t", "F", ["ctgov"])] };
+  it("hides node types but never the focus or headers", () => {
+    const o = filterView(v as never, "F", new Set(["phenotype", "disease"]), new Set());
+    expect(o.nodes.map((n) => n.id).sort()).toEqual(["F", "g", "h", "t"]);
+    expect(o.links.map((l) => l.id)).toEqual(["1", "3"]);
+  });
+  it("keeps only links (and their nodes) backed by the selected sources", () => {
+    const o = filterView(v as never, "F", new Set(), new Set(["hpo"]));
+    expect(o.links.map((l) => l.id)).toEqual(["2"]);
+    expect(o.nodes.map((n) => n.id).sort()).toEqual(["F", "h", "p"]);
+  });
+  it("maps type layers to route sectors", () => {
+    expect([...routeLayersFor(new Set(["phenotype", "trial"]))].sort()).toEqual(["mechanism", "people", "studies", "treatments"]);
+    expect(routeLayersFor(new Set(["trial", "study"])).has("studies")).toBe(false);
+  });
+});
+
+import { parseHl } from "./focusEvidence";
+describe("hl deep link", () => {
+  it("splits edges and entities and opens the drawer", () => {
+    expect(parseHl("edge:a, edge:b,disease:ORPHA:1")).toEqual({ edgeIds: ["edge:a", "edge:b"], entityIds: ["disease:ORPHA:1"], openDrawer: true });
+    expect(parseHl("")).toBeNull(); expect(parseHl(null)).toBeNull();
+  });
+});

@@ -22,6 +22,7 @@ describe("icon map", () => {
   it("covers every entity type, mode, step and kind with the exact copy", () => {
     for (const t of ["disease", "gene", "variant", "phenotype", "pathway", "trial", "study", "treatment", "organization", "investigator"] as const) expect(NODE_ICON[t]).toBeDefined();
     expect(MODE_COPY.devon.title).toBe("Patient or caregiver");
+    expect(MODE_COPY.osei.title).toBe("Researcher & clinician");
     expect(STEP_ICON).toHaveLength(4);
     expect(STEP_COPY[3]).toBe("What should we do together next?");
     expect(KIND_BADGE.proposed).toBe("Community draft · not evidence");

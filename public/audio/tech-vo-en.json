@@ -1,0 +1,80 @@
+{
+  "voice": "ElevenLabs Brian (nPczCjzI2devNBz1zQrb), eleven_multilingual_v2, speed 1.15",
+  "total_s": 56.028,
+  "lead_s": 0.2,
+  "gap_s": 0.15,
+  "lines": [
+    {
+      "line": 1,
+      "scene": 1,
+      "scene_slot_s": 6,
+      "start": 0.2,
+      "end": 5.321,
+      "duration": 5.121,
+      "text": "Nedamex is an evidence graph for rare diseases: over thirty diseases and thousands of sourced links."
+    },
+    {
+      "line": 2,
+      "scene": 2,
+      "scene_slot_s": 8,
+      "start": 5.471,
+      "end": 13.511,
+      "duration": 8.04,
+      "text": "Nine AI coding agents built it in parallel — each on its own branch, coordinated through one shared log, plus a tester agent that behaves like a real user."
+    },
+    {
+      "line": 3,
+      "scene": 3,
+      "scene_slot_s": 8,
+      "start": 13.661,
+      "end": 25.741,
+      "duration": 12.079,
+      "text": "The data comes from public sources — Orphanet, HPO, ClinVar, PubMed, ClinicalTrials.gov, Open Targets, NIH RePORTER, openFDA and EMA — stored in Supabase."
+    },
+    {
+      "line": 4,
+      "scene": 4,
+      "scene_slot_s": 8,
+      "start": 25.891,
+      "end": 35.033,
+      "duration": 9.142,
+      "text": "OpenAI's gpt-4o-mini extracts and explains, but a verifier deletes any sentence without a citation. ElevenLabs gives every guide its own voice."
+    },
+    {
+      "line": 5,
+      "scene": 5,
+      "scene_slot_s": 7,
+      "start": 35.183,
+      "end": 40.923,
+      "duration": 5.74,
+      "text": "Next.js on Vercel runs the engine, Lovable hosts the platform, and Blender and Remotion made the 3D and this video."
+    },
+    {
+      "line": 6,
+      "scene": 6,
+      "scene_slot_s": 8,
+      "start": 41.073,
+      "end": 47.715,
+      "duration": 6.642,
+      "text": "What worked: one shared log, strict ownership of files, and a tester that caught wrong 'approved' labels before anyone else did."
+    },
+    {
+      "line": 7,
+      "scene": 7,
+      "scene_slot_s": 9,
+      "start": 47.865,
+      "end": 53.873,
+      "duration": 6.008,
+      "text": "What didn't: our cloud sandbox couldn't reach the APIs, the first graph shook, and a rename mid-build touched every screen."
+    },
+    {
+      "line": 8,
+      "scene": 8,
+      "scene_slot_s": 4,
+      "start": 54.023,
+      "end": 55.778,
+      "duration": 1.755,
+      "text": "Rare disease, connected. Nedamex."
+    }
+  ]
+}

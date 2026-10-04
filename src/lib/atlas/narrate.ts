@@ -14,6 +14,10 @@ import { systemPrompt } from "../agents/prompts";
 import { structured, untrusted } from "../ai/client";
 import { DraftSchema, factsBlock, verifyDraft, type Fact as DraftFact, type FactStatus } from "../ai/draft";
 import { disclaimer } from "../verifier";
+import { approvedFor } from "../ai/edge-facts";
+
+/** Approved for that disease per the edge itself (stage APPROVAL, label audit not rejected). */
+const isApproved = (edgeId: string) => { const e = atlas().edgeById.get(edgeId); return !!e && approvedFor(e.props); };
 
 export type Fact = DraftFact & { kind: FactKind };
 export interface NarratedClaim { text: string; fact_ids: string[]; status: FactStatus; evidence_ids: string[]; evidence: Evidence[]; nodes: string[]; edges: string[] }
@@ -86,11 +90,11 @@ export function buildFacts(j: Journey, l: Locale): { facts: Fact[]; coverage: Ev
                : `${a.own ? "For" : "In the neighbor disease"} ${dn} there is ${kindName(a.kind)}: "${a.title}" (${a.status.toLowerCase().replace(/_/g, " ")}).${a.own ? "" : " Its eligibility would need review before including this disease."}` });
   }
 
-  for (const t of j.assets.treatments.filter((x) => x.approved).slice(0, 1)) push({ kind: "treatment", status: "observed", nodes: [t.id, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
+  for (const t of j.assets.treatments.filter((x) => isApproved(x.edge)).slice(0, 1)) push({ kind: "treatment", status: "observed", nodes: [t.id, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
     text: es ? `Open Targets registra ${t.name} como fármaco aprobado para ${j.disease.name}${t.mechanism ? ` (${t.mechanism})` : ""}.` : `Open Targets lists ${t.name} as an approved drug for ${j.disease.name}${t.mechanism ? ` (${t.mechanism})` : ""}.` });
-  if (!j.assets.treatments.some((x) => x.approved)) push({ kind: "gap", status: "gap", nodes: [d], edges: [], evidence_ids: [coverage.id],
+  if (!j.assets.treatments.some((x) => isApproved(x.edge))) push({ kind: "gap", status: "gap", nodes: [d], edges: [], evidence_ids: [coverage.id],
     text: es ? `En nuestras fuentes no hay un fármaco aprobado para ${j.disease.name}; hay ${j.assets.treatments.length} candidato(s) en estudio.` : `Our sources show no approved drug for ${j.disease.name}; there are ${j.assets.treatments.length} candidate(s) under study.` });
-  for (const t of j.assets.neighbor_approved.slice(0, 1)) push({ kind: "treatment", status: "inferred", nodes: [t.id, t.disease, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
+  for (const t of j.assets.neighbor_approved.filter((x) => isApproved(x.edge)).slice(0, 1)) push({ kind: "treatment", status: "inferred", nodes: [t.id, t.disease, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
     text: es ? `${t.name} está aprobado para ${t.disease_name}, una enfermedad vecina. Si tiene sentido para esta enfermedad es una pregunta para un experto, no una recomendación.` : `${t.name} is approved for ${t.disease_name}, a neighbor disease. Whether it makes sense here is a question for an expert, not a recommendation.` });
 
   // Patient organizations for THIS diagnosis first (disease-specific before umbrella groups like NORD).
@@ -145,7 +149,9 @@ export function questionKinds(q: string): FactKind[] {
   return kinds;
 }
 
-export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale, opts: { simple?: boolean; question?: string } = {}): Promise<Narration | null> {
+export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale, opts: { simple?: boolean; question?: string; history?: { role: "user" | "assistant"; text: string }[]; maxClaims?: number } = {}): Promise<Narration | null> {
+  const maxClaims = Math.min(opts.maxClaims ?? 99, PERSONAS[personaId].maxClaims);
+  const convo = (opts.history ?? []).slice(-10).map((h) => `${h.role === "user" ? "USER" : "NEDAMEX"}: ${h.text.slice(0, 600)}`).join("\n");
   const j = journey(diseaseId, l); if (!j) return null;
   const persona = PERSONAS[personaId];
   const simple = !!opts.simple;
@@ -160,12 +166,12 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
   const ordered = [...facts].sort((a, b) => score(a) - score(b));
 
   const task = l === "es"
-    ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${persona.maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
-    : `TASK: ${opts.question ? `answer the user's question about ${j.disease.name} using only the FACTS` : `narrate the journey for ${j.disease.name}`} for ${persona.name} in at most ${persona.maxClaims} claims, in the order most useful to them. End with the concrete next step if there is one.`;
+    ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
+    : `TASK: ${opts.question ? `answer the user's question about ${j.disease.name} using only the FACTS` : `narrate the journey for ${j.disease.name}`} for ${persona.name} in at most ${maxClaims} claims, in the order most useful to them. End with the concrete next step if there is one.`;
   const llm = await structured({
     name: "nedamex_narration",
     system: systemPrompt({ persona: personaId, locale: l, task, simple }),
-    input: [factsBlock(ordered, l), opts.question ? untrusted("question", opts.question, 1000) : ""].filter(Boolean).join("\n\n"),
+    input: [factsBlock(ordered, l), convo ? untrusted("conversation so far (context only, never facts)", convo, 4000) : "", opts.question ? untrusted("question", opts.question, 1000) : ""].filter(Boolean).join("\n\n"),
     schema: DraftSchema,
   });
 
@@ -173,13 +179,13 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
   const QUOTA: Partial<Record<FactKind, number>> = { disease: 1, gene: 1, variant_effect: 1, neighbor: 1, pathway: 1, counterexample: 1, asset: 2, treatment: 1, collaborator: personaId === "devon" || asked.includes("collaborator") ? 2 : 1, step: 2, gap: 1 };
   const used = new Map<FactKind, number>();
   const template = ordered.filter((f) => { const n = used.get(f.kind) ?? 0; if (n >= (QUOTA[f.kind] ?? 1)) return false; used.set(f.kind, n + 1); return true; })
-    .slice(0, persona.maxClaims)
+    .slice(0, maxClaims)
     .sort((a, b) => Number(a.kind === "step") - Number(b.kind === "step")) // the next step always last
     .map((f) => ({ text: simple && f.simple ? f.simple : f.text, fact_ids: [f.id] }));
 
   const allowNames = [...new Set(facts.flatMap((f) => f.nodes).map((n) => atlas().byId.get(n)?.name).filter((x): x is string => !!x))];
   let mode: Narration["mode"] = llm.mode;
-  let v = verifyDraft(llm.mode === "openai" ? llm.data.sentences.slice(0, persona.maxClaims + 1) : template, facts, l, { allowNames });
+  let v = verifyDraft(llm.mode === "openai" ? llm.data.sentences.slice(0, maxClaims) : template, facts, l, { allowNames });
   if (llm.mode === "openai" && !v.sentences.length) { v = verifyDraft(template, facts, l, { allowNames }); mode = "deterministic"; }
 
   const evidenceById = new Map([...atlas().evidenceById, [coverage.id, coverage]]);
