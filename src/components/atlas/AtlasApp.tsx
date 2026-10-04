@@ -26,6 +26,7 @@ import { focusView, labelSet, linkEnd, routeEdges } from "./focus";
 import type { GraphCommand } from "./graphProps";
 import { PrefsPanel } from "./PrefsPanel";
 import { useGraphMode } from "./useGraphMode";
+import { useEmbed } from "./useEmbed";
 import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
 import { VoiceDock } from "@/components/voice/VoiceDock";
@@ -75,6 +76,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const { prefs, setPrefs } = usePrefs();
   const autoNarrate = prefs.autoRead;
   const graph = useGraphMode(persona);
+  // Inside the Lovable app (iframe) or ?embed=1: the host supplies the header → compact bar, no logo, no autofocus.
+  const embed = useEmbed();
   // Real height of the narration bar: the graph frames what is said above it.
   const [barH, setBarH] = useState(0);
   const barObserver = useRef<ResizeObserver | null>(null);
@@ -214,13 +217,13 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
       <a href="#atlas-main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2 focus:shadow">Skip to the graph</a>
       {/* Header */}
       <header className="shrink-0 border-b border-line bg-paper/95 backdrop-blur z-30">
-        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-16">
-          <Link href="/" className="flex items-center gap-2 shrink-0 rounded-lg" aria-label={`${site.name} home`}>
+        <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 ${embed ? "h-12" : "h-16"}`}>
+          {!embed && <Link href="/" className="flex items-center gap-2 shrink-0 rounded-lg" aria-label={`${site.name} home`}>
             <Image src="/brand/nexmed-logo-192.png" alt="" width={30} height={30} priority />
             <span className="font-semibold tracking-tight text-brand-ink hidden sm:inline">{site.name}</span>
-          </Link>
-          <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} persona={persona} onPick={onPick} autoFocus={!initialDisease} /></div>
-          <ModeSelector className="hidden xl:flex" t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} />
+          </Link>}
+          <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} persona={persona} onPick={onPick} autoFocus={!initialDisease && !embed} /></div>
+          <ModeSelector className={embed ? "hidden 2xl:flex" : "hidden xl:flex"} compact={embed} t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} />
           {/* Help → the 3-step tour (mvp-builder's Tour listens to `nedamex:tour`). */}
           <button type="button" onClick={() => window.dispatchEvent(new Event("nedamex:tour"))} aria-label={t.help} title={t.help}
             className="grid place-items-center w-9 h-9 shrink-0 rounded-full border border-line text-ink-2 hover:bg-brand-soft hover:text-ink">
@@ -230,7 +233,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           <button type="button" onClick={() => switchLocale(locale === "en" ? "es" : "en")} className="shrink-0 flex items-center gap-1 rounded-full border border-line h-9 px-2.5 text-xs font-medium text-ink-2 hover:bg-brand-soft" aria-label={locale === "en" ? "Cambiar a español" : "Switch to English"}><Languages aria-hidden size={16} strokeWidth={1.75} />{locale === "en" ? "ES" : "EN"}</button>
         </div>
         {/* Modes below xl (always visible on mobile) */}
-        <ModeSelector className="xl:hidden flex px-3 sm:px-4 pb-2 overflow-x-auto" t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} compact />
+        <ModeSelector className={`${embed ? "2xl:hidden" : "xl:hidden"} flex px-3 sm:px-4 pb-2 overflow-x-auto`} t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} compact />
       </header>
 
       <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[auto_1fr_420px]">

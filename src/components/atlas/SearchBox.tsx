@@ -49,6 +49,13 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
     return () => { clearTimeout(tm); c.abort(); };
   }, [q, locale]);
 
+  // Initial focus is programmatic and skipped inside an iframe (browsers block cross-origin autofocus and log it).
+  useEffect(() => {
+    if (!autoFocus) return;
+    let framed = true; try { framed = window.self !== window.top; } catch { /* cross-origin → framed */ }
+    if (!framed) input.current?.focus();
+  }, [autoFocus]);
+
   // "/" or Ctrl/⌘+K focuses search (not while typing in another field).
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -75,7 +82,7 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
       <div className="flex items-center gap-2 rounded-xl border border-line bg-paper px-3 h-11 focus-within:border-brand-deep focus-within:ring-2 focus-within:ring-brand/25 transition-[border-color,box-shadow]">
         <Search aria-hidden size={18} strokeWidth={1.75} className="text-ink-3 shrink-0" />
         <input
-          id={`${listId}-in`} ref={input} value={q} autoFocus={autoFocus} autoComplete="off" spellCheck={false}
+          id={`${listId}-in`} ref={input} value={q} autoComplete="off" spellCheck={false}
           role="combobox" aria-autocomplete="list" aria-expanded={open && flat.length > 0} aria-controls={listId} aria-activedescendant={open && flat[active] ? `${listId}-${active}` : undefined}
           placeholder={t.search_placeholder}
           onChange={(e) => setQ(e.target.value)} onFocus={() => shown.length > 0 && setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
