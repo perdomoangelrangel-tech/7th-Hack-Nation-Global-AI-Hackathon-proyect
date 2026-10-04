@@ -16,16 +16,16 @@ export const site = {
   programUrl: (process.env.NEXT_PUBLIC_PROGRAM_URL ?? "/atlas").replace(/\/$/, ""),
   /** WAVE 5B: "Open Nedamex" (nav, hero, how-to strip, footer) lands on the app home, where you pick your role. */
   appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "https://nedamex.lovable.app").replace(/\/$/, "") || "/",
-  /** Submission videos: real URLs from env; until then the storyboard drafts in public/videos (shown with a "Draft" label). */
+  /** The two submission videos (form: Demo ≤ 60 s · Tech ≤ 60 s). Final URLs come from env. */
   videos: {
-    pitch: process.env.NEXT_PUBLIC_VIDEO_PITCH ?? process.env.NEXT_PUBLIC_VIDEO_TEAM ?? "",
     demo: process.env.NEXT_PUBLIC_VIDEO_DEMO ?? "",
-    functionality: process.env.NEXT_PUBLIC_VIDEO_FUNCTIONALITY ?? process.env.NEXT_PUBLIC_VIDEO_TECH ?? "",
+    tech: process.env.NEXT_PUBLIC_VIDEO_TECH ?? "",
   },
+  /** Fallbacks until the env URLs exist: the Demo storyboard draft and our Remotion Tech video (draft = Tech60 storyboard). */
   draftVideos: {
-    pitch: { src: "/videos/Team60-draft.mp4", poster: "/videos/Team60-draft.jpg" },
     demo: { src: "/videos/Demo60-draft.mp4", poster: "/videos/Demo60-draft.jpg" },
-    functionality: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
+    tech: { src: "/videos/nedamex-tech.mp4", poster: "/videos/nedamex-tech.jpg" },
+    techStoryboard: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
   },
   /** Team cards. Placeholders until the team fills them in — never invent people. */
   team: [
