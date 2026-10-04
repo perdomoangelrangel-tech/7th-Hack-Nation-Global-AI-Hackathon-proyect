@@ -10,6 +10,7 @@ import type { GraphView } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { Dict } from "@/lib/i18n";
 import { CANVAS, KIND_STYLE, KINDS, TYPE_COLOR, type LinkKind } from "./colors";
+import { playSfx } from "@/lib/sfx";
 import { TypeIcon } from "./icons";
 
 export type RailTab = "clusters" | "legend" | "community";
@@ -41,7 +42,7 @@ export function LeftRail({ tab, onTab, ...p }: SectionProps & { tab: RailTab | n
     <div className="hidden lg:flex h-full min-h-0 border-r border-line bg-paper">
       <nav aria-label={t.rail_label} className="w-14 shrink-0 flex flex-col items-center gap-1 py-3 border-r border-line">
         {TABS.map(({ id, icon: I }) => (
-          <button key={id} type="button" onClick={() => onTab(tab === id ? null : id)} aria-pressed={tab === id} aria-label={t.rail[id].title} title={t.rail[id].title}
+          <button key={id} type="button" onClick={() => { playSfx(tab === id ? "close" : "open"); onTab(tab === id ? null : id); }} aria-pressed={tab === id} aria-label={t.rail[id].title} title={t.rail[id].title}
             className={`grid place-items-center w-10 h-10 rounded-xl transition-colors ${tab === id ? "bg-brand-soft text-brand-deep" : "text-ink-2 hover:bg-brand-mist"}`}>
             <I aria-hidden size={20} strokeWidth={1.75} />
           </button>
@@ -50,7 +51,7 @@ export function LeftRail({ tab, onTab, ...p }: SectionProps & { tab: RailTab | n
       {tab && (
         <div className="w-[280px] min-h-0 overflow-y-auto p-4">
           <div className="flex justify-end -mt-1 -mr-1">
-            <button type="button" onClick={() => onTab(null)} aria-label={t.rail_close} className="grid place-items-center w-8 h-8 rounded-lg text-ink-3 hover:bg-brand-mist hover:text-ink">
+            <button type="button" onClick={() => { playSfx("close"); onTab(null); }} aria-label={t.rail_close} className="grid place-items-center w-8 h-8 rounded-lg text-ink-3 hover:bg-brand-mist hover:text-ink">
               <PanelLeftClose aria-hidden size={18} strokeWidth={1.75} />
             </button>
           </div>

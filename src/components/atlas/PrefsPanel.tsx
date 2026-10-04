@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Accessibility } from "lucide-react";
+import { playSfx } from "@/lib/sfx";
+import { useSfx } from "./useSfx";
 import { usePrefs, type Prefs } from "@/lib/prefs";
 import type { Dict } from "@/lib/i18n";
 import { motionTokens, springs } from "@/lib/motion";
@@ -12,6 +14,7 @@ const SIZES: Prefs["textScale"][] = [1, 1.15, 1.3];
 export function PrefsPanel({ t }: { t: Dict }) {
   const { prefs, setPrefs } = usePrefs();
   const [open, setOpen] = useState(false);
+  const [sounds, setSounds] = useSfx();
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
   const btn = useRef<HTMLButtonElement>(null);
@@ -34,7 +37,7 @@ export function PrefsPanel({ t }: { t: Dict }) {
 
   return (
     <div className="relative shrink-0">
-      <button ref={btn} type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={id} aria-label={t.settings} title={t.settings}
+      <button ref={btn} type="button" onClick={() => { playSfx(open ? "close" : "open"); setOpen((o) => !o); }} aria-expanded={open} aria-controls={id} aria-label={t.settings} title={t.settings}
         className="grid place-items-center w-9 h-9 rounded-full border border-line text-ink-2 hover:bg-brand-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-deep">
         <Accessibility aria-hidden size={20} strokeWidth={1.75} />
       </button>
@@ -60,6 +63,10 @@ export function PrefsPanel({ t }: { t: Dict }) {
               {toggle("simpleLanguage", t.simple_language)}
               {toggle("autoRead", t.auto_read)}
               {toggle("captions", t.captions)}
+              <label className="flex items-center justify-between gap-3 py-1.5 text-sm text-ink-2 cursor-pointer">
+                <span>{t.sounds}</span>
+                <input type="checkbox" role="switch" checked={sounds} onChange={(e) => { setSounds(e.target.checked); if (e.target.checked) playSfx("toggle"); }} className="w-4 h-4 accent-[var(--brand-deep)]" />
+              </label>
             </div>
             <label className="mt-3 block text-sm text-ink-2">
               <span className="flex justify-between">{t.voice_speed}<span className="tabular-nums text-ink-3">{prefs.voiceRate.toFixed(1)}×</span></span>
