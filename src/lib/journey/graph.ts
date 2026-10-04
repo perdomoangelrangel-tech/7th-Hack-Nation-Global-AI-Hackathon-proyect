@@ -61,3 +61,7 @@ export const tr = (l: Locale, en: string, es: string) => (l === "es" ? es : en);
 
 export const ACTIVE_STATUSES = new Set(["RECRUITING", "NOT_YET_RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION", "AVAILABLE"]);
 export const prettyStatus = (s: string) => s.replace(/_/g, " ").toLowerCase();
+
+/** Nedamex's own analysis (inferred similarity). Data renamed the source id; accept the legacy one too. */
+export const isAnalysisSource = (source: string) => source === "nexmed_analysis" || source === "atlas_analysis";
+export const ANALYSIS_LABEL = { en: "Nedamex analysis", es: "Análisis de Nedamex" } as const;

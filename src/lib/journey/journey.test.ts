@@ -266,3 +266,31 @@ describe("wave 4 · mode variants", async () => {
     expect(csv[0]).toContain("Approved treatment?");
   });
 });
+
+describe("wave 5B · community requests + analysis label", async () => {
+  const { prefillRequest, requestType } = await import("./prefill");
+  const { ProposalInput } = await import("./proposals");
+  const { isAnalysisSource } = await import("./graph");
+  it("detects request titles from the search footer", () => {
+    expect(requestType("Disease request: Alexander disease")).toBe("disease");
+    expect(requestType("Source suggestion: Orphanet")).toBe("source");
+    expect(requestType("Missing evidence for STXBP1-DEE")).toBeNull();
+  });
+  it("prefills a request that cites nothing and says it is not evidence", () => {
+    for (const t of ["Disease request: Alexander disease", "Source suggestion: a registry list"]) {
+      const d = prefillRequest(t, "en", null);
+      expect(d.kind).toBe("evidence");
+      expect(d.edges).toHaveLength(0);
+      expect(d.body).toMatch(/not evidence/);
+      expect(ProposalInput.safeParse({ ...d, disease: null, persona: "maria" }).success).toBe(true);
+    }
+    expect(prefillRequest("Disease request: Alexander disease").body).toContain("Alexander disease");
+  });
+  it("labels Nedamex's analysis under both the new and the legacy source id", () => {
+    expect(isAnalysisSource("nexmed_analysis")).toBe(true);
+    expect(isAnalysisSource("atlas_analysis")).toBe(true);
+    expect(isAnalysisSource("orphanet")).toBe(false);
+    const j = buildJourney(g, STXBP1, "maria", "en")!;
+    expect(j.coverage.sources.map((s) => s.name).join(" ")).not.toMatch(/nexmed|Nexmed/);
+  });
+});

@@ -10,7 +10,7 @@
 import type { Edge, Gap } from "../atlas/types";
 import type { PersonaId } from "../agents/profiles";
 import {
-  ACTIVE_STATUSES, cite, diseasesOf, fullNameOf, inOf, nameOf, other, outOf, prettyStatus, tr,
+  ACTIVE_STATUSES, ANALYSIS_LABEL, isAnalysisSource, cite, diseasesOf, fullNameOf, inOf, nameOf, other, outOf, prettyStatus, tr,
   type Cite, type GraphIndex, type Locale,
 } from "./graph";
 
@@ -475,7 +475,7 @@ export function coverageFor(g: GraphIndex, d: string): Coverage {
   const disease = g.byId.get(d);
   const inE = inOf(g, d);
   return {
-    sources: Object.values(g.snap.sources).filter((s): s is NonNullable<typeof s> => !!s).map((s) => ({ id: s.id, name: s.name, last_synced_at: s.last_synced_at, evidence_for_disease: bySource.get(s.id) ?? 0 })),
+    sources: Object.values(g.snap.sources).filter((s): s is NonNullable<typeof s> => !!s).map((s) => ({ id: s.id, name: isAnalysisSource(s.id) ? ANALYSIS_LABEL.en : s.name, last_synced_at: s.last_synced_at, evidence_for_disease: bySource.get(s.id) ?? 0 })),
     counts: {
       symptoms: outOf(g, d).filter((e) => e.relation === "has_phenotype").length,
       studies: inE.filter((e) => e.relation === "studies" && g.byId.get(e.from)?.type === "trial").length,
