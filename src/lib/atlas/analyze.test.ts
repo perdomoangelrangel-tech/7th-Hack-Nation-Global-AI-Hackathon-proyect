@@ -92,7 +92,7 @@ describe("analyze()", () => {
   it("names every cluster with a label basis", () => {
     for (const c of analyze(bundled()).clusters) {
       expect(c.label.length).toBeGreaterThan(0);
-      expect(c.label_basis).toMatch(/Reactome pathway|Orphanet classification|phenotype|Only member|No shared/);
+      expect(c.label_basis).toMatch(/Reactome pathway|Orphanet classification|phenotype|Only member|No shared|No Reactome pathway/);
     }
   });
 });

@@ -17,6 +17,7 @@ export interface SeedDisease {
   short_name?: string;           // label for the graph and the voice ("STXBP1-DEE")
   short_name_es?: string;
   opentargets_indexed?: boolean; // false when Open Targets does not index the MONDO id
+  efo_extra?: string[];          // extra Open Targets ids (verified ancestors) whose drug indications also apply
 }
 
 export interface SeedOrganization {

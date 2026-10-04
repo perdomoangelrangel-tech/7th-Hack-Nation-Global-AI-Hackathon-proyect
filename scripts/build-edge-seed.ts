@@ -8,8 +8,11 @@ import { readFileSync, writeFileSync } from "node:fs";
 const read = (f: string) => JSON.parse(readFileSync(`supabase/seed/${f}`, "utf8")) as Record<string, unknown>[];
 const diseases = read("diseases.json").map((d) => {
   // Fields the Edge Function uses (drop resolver-only notes such as `verified`).
-  const keep = ["slug", "orpha", "mondo", "efo", "omim", "clinvar_disease", "name", "name_es", "short_name", "short_name_es", "genes", "hgnc", "search_terms", "trial_keywords", "opentargets_indexed"];
-  return Object.fromEntries(keep.filter((k) => d[k] !== undefined).map((k) => [k, d[k]]));
+  const keep = ["slug", "orpha", "mondo", "efo", "omim", "clinvar_disease", "name", "name_es", "short_name", "short_name_es", "genes", "hgnc", "search_terms", "trial_keywords", "opentargets_indexed", "efo_extra"];
+  const out = Object.fromEntries(keep.filter((k) => d[k] !== undefined).map((k) => [k, d[k]]));
+  // 1–2 letter synonyms ("CF", "FA") match unrelated trials / papers ("FA" = Fanconi anemia too): never search with them.
+  for (const k of ["search_terms", "trial_keywords"]) if (Array.isArray(out[k])) out[k] = (out[k] as string[]).filter((t) => t.trim().length >= 3);
+  return out;
 });
 const missing = diseases.filter((d) => !d.slug || !d.hgnc);
 if (missing.length) throw new Error(`seed entries without slug/hgnc: ${missing.map((d) => d.orpha).join(", ")}`);
@@ -23,7 +26,7 @@ ${lines(diseases)}
 ];
 
 export const ORGANIZATIONS: SeedOrganization[] = [
-${lines(read("organizations.json"))}
+${lines(read("organizations.json").map((o) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== "verified"))))}
 ];
 
 export const APPROVALS: SeedApproval[] = [

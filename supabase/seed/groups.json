@@ -5,7 +5,8 @@
       "name": "Channelopathy with epilepsy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015922"
     },
     {
       "orpha": "ORPHA:693802",
@@ -36,7 +37,8 @@
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:166463",
@@ -54,7 +56,8 @@
       "name": "Genetic neurological channelopathy of the central nervous system",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0038261"
     },
     {
       "orpha": "ORPHA:166472",
@@ -71,7 +74,8 @@
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:778": [
@@ -90,7 +94,8 @@
       "name": "Motor stereotypies",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017656"
     },
     {
       "orpha": "ORPHA:168778",
@@ -104,35 +109,40 @@
         "rare autism spectrum disorder"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015680"
     },
     {
       "orpha": "ORPHA:611314",
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:101998",
       "name": "Rare epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015139"
     },
     {
       "orpha": "ORPHA:494457",
       "name": "Rare hyperkinetic movement disorder",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0044636"
     },
     {
       "orpha": "ORPHA:102369",
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:505652": [
@@ -141,7 +151,8 @@
       "name": "Motor stereotypies",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017656"
     },
     {
       "orpha": "ORPHA:693802",
@@ -165,14 +176,16 @@
         "rare autism spectrum disorder"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015680"
     },
     {
       "orpha": "ORPHA:611314",
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:166463",
@@ -190,14 +203,16 @@
       "name": "Rare hyperkinetic movement disorder",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0044636"
     },
     {
       "orpha": "ORPHA:102369",
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:72": [
@@ -206,7 +221,8 @@
       "name": "Chromosomal anomaly with epilepsy as a major feature",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015652"
     },
     {
       "orpha": "ORPHA:611327",
@@ -215,7 +231,8 @@
         "Genetic multiple congenital anomalies-intellectual disability with or without dysmorphism"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035863"
     },
     {
       "orpha": "ORPHA:641343",
@@ -243,7 +260,8 @@
         "hereditary multiple congenital anomalies/dysmorphic syndrome"
       ],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0043005"
     },
     {
       "orpha": "ORPHA:68341",
@@ -260,14 +278,16 @@
       "name": "Rare epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015139"
     },
     {
       "orpha": "ORPHA:102369",
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:228349": [
@@ -304,7 +324,8 @@
       "name": "Epilepsy and/or ataxia with myoclonus as a major feature",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017653"
     },
     {
       "orpha": "ORPHA:183500",
@@ -338,21 +359,24 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:98543",
       "name": "Metabolic disease with dementia",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020142"
     },
     {
       "orpha": "ORPHA:68385",
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:716405",
@@ -370,7 +394,8 @@
       "name": "Rare neurodegenerative disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
     },
     {
       "orpha": "ORPHA:699645",
@@ -407,7 +432,8 @@
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:166463",
@@ -425,14 +451,16 @@
       "name": "Genetic neurological channelopathy of the central nervous system",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0038261"
     },
     {
       "orpha": "ORPHA:102369",
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:293181": [
@@ -441,7 +469,8 @@
       "name": "Channelopathy with epilepsy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015922"
     },
     {
       "orpha": "ORPHA:693802",
@@ -476,7 +505,8 @@
       "name": "Genetic neurological channelopathy of the central nervous system",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0038261"
     },
     {
       "orpha": "ORPHA:166472",
@@ -505,7 +535,8 @@
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:166463",
@@ -523,7 +554,8 @@
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:544254": [
@@ -542,7 +574,8 @@
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:166463",
@@ -560,7 +593,8 @@
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:561854": [
@@ -579,7 +613,8 @@
       "name": "Motor stereotypies",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017656"
     },
     {
       "orpha": "ORPHA:168778",
@@ -593,35 +628,40 @@
         "rare autism spectrum disorder"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015680"
     },
     {
       "orpha": "ORPHA:611314",
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:101998",
       "name": "Rare epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015139"
     },
     {
       "orpha": "ORPHA:494457",
       "name": "Rare hyperkinetic movement disorder",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0044636"
     },
     {
       "orpha": "ORPHA:102369",
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ],
   "ORPHA:228346": [
@@ -670,21 +710,24 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:98543",
       "name": "Metabolic disease with dementia",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020142"
     },
     {
       "orpha": "ORPHA:68385",
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:716405",
@@ -702,7 +745,8 @@
       "name": "Rare neurodegenerative disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
     }
   ],
   "ORPHA:228354": [
@@ -739,7 +783,8 @@
       "name": "Epilepsy and/or ataxia with myoclonus as a major feature",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017653"
     },
     {
       "orpha": "ORPHA:183500",
@@ -773,21 +818,24 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:98543",
       "name": "Metabolic disease with dementia",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020142"
     },
     {
       "orpha": "ORPHA:68385",
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:716405",
@@ -805,7 +853,8 @@
       "name": "Rare neurodegenerative disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
     },
     {
       "orpha": "ORPHA:699645",
@@ -847,21 +896,24 @@
         "glycogenosis with hypertrophic cardiomyopathy"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016325"
     },
     {
       "orpha": "ORPHA:217581",
       "name": "Lysosomal disease with hypertrophic cardiomyopathy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016326"
     },
     {
       "orpha": "ORPHA:217638",
       "name": "Lysosomal disease with restrictive cardiomyopathy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016341"
     },
     {
       "orpha": "ORPHA:309337",
@@ -879,7 +931,8 @@
         "glycogen storage myopathy"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016118"
     },
     {
       "orpha": "ORPHA:79161",
@@ -945,7 +998,8 @@
         "rare familial disorder with hypertrophic subaortic stenosis"
       ],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0020484"
     }
   ],
   "ORPHA:324": [
@@ -962,42 +1016,48 @@
       "name": "Disorder with multisystemic involvement and primary lymphedema",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis"
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0035471"
     },
     {
       "orpha": "ORPHA:183478",
       "name": "Genetic skin vascular disorder",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015948"
     },
     {
       "orpha": "ORPHA:217581",
       "name": "Lysosomal disease with hypertrophic cardiomyopathy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016326"
     },
     {
       "orpha": "ORPHA:217638",
       "name": "Lysosomal disease with restrictive cardiomyopathy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016341"
     },
     {
       "orpha": "ORPHA:98644",
       "name": "Metabolic disease with cataract",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020228"
     },
     {
       "orpha": "ORPHA:93593",
       "name": "Nephropathy secondary to a storage or other metabolic disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019743"
     },
     {
       "orpha": "ORPHA:506213",
@@ -1011,7 +1071,8 @@
       "name": "Rare hereditary metabolic disease with peripheral neuropathy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016133"
     },
     {
       "orpha": "ORPHA:79379",
@@ -1040,14 +1101,16 @@
       "name": "Sphingolipidosis with epilepsy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018299"
     },
     {
       "orpha": "ORPHA:79377",
       "name": "Dermis disorder",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare skin diseases"
+      "hierarchy": "Orphanet classification of rare skin diseases",
+      "mondo": "MONDO:0019291"
     },
     {
       "orpha": "ORPHA:217635",
@@ -1064,7 +1127,8 @@
       "name": "Genetic dermis disorder",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0026160"
     },
     {
       "orpha": "ORPHA:68366",
@@ -1086,7 +1150,8 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:77240",
@@ -1129,14 +1194,16 @@
         "rare familial disorder with hypertrophic subaortic stenosis"
       ],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0020484"
     },
     {
       "orpha": "ORPHA:207015",
       "name": "Rare hereditary disease with peripheral neuropathy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016132"
     },
     {
       "orpha": "ORPHA:98641",
@@ -1146,7 +1213,8 @@
         "syndromic cataract (disease)"
       ],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare ophthalmic disorders"
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0020225"
     },
     {
       "orpha": "ORPHA:522548",
@@ -1230,14 +1298,16 @@
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:182070",
       "name": "Rare neurodegenerative disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
     },
     {
       "orpha": "ORPHA:264968",
@@ -1247,14 +1317,16 @@
         "secondary ILD in childhood and adulthood associated with a metabolic disease"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare respiratory diseases"
+      "hierarchy": "Orphanet classification of rare respiratory diseases",
+      "mondo": "MONDO:0017037"
     },
     {
       "orpha": "ORPHA:371442",
       "name": "Sphingolipidosis with epilepsy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018299"
     },
     {
       "orpha": "ORPHA:98687",
@@ -1275,21 +1347,24 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:98543",
       "name": "Metabolic disease with dementia",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020142"
     },
     {
       "orpha": "ORPHA:519341",
       "name": "Rare brainstem or cerebellar disorder with ophthalmic involvement as a major feature",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare ophthalmic disorders"
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0034961"
     },
     {
       "orpha": "ORPHA:717862",
@@ -1306,7 +1381,8 @@
         "secondary ILD in childhood and adulthood associated with a systemic disease"
       ],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare respiratory diseases"
+      "hierarchy": "Orphanet classification of rare respiratory diseases",
+      "mondo": "MONDO:0017035"
     },
     {
       "orpha": "ORPHA:79225",
@@ -1346,14 +1422,16 @@
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:611314",
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:139009",
@@ -1383,7 +1461,8 @@
       "name": "Rare disease with glaucoma as a major feature",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020222"
     },
     {
       "orpha": "ORPHA:506219",
@@ -1397,7 +1476,8 @@
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     },
     {
       "orpha": "ORPHA:139393",
@@ -1439,14 +1519,16 @@
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:182070",
       "name": "Rare neurodegenerative disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
     },
     {
       "orpha": "ORPHA:79225",
@@ -1461,7 +1543,8 @@
       "name": "Sphingolipidosis with epilepsy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018299"
     },
     {
       "orpha": "ORPHA:441434",
@@ -1470,7 +1553,8 @@
         "syndrome associated with hereditary optic neuropathy"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018609"
     },
     {
       "orpha": "ORPHA:98671",
@@ -1500,7 +1584,8 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:506219",
@@ -1527,21 +1612,24 @@
       "name": "Metabolic disease with dementia",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020142"
     },
     {
       "orpha": "ORPHA:68385",
       "name": "Neurometabolic disease",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
     },
     {
       "orpha": "ORPHA:207018",
       "name": "Rare hereditary metabolic disease with peripheral neuropathy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016133"
     },
     {
       "orpha": "ORPHA:79225",
@@ -1556,7 +1644,8 @@
       "name": "Sphingolipidosis with epilepsy",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018299"
     },
     {
       "orpha": "ORPHA:441434",
@@ -1565,7 +1654,8 @@
         "syndrome associated with hereditary optic neuropathy"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018609"
     },
     {
       "orpha": "ORPHA:158124",
@@ -1605,14 +1695,16 @@
       "name": "Lysosomal disease with epilepsy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016397"
     },
     {
       "orpha": "ORPHA:89043",
       "name": "Rare dementia",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0019515"
     },
     {
       "orpha": "ORPHA:506219",
@@ -1626,7 +1718,8 @@
       "name": "Rare hereditary disease with peripheral neuropathy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016132"
     }
   ],
   "ORPHA:70": [
@@ -1647,7 +1740,8 @@
       "name": "Genetic neuromuscular disease",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0026167"
     },
     {
       "orpha": "ORPHA:98503",
@@ -1675,7 +1769,8 @@
         "severe dystrophinopathy, Duchenne and Becker type"
       ],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016899"
     },
     {
       "orpha": "ORPHA:207085",
@@ -1701,14 +1796,16 @@
       "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
       "synonyms": [],
       "depth": 1,
-      "hierarchy": "Orphanet classification of rare genetic diseases"
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
     },
     {
       "orpha": "ORPHA:217610",
       "name": "Neuromuscular disease with dilated cardiomyopathy",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare cardiac diseases"
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016334"
     },
     {
       "orpha": "ORPHA:206644",
@@ -1731,14 +1828,1244 @@
       "name": "Rare ocular motility/alignment disorder",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare ophthalmic disorders"
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0034968"
     },
     {
       "orpha": "ORPHA:102369",
       "name": "Rare syndromic intellectual disability",
       "synonyms": [],
       "depth": 2,
-      "hierarchy": "Orphanet classification of rare neurological diseases"
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
+    }
+  ],
+  "ORPHA:586": [
+    {
+      "orpha": "ORPHA:156607",
+      "name": "Genetic biliary tract disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015509"
+    },
+    {
+      "orpha": "ORPHA:165661",
+      "name": "Genetic pancreatic disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015618"
+    },
+    {
+      "orpha": "ORPHA:101941",
+      "name": "Rare biliary tract disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare hepatic diseases",
+      "mondo": "MONDO:0015116"
+    },
+    {
+      "orpha": "ORPHA:506210",
+      "name": "Rare disorder potentially indicated for liver transplant",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:506222",
+      "name": "Rare disorder potentially indicated for lung transplant",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:399824",
+      "name": "Rare disorder with obstructive azoospermia",
+      "synonyms": [
+        "Rare disorder due to impaired sperm transport",
+        "rare disorder due to impaired sperm transport"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare infertility disorders",
+      "mondo": "MONDO:0018396"
+    },
+    {
+      "orpha": "ORPHA:101937",
+      "name": "Rare pancreatic disease",
+      "synonyms": [
+        "rare pancreas disease"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare gastroenterological diseases",
+      "mondo": "MONDO:0015112"
+    },
+    {
+      "orpha": "ORPHA:101944",
+      "name": "Rare pulmonary disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare respiratory diseases",
+      "mondo": "MONDO:0015118"
+    },
+    {
+      "orpha": "ORPHA:98343",
+      "name": "Male infertility due to obstructive azoospermia",
+      "synonyms": [
+        "Male infertility due to impaired sperm transport"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare infertility disorders",
+      "mondo": "MONDO:0020091"
+    },
+    {
+      "orpha": "ORPHA:399998",
+      "name": "Male infertility due to obstructive azoospermia of genetic origin",
+      "synonyms": [
+        "Male infertility due to impaired sperm transport of genetic origin"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018407"
+    },
+    {
+      "orpha": "ORPHA:506207",
+      "name": "Rare disorder potentially indicated for transplant",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    }
+  ],
+  "ORPHA:716": [
+    {
+      "orpha": "ORPHA:225689",
+      "name": "Amino acid or protein metabolism disease with epilepsy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016399"
+    },
+    {
+      "orpha": "ORPHA:708881",
+      "name": "Phenylalanine hydroxylase deficiency",
+      "synonyms": [
+        "PAH deficiency"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism"
+    },
+    {
+      "orpha": "ORPHA:284814",
+      "name": "Disorder of phenylalanine metabolism",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism",
+      "mondo": "MONDO:0017306"
+    },
+    {
+      "orpha": "ORPHA:166481",
+      "name": "Metabolic diseases with epilepsy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015656"
+    },
+    {
+      "orpha": "ORPHA:68385",
+      "name": "Neurometabolic disease",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
+    }
+  ],
+  "ORPHA:399": [
+    {
+      "orpha": "ORPHA:276058",
+      "name": "Genetic neurodegenerative disease with dementia",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0021037"
+    },
+    {
+      "orpha": "ORPHA:306719",
+      "name": "Neurodegenerative disease with chorea",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017646"
+    },
+    {
+      "orpha": "ORPHA:98534",
+      "name": "Neurodegenerative disease with dementia",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0020136"
+    },
+    {
+      "orpha": "ORPHA:519347",
+      "name": "Rare neuromuscular disorder with ocular motility/alignment anomaly",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders"
+    },
+    {
+      "orpha": "ORPHA:158124",
+      "name": "Genetic dementia",
+      "synonyms": [
+        "hereditary dementia"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015547"
+    },
+    {
+      "orpha": "ORPHA:183500",
+      "name": "Genetic neurodegenerative disease",
+      "synonyms": [
+        "inherited neurodegenerative disorder",
+        "hereditary neurodegenerative disease",
+        "hereditary neurodegenerative disorder"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0024237"
+    },
+    {
+      "orpha": "ORPHA:306715",
+      "name": "Rare choreic movement disorder",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0017645"
+    },
+    {
+      "orpha": "ORPHA:89043",
+      "name": "Rare dementia",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0019515"
+    },
+    {
+      "orpha": "ORPHA:182070",
+      "name": "Rare neurodegenerative disease",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
+    },
+    {
+      "orpha": "ORPHA:519355",
+      "name": "Rare ocular motility/alignment disorder",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0034968"
+    }
+  ],
+  "ORPHA:95": [
+    {
+      "orpha": "ORPHA:98098",
+      "name": "Autosomal recessive degenerative and progressive cerebellar ataxia",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020046"
+    },
+    {
+      "orpha": "ORPHA:207028",
+      "name": "Cerebellar ataxia with peripheral neuropathy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016136"
+    },
+    {
+      "orpha": "ORPHA:68385",
+      "name": "Neurometabolic disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
+    },
+    {
+      "orpha": "ORPHA:519341",
+      "name": "Rare brainstem or cerebellar disorder with ophthalmic involvement as a major feature",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0034961"
+    },
+    {
+      "orpha": "ORPHA:217595",
+      "name": "Syndrome associated with hypertrophic cardiomyopathy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0026989"
+    },
+    {
+      "orpha": "ORPHA:1172",
+      "name": "Autosomal recessive cerebellar ataxia",
+      "synonyms": [
+        "ARCA",
+        "arca",
+        "cerebellar ataxia, autosomal recessive"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015244"
+    },
+    {
+      "orpha": "ORPHA:183616",
+      "name": "Genetic neuro-ophthalmological disease",
+      "synonyms": [
+        "hereditary neuro-ophthalmological disease"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0957003"
+    },
+    {
+      "orpha": "ORPHA:140653",
+      "name": "Neuro-ophthalmological disease",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0015368"
+    },
+    {
+      "orpha": "ORPHA:99739",
+      "name": "Rare familial disorder with hypertrophic cardiomyopathy",
+      "synonyms": [
+        "Rare familial disorder with hypertrophic obstructive cardiomyopathy",
+        "Rare familial disorder with hypertrophic subaortic stenosis",
+        "rare familial disorder with hypertrophic obstructive cardiomyopathy",
+        "rare familial disorder with hypertrophic subaortic stenosis"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0020484"
+    },
+    {
+      "orpha": "ORPHA:207025",
+      "name": "Rare hereditary neurologic disease with peripheral neuropathy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016135"
+    }
+  ],
+  "ORPHA:98878": [
+    {
+      "orpha": "ORPHA:448",
+      "name": "Hemophilia",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018660"
+    },
+    {
+      "orpha": "ORPHA:68334",
+      "name": "Rare hemorrhagic disorder due to a constitutional coagulation factors defect",
+      "synonyms": [
+        "Rare bleeding disorder due to a constitutional coagulation factors defect",
+        "Rare coagulopathy due to a constitutional coagulation factors defect",
+        "rare bleeding disorder due to a constitutional coagulation factors defect",
+        "rare coagulopathy due to a constitutional coagulation factors defect"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019039"
+    }
+  ],
+  "ORPHA:232": [
+    {
+      "orpha": "ORPHA:93614",
+      "name": "Hematological disorder with renal involvement",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019747"
+    },
+    {
+      "orpha": "ORPHA:477771",
+      "name": "Rare disorder with a moyamoya angiopathy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018792"
+    },
+    {
+      "orpha": "ORPHA:399185",
+      "name": "Rare hereditary disease with avascular necrosis",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018377"
+    },
+    {
+      "orpha": "ORPHA:275752",
+      "name": "Sickle cell disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017146"
+    },
+    {
+      "orpha": "ORPHA:399388",
+      "name": "Avascular necrosis of genetic origin",
+      "synonyms": [
+        "genetic avascular necrosis"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018384"
+    },
+    {
+      "orpha": "ORPHA:183503",
+      "name": "Genetic central nervous system and retinal vascular disease",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015953"
+    },
+    {
+      "orpha": "ORPHA:466066",
+      "name": "Genetic hemoglobinopathy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0034039"
+    },
+    {
+      "orpha": "ORPHA:68364",
+      "name": "Hemoglobinopathy",
+      "synonyms": [
+        "inherited hemoglobinopathy",
+        "Hemoglobinopathies / iron metabolism",
+        "hereditary hemoglobinopathy"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare hematological diseases",
+      "mondo": "MONDO:0019050"
+    },
+    {
+      "orpha": "ORPHA:477768",
+      "name": "Moyamoya angiopathy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0018791"
+    },
+    {
+      "orpha": "ORPHA:399169",
+      "name": "Secondary avascular necrosis",
+      "synonyms": [
+        "Secondary AVN",
+        "secondary AVN"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare systemic and rheumatological diseases",
+      "mondo": "MONDO:0018374"
+    }
+  ],
+  "ORPHA:805": [
+    {
+      "orpha": "ORPHA:568047",
+      "name": "Disorder with multisystemic involvement and primary lymphedema",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0035471"
+    },
+    {
+      "orpha": "ORPHA:93587",
+      "name": "Genetic cystic renal disease",
+      "synonyms": [
+        "Hereditary cystic renal disease",
+        "familial cystic renal disease",
+        "hereditary cystic kidney disease"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019741"
+    },
+    {
+      "orpha": "ORPHA:183481",
+      "name": "Genetic mixed dermis disorder",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0957001"
+    },
+    {
+      "orpha": "ORPHA:183487",
+      "name": "Genetic skin tumor or hamartoma",
+      "synonyms": [
+        "genetic skin tumour"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015950"
+    },
+    {
+      "orpha": "ORPHA:252190",
+      "name": "Inherited nervous system cancer-predisposing syndrome",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0016756"
+    },
+    {
+      "orpha": "ORPHA:319328",
+      "name": "Inherited renal cancer-predisposing syndrome",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017891"
+    },
+    {
+      "orpha": "ORPHA:98196",
+      "name": "Malformation syndrome with hamartosis",
+      "synonyms": [
+        "Dysmorphologic diseases with phakomatosis"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0020063"
+    },
+    {
+      "orpha": "ORPHA:79380",
+      "name": "Mixed dermis disorder",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare skin diseases",
+      "mondo": "MONDO:0019294"
+    },
+    {
+      "orpha": "ORPHA:166466",
+      "name": "Neurocutaneous syndrome with epilepsy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015651"
+    },
+    {
+      "orpha": "ORPHA:183422",
+      "name": "Polymalformative genetic syndrome with increased risk of developing cancer",
+      "synonyms": [
+        "PGSIRC"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015945"
+    },
+    {
+      "orpha": "ORPHA:180772",
+      "name": "Rare disease with autism",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015878"
+    },
+    {
+      "orpha": "ORPHA:506213",
+      "name": "Rare disorder potentially indicated for kidney transplant",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:611314",
+      "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
+    },
+    {
+      "orpha": "ORPHA:156162",
+      "name": "Renal ciliopathy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0022409"
+    },
+    {
+      "orpha": "ORPHA:363250",
+      "name": "Ciliopathy",
+      "synonyms": [
+        "ciliopathies"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0005308"
+    },
+    {
+      "orpha": "ORPHA:79377",
+      "name": "Dermis disorder",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare skin diseases",
+      "mondo": "MONDO:0019291"
+    },
+    {
+      "orpha": "ORPHA:183472",
+      "name": "Genetic dermis disorder",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0026160"
+    },
+    {
+      "orpha": "ORPHA:140162",
+      "name": "Inherited cancer-predisposing syndrome",
+      "synonyms": [
+        "hereditary neoplastic syndrome",
+        "cancer syndrome, hereditary",
+        "cancer syndromes, hereditary",
+        "familial neoplastic syndrome",
+        "familial tumor syndrome",
+        "familial tumour syndrome",
+        "hereditary cancer syndrome",
+        "hereditary cancer syndromes"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015356"
+    },
+    {
+      "orpha": "ORPHA:77240",
+      "name": "Primary lymphedema",
+      "synonyms": [
+        "Troncular lymphatic malformation"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0019175"
+    },
+    {
+      "orpha": "ORPHA:506207",
+      "name": "Rare disorder potentially indicated for transplant",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:101998",
+      "name": "Rare epilepsy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015139"
+    },
+    {
+      "orpha": "ORPHA:168778",
+      "name": "Rare pervasive developmental disorder",
+      "synonyms": [
+        "Rare ASD",
+        "Rare PDD",
+        "Rare autism spectrum disorder",
+        "rare ASD",
+        "rare PDD",
+        "rare autism spectrum disorder"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015680"
+    },
+    {
+      "orpha": "ORPHA:102369",
+      "name": "Rare syndromic intellectual disability",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
+    }
+  ],
+  "ORPHA:908": [
+    {
+      "orpha": "ORPHA:166469",
+      "name": "Chromosomal anomaly with epilepsy as a major feature",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015652"
+    },
+    {
+      "orpha": "ORPHA:611327",
+      "name": "Genetic multiple congenital anomalies/dysmorphic syndrome-intellectual disability",
+      "synonyms": [
+        "Genetic multiple congenital anomalies-intellectual disability with or without dysmorphism"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035863"
+    },
+    {
+      "orpha": "ORPHA:306765",
+      "name": "Motor stereotypies",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0017656"
+    },
+    {
+      "orpha": "ORPHA:102283",
+      "name": "Multiple congenital anomalies/dysmorphic syndrome-intellectual disability",
+      "synonyms": [
+        "MCA/MR",
+        "Multiple congenital anomalies-intellectual disability with or without dysmorphism",
+        "multiple congenital anomalies-intellectual disability with or without dysmorphism"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0015159"
+    },
+    {
+      "orpha": "ORPHA:180772",
+      "name": "Rare disease with autism",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015878"
+    },
+    {
+      "orpha": "ORPHA:98683",
+      "name": "Syndromic disorder with strabismus",
+      "synonyms": [
+        "Syndrome with a symptomatic strabismus"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0020253"
+    },
+    {
+      "orpha": "ORPHA:522520",
+      "name": "Syndromic genetic disorder with strabismus",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases"
+    },
+    {
+      "orpha": "ORPHA:240371",
+      "name": "Syndromic obesity",
+      "synonyms": [
+        "syndrome associated with obesity (disease)",
+        "syndromic obesity (disease)"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0016565"
+    },
+    {
+      "orpha": "ORPHA:183533",
+      "name": "Genetic multiple congenital anomalies/dysmorphic syndrome",
+      "synonyms": [
+        "hereditary multiple congenital anomalies/dysmorphic syndrome"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0043005"
+    },
+    {
+      "orpha": "ORPHA:77828",
+      "name": "Genetic obesity",
+      "synonyms": [
+        "inherited obesity",
+        "genetic obesity (disease)",
+        "leanness, inherited, autosomal recessive",
+        "monogenic obesity",
+        "obesity, association with, Autosomal recessive",
+        "obesity, early-onset, susceptibility to, Autosomal recessive",
+        "obesity, late-onset, Autosomal recessive",
+        "obesity, mild, early-onset, Autosomal recessive"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019182"
+    },
+    {
+      "orpha": "ORPHA:68341",
+      "name": "Multiple congenital anomalies/dysmorphic syndrome",
+      "synonyms": [
+        "MCAHS"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0019042"
+    },
+    {
+      "orpha": "ORPHA:139024",
+      "name": "Overgrowth/obesity syndrome",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0015330"
+    },
+    {
+      "orpha": "ORPHA:98681",
+      "name": "Rare disorder with strabismus",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0020251"
+    },
+    {
+      "orpha": "ORPHA:101998",
+      "name": "Rare epilepsy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015139"
+    },
+    {
+      "orpha": "ORPHA:494457",
+      "name": "Rare hyperkinetic movement disorder",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0044636"
+    },
+    {
+      "orpha": "ORPHA:168778",
+      "name": "Rare pervasive developmental disorder",
+      "synonyms": [
+        "Rare ASD",
+        "Rare PDD",
+        "Rare autism spectrum disorder",
+        "rare ASD",
+        "rare PDD",
+        "rare autism spectrum disorder"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015680"
+    },
+    {
+      "orpha": "ORPHA:102369",
+      "name": "Rare syndromic intellectual disability",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
+    }
+  ],
+  "ORPHA:580": [
+    {
+      "orpha": "ORPHA:217581",
+      "name": "Lysosomal disease with hypertrophic cardiomyopathy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0016326"
+    },
+    {
+      "orpha": "ORPHA:93448",
+      "name": "Lysosomal storage disease with skeletal involvement",
+      "synonyms": [
+        "Dysostosis multiplex",
+        "dysostosis multiplex"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0800088"
+    },
+    {
+      "orpha": "ORPHA:79213",
+      "name": "Mucopolysaccharidosis",
+      "synonyms": [
+        "MPS",
+        "Mucopolysaccharidoses",
+        "mucopolysaccharidoses"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0019249"
+    },
+    {
+      "orpha": "ORPHA:79388",
+      "name": "Mucopolysaccharidosis with skin involvement",
+      "synonyms": [
+        "MPS with skin involvement",
+        "mucopolysaccharidosis type 2",
+        "Hunter syndrome",
+        "Hunter's syndrome",
+        "I2S deficiency",
+        "IDS deficiency",
+        "MPS 2",
+        "MPS II",
+        "MPS2"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0010674"
+    },
+    {
+      "orpha": "ORPHA:68385",
+      "name": "Neurometabolic disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
+    },
+    {
+      "orpha": "ORPHA:98578",
+      "name": "Rare disorder with ptosis",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0020169"
+    },
+    {
+      "orpha": "ORPHA:611314",
+      "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
+    },
+    {
+      "orpha": "ORPHA:139009",
+      "name": "Developmental anomaly of metabolic origin",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0015327"
+    },
+    {
+      "orpha": "ORPHA:68366",
+      "name": "Lysosomal disease",
+      "synonyms": [
+        "lysosomal storage disease",
+        "disorder of lysosomal enzymes",
+        "lysosomal disorder",
+        "lysosomal storage disorder",
+        "lysosome disease",
+        "lysosome disorder"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism",
+      "mondo": "MONDO:0002561"
+    },
+    {
+      "orpha": "ORPHA:79387",
+      "name": "Metabolic disease with skin involvement",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019301"
+    },
+    {
+      "orpha": "ORPHA:98638",
+      "name": "Rare disease with glaucoma as a major feature",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020222"
+    },
+    {
+      "orpha": "ORPHA:506219",
+      "name": "Rare disorder potentially indicated for hematopoietic stem cell transplant",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:99739",
+      "name": "Rare familial disorder with hypertrophic cardiomyopathy",
+      "synonyms": [
+        "Rare familial disorder with hypertrophic obstructive cardiomyopathy",
+        "Rare familial disorder with hypertrophic subaortic stenosis",
+        "rare familial disorder with hypertrophic obstructive cardiomyopathy",
+        "rare familial disorder with hypertrophic subaortic stenosis"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare cardiac diseases",
+      "mondo": "MONDO:0020484"
+    },
+    {
+      "orpha": "ORPHA:102369",
+      "name": "Rare syndromic intellectual disability",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
+    },
+    {
+      "orpha": "ORPHA:139393",
+      "name": "Syndromic craniosynostosis",
+      "synonyms": [
+        "syndrome associated with craniosynostosis"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare developmental anomalies during embryogenesis",
+      "mondo": "MONDO:0015338"
+    }
+  ],
+  "ORPHA:905": [
+    {
+      "orpha": "ORPHA:309839",
+      "name": "Disorder of copper metabolism",
+      "synonyms": [
+        "copper Transport disorders",
+        "inborn cellular copper ion homeostasis disorder",
+        "inborn error of cellular copper ion homeostasis",
+        "rare inborn error of cellular copper ion homeostasis"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism",
+      "mondo": "MONDO:0017762"
+    },
+    {
+      "orpha": "ORPHA:225692",
+      "name": "Metal transport or utilization disorder with epilepsy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016400"
+    },
+    {
+      "orpha": "ORPHA:93593",
+      "name": "Nephropathy secondary to a storage or other metabolic disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019743"
+    },
+    {
+      "orpha": "ORPHA:68385",
+      "name": "Neurometabolic disease",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
+    },
+    {
+      "orpha": "ORPHA:506210",
+      "name": "Rare disorder potentially indicated for liver transplant",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:370106",
+      "name": "Rare disorder with dystonia and other neurologic or systemic manifestation",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0018265"
+    },
+    {
+      "orpha": "ORPHA:207018",
+      "name": "Rare hereditary metabolic disease with peripheral neuropathy",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016133"
+    },
+    {
+      "orpha": "ORPHA:306712",
+      "name": "Rare tremor disorder",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0017644"
+    },
+    {
+      "orpha": "ORPHA:98687",
+      "name": "Supranuclear eye movement disorder",
+      "synonyms": [
+        "supranuclear oculomotor palsy",
+        "conjugate gaze palsy",
+        "gaze palsy",
+        "supranuclear disorder of eye movement",
+        "supranuclear ocular palsy"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020257"
+    },
+    {
+      "orpha": "ORPHA:309836",
+      "name": "Disorder of mineral absorption and transport",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism",
+      "mondo": "MONDO:0017761"
+    },
+    {
+      "orpha": "ORPHA:166481",
+      "name": "Metabolic diseases with epilepsy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015656"
+    },
+    {
+      "orpha": "ORPHA:519341",
+      "name": "Rare brainstem or cerebellar disorder with ophthalmic involvement as a major feature",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare ophthalmic disorders",
+      "mondo": "MONDO:0034961"
+    },
+    {
+      "orpha": "ORPHA:506207",
+      "name": "Rare disorder potentially indicated for transplant",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare transplant-related disorders"
+    },
+    {
+      "orpha": "ORPHA:68363",
+      "name": "Rare dystonia",
+      "synonyms": [
+        "Rare dystonic disorder",
+        "rare dystonia (disease)",
+        "rare dystonic disorder"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0019049"
+    },
+    {
+      "orpha": "ORPHA:207015",
+      "name": "Rare hereditary disease with peripheral neuropathy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016132"
+    },
+    {
+      "orpha": "ORPHA:494457",
+      "name": "Rare hyperkinetic movement disorder",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0044636"
+    }
+  ],
+  "ORPHA:139396": [
+    {
+      "orpha": "ORPHA:611314",
+      "name": "Rare syndromic intellectual disability without multiple congenital anomalies/dysmorphic syndrome",
+      "synonyms": [],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0035862"
+    },
+    {
+      "orpha": "ORPHA:43",
+      "name": "X-linked adrenoleukodystrophy",
+      "synonyms": [
+        "ALD",
+        "X-ALD",
+        "X-linked ALD",
+        "adrenoleukodystrophy",
+        "ABCD1 deficiency",
+        "Bronze-Schilder disease",
+        "Siemerling-Creutzfeldt disease"
+      ],
+      "depth": 1,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism",
+      "mondo": "MONDO:0018544"
+    },
+    {
+      "orpha": "ORPHA:101960",
+      "name": "Genetic chronic primary adrenal insufficiency",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020999"
+    },
+    {
+      "orpha": "ORPHA:183500",
+      "name": "Genetic neurodegenerative disease",
+      "synonyms": [
+        "inherited neurodegenerative disorder",
+        "hereditary neurodegenerative disease",
+        "hereditary neurodegenerative disorder"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0024237"
+    },
+    {
+      "orpha": "ORPHA:68356",
+      "name": "Leukodystrophy",
+      "synonyms": [
+        "hypomyelinating leukodystrophy",
+        "hypomyelinating leukoencephalopathy"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019046"
+    },
+    {
+      "orpha": "ORPHA:98543",
+      "name": "Metabolic disease with dementia",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0020142"
+    },
+    {
+      "orpha": "ORPHA:68385",
+      "name": "Neurometabolic disease",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0019058"
+    },
+    {
+      "orpha": "ORPHA:79188",
+      "name": "Peroxisomal beta-oxidation disorder",
+      "synonyms": [
+        "disorder of peroxisomal beta oxidation"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare inborn errors of metabolism",
+      "mondo": "MONDO:0019233"
+    },
+    {
+      "orpha": "ORPHA:225686",
+      "name": "Peroxisomal disease with epilepsy",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0016398"
+    },
+    {
+      "orpha": "ORPHA:181441",
+      "name": "Rare disorder with hypergonadotropic hypogonadism",
+      "synonyms": [
+        "Rare disorder with primary hypogonadism",
+        "rare disorder with primary hypogonadism"
+      ],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare genetic diseases",
+      "mondo": "MONDO:0015906"
+    },
+    {
+      "orpha": "ORPHA:182070",
+      "name": "Rare neurodegenerative disease",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015918"
+    },
+    {
+      "orpha": "ORPHA:102369",
+      "name": "Rare syndromic intellectual disability",
+      "synonyms": [],
+      "depth": 2,
+      "hierarchy": "Orphanet classification of rare neurological diseases",
+      "mondo": "MONDO:0015162"
     }
   ]
 }

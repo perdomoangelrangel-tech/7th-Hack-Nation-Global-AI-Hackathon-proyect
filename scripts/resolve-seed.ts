@@ -9,7 +9,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-interface Candidate { slug: string; orpha: number; gene: string; cluster: string; extra_terms?: string[] }
+interface Candidate { slug: string; orpha: number; gene: string; cluster: string; extra_terms?: string[]; names?: string[] }
 interface SeedDisease { slug: string; orpha: string; mondo: string; efo: string; name: string; name_es: string; genes: string[]; hgnc: Record<string, string>; search_terms: string[]; trial_keywords: string[]; opentargets_indexed?: boolean; verified?: string }
 
 // Candidate ORPHAcodes to verify (grouped by expected mechanism). Rejected ones are reported, not written.
@@ -42,6 +42,18 @@ const CANDIDATES: Candidate[] = [
   // neuromuscular
   { slug: "sma", orpha: 70, gene: "SMN1", cluster: "neuromuscular", extra_terms: ["spinal muscular atrophy"] },
   { slug: "duchenne", orpha: 98896, gene: "DMD", cluster: "neuromuscular" },
+  // WAVE 6: ORPHA codes resolved by Orphanet preferred term (orpha: 0 = look up by `names`, exact match required).
+  { slug: "cf", orpha: 0, names: ["Cystic fibrosis"], gene: "CFTR", cluster: "channel" },
+  { slug: "pku", orpha: 0, names: ["Phenylketonuria", "Classic phenylketonuria"], gene: "PAH", cluster: "metabolic" },
+  { slug: "huntington", orpha: 0, names: ["Huntington disease"], gene: "HTT", cluster: "neurodegenerative" },
+  { slug: "friedreich", orpha: 0, names: ["Friedreich ataxia"], gene: "FXN", cluster: "neurodegenerative" },
+  { slug: "hemophilia-a", orpha: 0, names: ["Hemophilia A"], gene: "F8", cluster: "hematologic" },
+  { slug: "sickle-cell", orpha: 0, names: ["Sickle cell anemia", "Sickle cell disease"], gene: "HBB", cluster: "hematologic" },
+  { slug: "tsc", orpha: 0, names: ["Tuberous sclerosis complex"], gene: "TSC2", cluster: "mtor" },
+  { slug: "fragile-x", orpha: 0, names: ["Fragile X syndrome"], gene: "FMR1", cluster: "synaptic" },
+  { slug: "mps2", orpha: 0, names: ["Mucopolysaccharidosis type 2"], gene: "IDS", cluster: "lysosomal" },
+  { slug: "wilson", orpha: 0, names: ["Wilson disease"], gene: "ATP7B", cluster: "metabolic" },
+  { slug: "x-ald", orpha: 0, names: ["X-linked cerebral adrenoleukodystrophy", "X-linked adrenoleukodystrophy", "Adrenoleukodystrophy"], gene: "ABCD1", cluster: "peroxisomal" },
 ];
 
 // deno-lint-ignore no-explicit-any
@@ -83,7 +95,16 @@ async function hgncOf(symbol: string): Promise<string | null> {
 }
 
 async function resolve(c: Candidate): Promise<{ ok: true; seed: SeedDisease } | { ok: false; slug: string; why: string }> {
-  const code = c.orpha;
+  let code = c.orpha;
+  if (!code) {
+    // Orphadata name search is fuzzy: accept only an exact (case-insensitive) preferred-term match.
+    for (const n of c.names ?? []) {
+      const r = await orpha(`rd-cross-referencing/orphacodes/names/${encodeURIComponent(n)}`);
+      const hit = arr(r).find((x: Any) => String(x?.["Preferred term"] ?? "").toLowerCase() === n.toLowerCase());
+      if (hit?.ORPHAcode) { code = Number(hit.ORPHAcode); break; }
+    }
+    if (!code) return { ok: false, slug: c.slug, why: `no Orphanet preferred term equals ${JSON.stringify(c.names)}` };
+  }
   const [genes, xref, xrefEs] = await Promise.all([orpha(`rd-associated-genes/orphacodes/${code}`), orpha(`rd-cross-referencing/orphacodes/${code}`), orpha(`rd-cross-referencing/orphacodes/${code}`, "es")]);
   if (!xref) return { ok: false, slug: c.slug, why: `ORPHA:${code} not found in Orphadata` };
   const name: string = xref["Preferred term"];
@@ -134,7 +155,23 @@ const SHORT: Record<string, [string, string]> = {
   gaucher: ["Gaucher disease", "Enfermedad de Gaucher"], npc: ["Niemann-Pick C", "Niemann-Pick C"], mps1: ["MPS I", "MPS I"],
   krabbe: ["Krabbe disease", "Enfermedad de Krabbe"], mld: ["Metachromatic leukodystrophy", "Leucodistrofia metacromática"],
   sma: ["Spinal muscular atrophy", "Atrofia muscular espinal"], duchenne: ["Duchenne muscular dystrophy", "Distrofia muscular de Duchenne"],
+  cf: ["Cystic fibrosis", "Fibrosis quística"], pku: ["Phenylketonuria (PKU)", "Fenilcetonuria"], huntington: ["Huntington disease", "Enfermedad de Huntington"],
+  friedreich: ["Friedreich ataxia", "Ataxia de Friedreich"], "hemophilia-a": ["Hemophilia A", "Hemofilia A"], "sickle-cell": ["Sickle cell disease", "Anemia de células falciformes"],
+  tsc: ["Tuberous sclerosis complex", "Complejo esclerosis tuberosa"], "fragile-x": ["Fragile X syndrome", "Síndrome X frágil"], mps2: ["MPS II (Hunter)", "MPS II (Hunter)"],
+  wilson: ["Wilson disease", "Enfermedad de Wilson"], "x-ald": ["X-linked adrenoleukodystrophy", "Adrenoleucodistrofia ligada al X"],
 };
+
+// Extra Open Targets disease ids whose drug indications also apply (Open Targets files some approvals under a parent
+// term, e.g. nusinersen is APPROVAL for MONDO_0001516 "spinal muscular atrophy" but PHASE_3 for our MONDO_0019079).
+// Accepted only when Open Targets lists the extra id among the ancestors of the seed's own id.
+const EXTRA_EFO: Record<string, string[]> = { sma: ["MONDO_0001516"] };
+async function otAncestors(efo: string): Promise<string[]> {
+  const r = await fetch("https://api.platform.opentargets.org/api/v4/graphql", {
+    method: "POST", headers: { ...UA, "content-type": "application/json" }, signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({ query: "query($id:String!){disease(efoId:$id){ancestors}}", variables: { id: efo } }),
+  }).then((x) => x.json()).catch(() => null);
+  return r?.data?.disease?.ancestors ?? [];
+}
 
 /** OMIM (exact Orphanet mapping) + the ClinVar trait name (MedGen "Disease or Syndrome" title for that MIM). */
 async function enrich(d: SeedDisease & { omim?: string; clinvar_disease?: string; short_name?: string; short_name_es?: string }) {
@@ -155,6 +192,12 @@ async function enrich(d: SeedDisease & { omim?: string; clinvar_disease?: string
     }
   }
   if (!d.short_name && SHORT[d.slug]) [d.short_name, d.short_name_es] = SHORT[d.slug];
+  if (EXTRA_EFO[d.slug] && !(d as { efo_extra?: string[] }).efo_extra) {
+    const anc = await otAncestors(d.efo);
+    const ok = EXTRA_EFO[d.slug].filter((x) => anc.includes(x));
+    if (ok.length) (d as { efo_extra?: string[] }).efo_extra = ok;
+    else console.warn(`  ⚠ ${d.slug}: ${EXTRA_EFO[d.slug].join(", ")} not an Open Targets ancestor of ${d.efo}; not added`);
+  }
 }
 
 async function main() {

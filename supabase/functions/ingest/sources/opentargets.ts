@@ -71,10 +71,16 @@ export async function opentargets(ctx: Ctx, d: SeedDisease) {
   const efo = await resolveDiseaseId(ctx, d);
   if (!efo) { ctx.note(`opentargets: no disease id for ${d.name}`); return; }
 
-  const res = await gql(CANDIDATES, { efoId: efo });
-  if (res?.errors?.length) throw new Error(`opentargets graphql: ${JSON.stringify(res.errors).slice(0, 500)}`);
-  const rows: Any[] = res?.data?.disease?.drugAndClinicalCandidates?.rows ?? [];
-  ctx.sample("opentargets.candidates", { count: res?.data?.disease?.drugAndClinicalCandidates?.count, first: rows[0] });
+  // The seed's own id plus verified ancestor ids (efo_extra) where Open Targets files some approvals (SMA: nusinersen,
+  // risdiplam and onasemnogene are APPROVAL under MONDO_0001516, PHASE_3 under MONDO_0019079). Highest stage wins below.
+  const ids = [efo, ...(d.efo_extra ?? []).filter((x) => x !== efo)];
+  const rows: Any[] = [];
+  for (const id of ids) {
+    const res = await gql(CANDIDATES, { efoId: id });
+    if (res?.errors?.length) throw new Error(`opentargets graphql (${id}): ${JSON.stringify(res.errors).slice(0, 500)}`);
+    for (const r of res?.data?.disease?.drugAndClinicalCandidates?.rows ?? []) rows.push({ ...r, __disease_id: id });
+  }
+  ctx.sample("opentargets.candidates", { ids, count: rows.length, first: rows[0] });
 
   const diseaseRef = { type: "disease" as const, canonicalId: d.orpha, name: d.name };
 
@@ -97,7 +103,7 @@ export async function opentargets(ctx: Ctx, d: SeedDisease) {
       });
       continue;
     }
-    if (stageToPhase(r.maxClinicalStage) > stageToPhase(g.maxClinicalStage)) g.maxClinicalStage = r.maxClinicalStage;
+    if (stageToPhase(r.maxClinicalStage) > stageToPhase(g.maxClinicalStage)) { g.maxClinicalStage = r.maxClinicalStage; g.__disease_id = r.__disease_id; }
     g.clinicalReports.push(...(r.clinicalReports ?? []));
     g.drug.tradeNames = [...(g.drug.tradeNames ?? []), ...(drug.tradeNames ?? [])];
     g.drug.synonyms = [...(g.drug.synonyms ?? []), ...(drug.synonyms ?? [])];
@@ -142,12 +148,13 @@ export async function opentargets(ctx: Ctx, d: SeedDisease) {
       confidenceBasis: "clinical_phase",
       props: {
         origin: "opentargets", phase, stage: r.maxClinicalStage, status: approvedForIndication ? "APPROVED" : statuses[0],
+        opentargets_disease_id: r.__disease_id,
         approved: approvedAnywhere, approved_for_indication: approvedForIndication, investigational: !approvedForIndication,
         mechanism, intervention_type: "DRUG", nct_ids: ncts, regulators,
       },
       evidence: [
         {
-          source: "opentargets", externalId: `${chembl}/${efo}`, url: `https://platform.opentargets.org/drug/${chembl}`,
+          source: "opentargets", externalId: `${chembl}/${r.__disease_id ?? efo}`, url: `https://platform.opentargets.org/drug/${chembl}`,
           quote: trunc(`${drug.name} · ${r.maxClinicalStage} for ${d.name}${mechanism ? ` · ${mechanism}` : ""}`, 300),
           publishedOn: today(),
         },

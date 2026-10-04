@@ -1,10 +1,29 @@
 {
+  "ABCD1": {
+    "hgnc": "HGNC:61",
+    "symbol": "ABCD1",
+    "name": "ATP binding cassette subfamily D member 1",
+    "aliases": [
+      "ATP binding cassette subfamily D member 1",
+      "ALDP"
+    ]
+  },
   "ARSA": {
     "hgnc": "HGNC:713",
     "symbol": "ARSA",
     "name": "arylsulfatase A",
     "aliases": [
       "arylsulfatase A"
+    ]
+  },
+  "ATP7B": {
+    "hgnc": "HGNC:870",
+    "symbol": "ATP7B",
+    "name": "ATPase copper transporting beta",
+    "aliases": [
+      "ATPase copper transporting beta",
+      "copper pump 2",
+      "copper-transporting ATPase 2"
     ]
   },
   "BICD2": {
@@ -27,6 +46,42 @@
       "STK9"
     ]
   },
+  "CEACAM3": {
+    "hgnc": "HGNC:1815",
+    "symbol": "CEACAM3",
+    "name": "CEA cell adhesion molecule 3",
+    "aliases": [
+      "CEA cell adhesion molecule 3",
+      "CD66d",
+      "CGM1a",
+      "CGM1"
+    ]
+  },
+  "CEACAM6": {
+    "hgnc": "HGNC:1818",
+    "symbol": "CEACAM6",
+    "name": "CEA cell adhesion molecule 6",
+    "aliases": [
+      "CEA cell adhesion molecule 6",
+      "CD66c",
+      "NCA-50/90"
+    ]
+  },
+  "CFTR": {
+    "hgnc": "HGNC:1884",
+    "symbol": "CFTR",
+    "name": "CF transmembrane conductance regulator",
+    "aliases": [
+      "CF transmembrane conductance regulator",
+      "MRP7",
+      "ABC35",
+      "TNR-CFTR",
+      "dJ760C5.1",
+      "CFTR/MRP",
+      "ABCC7",
+      "ATP-binding cassette sub-family C, member 7"
+    ]
+  },
   "CHCHD10": {
     "hgnc": "HGNC:15559",
     "symbol": "CHCHD10",
@@ -37,6 +92,15 @@
       "MIX17A",
       "C22orf16",
       "MIX17 homolog A"
+    ]
+  },
+  "CLCA4": {
+    "hgnc": "HGNC:2018",
+    "symbol": "CLCA4",
+    "name": "chloride channel accessory 4",
+    "aliases": [
+      "chloride channel accessory 4",
+      "CaCC2"
     ]
   },
   "CLN3": {
@@ -60,6 +124,15 @@
       "TLCD6",
       "EPMR",
       "C8orf61"
+    ]
+  },
+  "DCTN4": {
+    "hgnc": "HGNC:15518",
+    "symbol": "DCTN4",
+    "name": "dynactin subunit 4",
+    "aliases": [
+      "dynactin subunit 4",
+      "Dyn4"
     ]
   },
   "DMD": {
@@ -94,6 +167,42 @@
       "DNCH1"
     ]
   },
+  "EDNRA": {
+    "hgnc": "HGNC:3179",
+    "symbol": "EDNRA",
+    "name": "endothelin receptor type A",
+    "aliases": [
+      "endothelin receptor type A",
+      "ET-A",
+      "ETA-R",
+      "hET-AR"
+    ]
+  },
+  "F8": {
+    "hgnc": "HGNC:3546",
+    "symbol": "F8",
+    "name": "coagulation factor VIII",
+    "aliases": [
+      "coagulation factor VIII",
+      "FVIII",
+      "DXS1253E",
+      "HEMA",
+      "Factor VIIIF8B",
+      "hemophilia A"
+    ]
+  },
+  "FMR1": {
+    "hgnc": "HGNC:3775",
+    "symbol": "FMR1",
+    "name": "fragile X messenger ribonucleoprotein 1",
+    "aliases": [
+      "fragile X messenger ribonucleoprotein 1",
+      "FMRP",
+      "FRAXA",
+      "MGC87458",
+      "POF1"
+    ]
+  },
   "FOXG1": {
     "hgnc": "HGNC:3811",
     "symbol": "FOXG1",
@@ -113,6 +222,17 @@
       "FKHL3",
       "FOXG1A",
       "brain factor 1"
+    ]
+  },
+  "FXN": {
+    "hgnc": "HGNC:3951",
+    "symbol": "FXN",
+    "name": "frataxin",
+    "aliases": [
+      "frataxin",
+      "FARR",
+      "CyaY",
+      "FRDA"
     ]
   },
   "GAA": {
@@ -161,6 +281,16 @@
       "glucocerebrosidase"
     ]
   },
+  "GCLC": {
+    "hgnc": "HGNC:4311",
+    "symbol": "GCLC",
+    "name": "glutamate-cysteine ligase catalytic subunit",
+    "aliases": [
+      "glutamate-cysteine ligase catalytic subunit",
+      "GLCLC",
+      "GLCL"
+    ]
+  },
   "GLA": {
     "hgnc": "HGNC:4296",
     "symbol": "GLA",
@@ -168,6 +298,66 @@
     "aliases": [
       "galactosidase alpha",
       "GALA"
+    ]
+  },
+  "GSTM3": {
+    "hgnc": "HGNC:4635",
+    "symbol": "GSTM3",
+    "name": "glutathione S-transferase mu 3",
+    "aliases": [
+      "glutathione S-transferase mu 3",
+      "GST5",
+      "GSTM3TV2"
+    ]
+  },
+  "HBB": {
+    "hgnc": "HGNC:4827",
+    "symbol": "HBB",
+    "name": "hemoglobin subunit beta",
+    "aliases": [
+      "hemoglobin subunit beta",
+      "CD113t-C",
+      "beta-globin"
+    ]
+  },
+  "HFE": {
+    "hgnc": "HGNC:4886",
+    "symbol": "HFE",
+    "name": "homeostatic iron regulator",
+    "aliases": [
+      "homeostatic iron regulator",
+      "HLA-H",
+      "HFE1",
+      "high Fe"
+    ]
+  },
+  "HMOX1": {
+    "hgnc": "HGNC:5013",
+    "symbol": "HMOX1",
+    "name": "heme oxygenase 1",
+    "aliases": [
+      "heme oxygenase 1",
+      "bK286B10",
+      "HO-1"
+    ]
+  },
+  "HTT": {
+    "hgnc": "HGNC:4851",
+    "symbol": "HTT",
+    "name": "huntingtin",
+    "aliases": [
+      "huntingtin",
+      "IT15"
+    ]
+  },
+  "IDS": {
+    "hgnc": "HGNC:5389",
+    "symbol": "IDS",
+    "name": "iduronate 2-sulfatase",
+    "aliases": [
+      "iduronate 2-sulfatase",
+      "ID2S",
+      "SIDS"
     ]
   },
   "IDUA": {
@@ -178,6 +368,28 @@
       "alpha-L-iduronidase",
       "MPS1",
       "MPSI"
+    ]
+  },
+  "IFNG": {
+    "hgnc": "HGNC:5438",
+    "symbol": "IFNG",
+    "name": "interferon gamma",
+    "aliases": [
+      "interferon gamma"
+    ]
+  },
+  "KCNN4": {
+    "hgnc": "HGNC:6293",
+    "symbol": "KCNN4",
+    "name": "potassium calcium-activated channel subfamily N member 4",
+    "aliases": [
+      "potassium calcium-activated channel subfamily N member 4",
+      "KCa3.1",
+      "hSK4",
+      "hKCa4",
+      "hIKCa1",
+      "small conductance calcium-activated potassium channel 4",
+      "intermediate conductance calcium-activated potassium channel"
     ]
   },
   "KCNQ2": {
@@ -229,6 +441,17 @@
       "MRX79"
     ]
   },
+  "MIF": {
+    "hgnc": "HGNC:7097",
+    "symbol": "MIF",
+    "name": "macrophage migration inhibitory factor",
+    "aliases": [
+      "macrophage migration inhibitory factor",
+      "GLIF",
+      "glycosylation-inhibiting factor",
+      "phenylpyruvate tautomerase"
+    ]
+  },
   "NPC1": {
     "hgnc": "HGNC:7897",
     "symbol": "NPC1",
@@ -247,6 +470,18 @@
       "NP-C2",
       "EDDM1",
       "epididymal protein 1"
+    ]
+  },
+  "PAH": {
+    "hgnc": "HGNC:8582",
+    "symbol": "PAH",
+    "name": "phenylalanine hydroxylase",
+    "aliases": [
+      "phenylalanine hydroxylase",
+      "Phe-4-monooxygenase",
+      "L-phenylalanine hydroxylase",
+      "phenylalanine-4-hydroxylase",
+      "phenylalanine 4-monooxygenase"
     ]
   },
   "PCDH19": {
@@ -348,6 +583,31 @@
       "ETHA"
     ]
   },
+  "SERPINA1": {
+    "hgnc": "HGNC:8941",
+    "symbol": "SERPINA1",
+    "name": "serpin family A member 1",
+    "aliases": [
+      "serpin family A member 1",
+      "alpha-1-antitrypsin",
+      "A1AT",
+      "alpha1AT",
+      "protease inhibitor 1",
+      "anti-elastase",
+      "alpha-1 antitrypsin",
+      "alpha-1 proteinase inhibitor"
+    ]
+  },
+  "SLC11A1": {
+    "hgnc": "HGNC:10907",
+    "symbol": "SLC11A1",
+    "name": "solute carrier family 11 member 1",
+    "aliases": [
+      "solute carrier family 11 member 1",
+      "NRAMP",
+      "NRAMP1"
+    ]
+  },
   "SLC12A5": {
     "hgnc": "HGNC:13818",
     "symbol": "SLC12A5",
@@ -372,6 +632,43 @@
       "GC-1"
     ]
   },
+  "SLC26A9": {
+    "hgnc": "HGNC:14469",
+    "symbol": "SLC26A9",
+    "name": "solute carrier family 26 member 9",
+    "aliases": [
+      "solute carrier family 26 member 9",
+      "anion transporter/exchanger-9"
+    ]
+  },
+  "SLC2A3": {
+    "hgnc": "HGNC:11007",
+    "symbol": "SLC2A3",
+    "name": "solute carrier family 2 member 3",
+    "aliases": [
+      "solute carrier family 2 member 3",
+      "GLUT3"
+    ]
+  },
+  "SLC6A14": {
+    "hgnc": "HGNC:11047",
+    "symbol": "SLC6A14",
+    "name": "solute carrier family 6 member 14",
+    "aliases": [
+      "solute carrier family 6 member 14"
+    ]
+  },
+  "SLC9A3": {
+    "hgnc": "HGNC:11073",
+    "symbol": "SLC9A3",
+    "name": "solute carrier family 9 member A3",
+    "aliases": [
+      "solute carrier family 9 member A3",
+      "NHE-3",
+      "NHE3",
+      "Sodium/hydrogen exchanger 3"
+    ]
+  },
   "SMN1": {
     "hgnc": "HGNC:11117",
     "symbol": "SMN1",
@@ -388,6 +685,17 @@
       "SMA@",
       "gemin-1",
       "tudor domain containing 16A"
+    ]
+  },
+  "STX1A": {
+    "hgnc": "HGNC:11433",
+    "symbol": "STX1A",
+    "name": "syntaxin 1A",
+    "aliases": [
+      "syntaxin 1A",
+      "HPC-1",
+      "p35-1",
+      "STX1"
     ]
   },
   "STXBP1": {
@@ -429,6 +737,19 @@
       "skywalker homolog (Drosophila)"
     ]
   },
+  "TGFB1": {
+    "hgnc": "HGNC:11766",
+    "symbol": "TGFB1",
+    "name": "transforming growth factor beta 1",
+    "aliases": [
+      "transforming growth factor beta 1",
+      "TGFbeta",
+      "TGFB",
+      "DPD1",
+      "prepro-transforming growth factor beta-1",
+      "Diaphyseal dysplasia 1, progressive"
+    ]
+  },
   "TPP1": {
     "hgnc": "HGNC:2073",
     "symbol": "TPP1",
@@ -441,6 +762,28 @@
       "SCAR7",
       "TPP I",
       "lysosomal pepstatin-insensitive carboxypeptidase"
+    ]
+  },
+  "TSC1": {
+    "hgnc": "HGNC:12362",
+    "symbol": "TSC1",
+    "name": "TSC complex subunit 1",
+    "aliases": [
+      "TSC complex subunit 1",
+      "KIAA0243",
+      "hamartin"
+    ]
+  },
+  "TSC2": {
+    "hgnc": "HGNC:12363",
+    "symbol": "TSC2",
+    "name": "TSC complex subunit 2",
+    "aliases": [
+      "TSC complex subunit 2",
+      "tuberin",
+      "PPP1R160",
+      "TSC4",
+      "protein phosphatase 1, regulatory subunit 160"
     ]
   },
   "UBE3A": {

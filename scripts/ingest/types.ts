@@ -1,7 +1,8 @@
 export interface SeedDisease {
   orpha: string;        // ORPHA:33069 (identificador canónico del nodo)
   mondo: string;        // MONDO:0011794 (verificado contra Orphanet ExternalReference)
-  efo: string;          // MONDO_0011794 (formato Open Targets)
+  efo: string;          // MONDO_0011794 (Open Targets format)
+  efo_extra?: string[]; // verified Open Targets ancestor ids whose drug indications also apply (SMA → MONDO_0001516)
   omim?: string;        // OMIM:607208 (para anotaciones HPO)
   clinvar_disease?: string; // nombre del rasgo en ClinVar/MedGen ("Developmental and epileptic encephalopathy, 7")
   name: string;

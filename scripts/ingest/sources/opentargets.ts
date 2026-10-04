@@ -42,7 +42,20 @@ export async function ingestOpenTargetsDrugs(g: GraphWriter, d: SeedDisease) {
   }
   await g.upsertEntity({ ...disease, props: { opentargets_indexed: true, opentargets_id: d.efo } });
 
-  for (const r of res.disease.drugAndClinicalCandidates.rows) {
+  // Own id + verified ancestor ids (efo_extra): keep the highest stage per drug (SMA approvals live under MONDO_0001516).
+  const rows = [...res.disease.drugAndClinicalCandidates.rows];
+  for (const extra of d.efo_extra ?? []) {
+    const x = await graphql<{ disease: { drugAndClinicalCandidates: { rows: DrugRow[] } } | null }>(ENDPOINT, DRUGS, { efoId: extra });
+    rows.push(...(x.disease?.drugAndClinicalCandidates.rows ?? []));
+  }
+  const best = new Map<string, DrugRow>();
+  for (const r of rows) {
+    if (!r.drug) continue;
+    const prev = best.get(r.drug.id);
+    if (!prev || (STAGE[r.maxClinicalStage] ?? 0) > (STAGE[prev.maxClinicalStage] ?? 0)) best.set(r.drug.id, r);
+  }
+
+  for (const r of best.values()) {
     if (!r.drug) continue;
     const stage = r.maxClinicalStage;
     const phase = STAGE[stage] ?? 0;

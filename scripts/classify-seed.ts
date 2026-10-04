@@ -60,7 +60,8 @@ async function groupsFor(code: number): Promise<Group[]> {
         if (c && !TOO_GENERIC.test(c.name) && !out.has(p)) {
           const m = await mondoOf(p);
           const synonyms = [...new Set([...c.synonyms.slice(0, 6), ...(m ? [m.name, ...m.synonyms] : [])])]
-            .filter((x) => x && x.toLowerCase() !== c.name.toLowerCase()).slice(0, 12);
+            // MONDO keeps "obsolete <label>" synonyms of merged terms; they are not search words.
+            .filter((x) => x && x.toLowerCase() !== c.name.toLowerCase() && !/^obsolete\b/i.test(x)).slice(0, 12);
           out.set(p, { orpha: `ORPHA:${p}`, name: c.name, synonyms, depth, hierarchy: String(t.hch_tag ?? ""), ...(m ? { mondo: m.id } : {}) });
         }
         const up = arr((await orpha(`rd-classification/orphacodes/${p}/hchids/${t.hch_id}`))?.parents).map(Number);
