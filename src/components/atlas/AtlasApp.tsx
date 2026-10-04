@@ -542,6 +542,12 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
       {/* Footer: disclaimer · snapshot date · counts (live from the graph) · narrate on pick */}
       <footer className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-paper px-4 py-2 pr-4 lg:pr-60 text-[11px] text-ink-3">
         <span className="flex items-center gap-1.5"><Info aria-hidden size={14} strokeWidth={1.75} />{t.footer_disclaimer}</span>
+        {/* Legal strip (WAVE 7) — also in embed mode; target _top leaves the Lovable frame. */}
+        <nav aria-label="Legal" className="flex items-center gap-2">
+          <a href="https://nedamex.vercel.app/terms" target="_top" className="underline-offset-2 hover:underline text-ink-2">Terms</a><span aria-hidden>·</span>
+          <a href="https://nedamex.vercel.app/security" target="_top" className="underline-offset-2 hover:underline text-ink-2">Security &amp; Privacy</a><span aria-hidden>·</span>
+          <span>Not medical advice</span>
+        </nav>
         {stats.generated_at && <span className="flex items-center gap-1.5"><History aria-hidden size={14} strokeWidth={1.75} />{t.snapshot.replace("{d}", stats.generated_at.slice(0, 10))}</span>}
         <span className="hidden md:inline">{t.stats_line.replace("{d}", String(stats.diseases)).replace("{e}", stats.edges.toLocaleString("en-US")).replace("{v}", stats.evidence.toLocaleString("en-US")).replace("{s}", String(stats.sources))}</span>
         <label className="ml-auto flex items-center gap-2 text-ink-2 cursor-pointer">
