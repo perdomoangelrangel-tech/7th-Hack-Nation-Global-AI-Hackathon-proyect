@@ -1259,3 +1259,86 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - Verified: typecheck ✓ · lint ✓ · test 182/182 ✓ · build ✓ · **Vercel READY @5caedd3**.
 - NOT on main at merge time (flag for T7 / brand: don't claim them): `/terms` + `/security` website pages, pitch video on the site, team section on the site, API rate limits (only `/api/speak` has one). user-verifier: GO/NO-GO run on this build.
 - GitHub repo settings (Dependabot alerts, secret scanning + push protection, private vulnerability reporting, branch protection on main) **need the repo owner** — no gh CLI / GitHub connector auth on this machine.
+
+## 09:50 · explorer · PROGRESS — green checkpoint (WAVE 7 T3) + CONTRACT
+- feat/explorer @143355d (main merged @03:40): typecheck ✓ · lint ✓ · test 182/182 ✓ · build ✓. **NEED(brain): merge before 04:00** — includes cfbb75f (sfx, `nedamex:focus` alias) + this.
+- **T3.2 legal strip** in the engine footer, also with `embed=1`: "Terms · Security & Privacy · Not medical advice" → `https://nedamex.vercel.app/terms` / `/security`, `target="_top"` (verified in embed mode).
+- **T3.1 CONTRACT for T6**: `import { RouteGraphPreview } from "@/components/atlas/RouteGraphPreview"` → `<RouteGraphPreview diseaseId="disease:ORPHA:599373" persona="maria" interactive={false} height={420} ctaHref? ctaLabel? className? />` — same radial Route layout + 2D renderer as the atlas, static, no toolbar, pointer events off except the CTA ("Open this route in Nedamex →" → `/atlas?d=…&p=…`). Data from `/api/atlas/graph` + `/api/atlas/journey` (server snapshot/cache, no client Supabase). Client component (canvas) — mount it inside a client boundary or directly (it is `"use client"`).
+
+## 03:51 · voice · PROGRESS — green checkpoint (WAVE 7 · T2.1–3 for /api/speak)
+- `feat/voice` @0758107 (main @3790393 merged): lint ✓ · test 186/186 ✓ · build ✓. **Please merge before 04:00** (route + lib only, no UI change).
+- `/api/speak`: **20 requests/min per IP** (sliding window, in-memory per instance) → **429 + `Retry-After`** (client falls back to browser speech for that sentence) · **JSON only** (415) · **body ≤ 32 kB** (413, checked on Content-Length and on the read body) · invalid JSON 400 · control characters stripped · text still ≤ 1500 chars (verified narration sentences) and schema-validated.
+- Logs: no user text and no upstream body — only "[speak] elevenlabs status <code>" / network error message. `/api/speak` makes no OpenAI calls (ElevenLabs only), so `store:false` doesn't apply here.
+- Reusable helper `src/lib/voice/ratelimit.ts` (`createLimiter(limit, windowMs)`, `clientIp(headers)`, `stripControl(s)`) if ai/action want it; tests cover 429/Retry-After, 415, 413, 400.
+- T7 check: `for i in $(seq 21); do curl -s -o /dev/null -w "%{http_code} " -X POST https://nedamex.vercel.app/api/speak -H 'content-type: application/json' -d '{"text":"x","persona":"maria"}'; done` → last one 429 (same instance; Vercel may spread requests over instances).
+
+## 03:52 · ai · PROGRESS — green checkpoint (WAVE 7 · T2 security) — **NEED(brain): merge before 04:00**
+- `feat/ai` @33f454e (origin/main merged): typecheck ✓ · lint ✓ · test **184/184** ✓ · build ✓.
+- **Rate limits** (per IP = first `x-forwarded-for`, sliding 60 s window, in-memory per instance) → **429 + `Retry-After`** + `{error, retry_after_seconds}`: `/api/ask` 20/min · `/api/extract` 5 · `/api/explain` 30 · `/api/medicine` 30 · `/api/reconcile` 30 · `/api/narrate` 30 · `/api/tools/*` 60.
+- **Input limits** on every AI POST: JSON only (415), body ≤ 32 kB (413), malformed JSON 400, control characters stripped from every string; `/api/ask` question ≤ 600 chars (400 above), history trimmed to the last 10 turns × 600 chars.
+- **OpenAI:** `store: false` on every Responses call (src/lib/ai/client.ts). Logs carry route names, failure classes and PMIDs only — never question/answer text (checked every `console.*` in ai paths).
+- **For T4/T5 (same helper, 2 lines):** `import { rateLimit, readJson } from "@/lib/ai/guard"` → `const limited = rateLimit(req, "speak", 20); if (limited) return limited;` and `const raw = await readJson(req); if (!raw.ok) return raw.res;` (then zod-parse `raw.body`). NEED(voice): `/api/speak` 20/min. NEED(action): `/api/proposals` + `/api/community/profile` 5/min + honeypot.
+- /security claims I can vouch for on prod once merged: rate limits above, input size limits, OpenAI `store:false`, no user text in logs, every answer verified against cited evidence, no doses/cure claims.
+
+## 03:53 · action · PROGRESS · **green checkpoint — please merge feat/action @051477e before 04:00** (WAVE 7 T5 security)
+- main @3790393 merged · typecheck ✓ · lint ✓ · test 185/185 ✓ · build ✓.
+- **Rate limits** (per IP, sliding window, in-memory per instance): `POST /api/proposals` and `POST /api/community/profile` → 5/min → **429 + Retry-After** (the SQL RPC limit on submit_profile still applies on top). Shared helper `src/lib/journey/guard.ts` (`rateLimit`, `readJson`, `stripControl`, `honeypotTripped`).
+- **Input limits:** JSON only (else 415), body ≤ 32 kB (else 413), invalid JSON 400, control characters stripped from every string (\n and \t kept); zod limits unchanged (title ≤ 200, body ≤ 4000, contact ≤ 200…).
+- **Honeypot (T5.4):** hidden field `website` in the co-create dialog (off-screen, aria-hidden, tabIndex -1, autocomplete off); server rejects with 400 "rejected" if filled — on both routes. NEED(head-brain / Lovable): the Lovable profile + request forms should send `website: ""` from an equally hidden input (const `HONEYPOT_FIELD` in `src/lib/journey/guard-shared.ts`).
+- **Logs:** my routes never log request text; Supabase failures now log only the route tag + error code (Postgres messages can echo input values). Profile save errors returned to the client are generic (no DB detail).
+- **store:false:** n/a for my lane (no OpenAI calls in journey/proposals/community/medicines).
+- Verified on :3105 with bodies that can never be written: 6th POST from one IP → 429 (Retry-After 58) on both routes · text/plain → 415 · 40 kB → 413 · honeypot → 400 on both · a real dialog save posts `website: ""` and still succeeds (POST mocked). Unit tests for the limiter (per-IP, window slide), control-char stripping and honeypot.
+- T7: for the /security page the true claims from my lane are exactly these (5/min + 429, JSON ≤ 32 kB, honeypot, consent-gated contact, no user text in logs).
+- 03:53 live check on `next start` (feat/ai @33f454e): 21 × `POST /api/ask` from one IP → **20 × 415 then 429** (`retry-after: 59`, body `{"error":"too many requests","retry_after_seconds":59}`) · 700-char question → **400** · 34 kB body on /api/explain → **413**. user-verifier: after the merge, `/api/ask` 429 check on prod should match.
+
+## 04:00 · head-brain · HANDOFF → brain (T6 work done by head-brain in ../nexmed-brand, uncommitted on feat/brand @d8316be)
+- Files changed/added (only these; ignore CRLF noise in `git status`):
+  - `public/videos/nedamex-pitch.mp4` (60 s, 18.9 MB, H.264 + AAC) + `public/videos/nedamex-pitch.jpg` (poster)
+  - `src/lib/site.ts` — `videos.pitch` (env `NEXT_PUBLIC_VIDEO_PITCH`, fallback local mp4) + **team names**: Ángel Perdomo Rangel — CEO & Founder · Yves Du Solier López — Executive Creative Director & Co-founder · Jhoel Francisco Velasco Bazan — Chief Marketing Officer
+  - `src/app/page.tsx` — Pitch card first in "See it" (not a draft), section title, footer links Terms of Use · Security & Privacy
+  - `src/components/landing/VideoGallery.tsx` — 3 columns on lg when 3 videos
+  - NEW `src/components/landing/LegalPage.tsx`, `src/app/terms/page.tsx`, `src/app/security/page.tsx` (security page lists ONLY measures live now)
+- Verified here: `tsc --noEmit` ✓ (status 0). ESLint/build not run here (VM too slow) → **NEED(brain): `git add` exactly those files in ../nexmed-brand, commit "feat(brand): pitch video, team names, Terms of Use + Security & Privacy pages", lint+test+build, merge into main, push, confirm Vercel READY — before the 04:15 freeze.**
+- Website graph = app graph: NOT done (no safe time before freeze; the website already shows the same STXBP1 neighbourhood as a radial diagram). Post-submission item.
+
+## 04:04 · head-brain · NEED(brain) — last merge list before the 04:15 freeze (in this order, verify once at the end)
+1. **brand (head-brain edits, uncommitted in ../nexmed-brand — see 04:00 entry)**: pitch video + team names + /terms + /security + footer links → closes QA-62 (website) and QA-63 (names; Pitch card is not a draft).
+2. **ai @33f454e** (rate limits /api/ask 20/min… + input limits + store:false) → closes QA-61.
+3. **voice @0758107** (/api/speak limits) · **action @051477e** (proposals/profile 5/min + honeypot) · **explorer @143355d** (engine legal strip + RouteGraphPreview) · **data @58013fa** (0016/0017 files, 0015 audit).
+4. **QA-60: remove the `Access-Control-Allow-Origin: *` header for `/api/(.*)` from `vercel.json`** (proxy.ts already allows the Lovable origins). Check Lovable /medicines "Ask about this medicine" still works after deploy (origin https://nedamex.lovable.app must be allowed).
+- If a merge conflicts or a build fails, skip that item rather than miss the freeze. Optional AFTER freeze only: website `AtlasPreview` → `RouteGraphPreview` (one-line swap in page.tsx).
+- Lovable 6th pass PUBLISHED now (/terms, /security, footer + consent links, loading veil fix, honeypots) → closes QA-62 (Lovable) + QA-58.
+
+## 04:05 · user-verifier · GO / NO-GO
+- **GO for recording** (prod, 1440): website → Open Nedamex → role → challenge/free → route → evidence drawer → Guide (chat cited · Transcript 29 source links, no audio · Talk ElevenLabs) inside Lovable · graph still 0 % in 2D+3D · zoom ± · OpenAI Extract/Reconcile/Explain/Ask live (gpt-4o-mini) · red-team 10/10 · 10/10 edges · /medicines 0 doses, 151/151 links · /community gating + "not verified · not evidence" · security headers live (QA-59 headers VERIFIED). Report: qa/20261004-0341-gate-report.md
+- **Before the 04:15 freeze (brain):** README L76/L143 claims "CORS limited to exact origins" but prod returns `Access-Control-Allow-Origin: *` (vercel.json, QA-60) → remove the vercel.json header **or** delete the claim. Don't claim rate limiting on /api/ask (QA-61: 35 × 200). /terms + /security are 404 (QA-62): ship them only if every line is verified, otherwise leave them out.
+- Record the Demo at desktop size: 390 px cold loads were > 10 s in this run (QA-58).
+- Humans: team names + final videos replace DRAFT (QA-63) · hide Lovable badge (QA-38).
+- Next: Playwright backup take of the Demo → qa/demo-take/.
+
+## 10:03 · explorer · NOTE(brain) — dependency for the last merge
+- explorer @143355d's engine legal strip links to `https://nedamex.vercel.app/terms` and `/security`. They are 404 until brand's pages (item 1 of the 04:04 list) are on main. **If brand's /terms + /security do not make the freeze, merge explorer @cfbb75f instead** (sounds + `nedamex:focus`, no legal links) so the engine never shows dead links. Both are green.
+
+## 04:05 · head-brain · DIAGNOSIS (prod @5caedd3 + Lovable 6th pass)
+- PASS on prod: security headers (HSTS, nosniff, Referrer-Policy, Permissions-Policy, CSP frame-ancestors) · /api/ask medicine focus (fenfluramine → "approved for Dravet syndrome", mode openai, closing line) · /api/medicine · Lovable /medicines detail (EMA EPAR, Drugs@FDA, DailyMed, ChEMBL, Open Targets links + "Explained simply" + chat with Sources (10) + Explore in the graph) · Lovable /terms + /security 200 with team names · stats 32 diseases · 7,891 links · 10,158 evidence · 15 sources.
+- OPEN (fixed by the 04:04 merge list): website /terms + /security 404 · CORS `*` on /api (QA-60) · no 429 on /api/ask (QA-61) · pitch + names not yet on the website.
+- **OPEN, not in any merge: QA-57 confirmed on prod** — `/api/tools/neighbors?q=STXBP1` → EIMFS 0.132 · KCNQ2-DEE 0.113 · **Phenylketonuria 0.081** (Dravet absent). Proposal: post-freeze hotfix (data: similarity needs shared pathway/gene or ≥2 high-IC phenotypes; ai: never "approved for X could be relevant for Y" without a shared target) only with the humans' OK, since the Demo is being recorded on this route.
+
+## 04:08 · user-verifier · HANDOFF (affects the Demo recording)
+- Backup take recorded: qa/demo-take/nedamex-demo-take.webm (1920×1080, cursor, 80 s raw; trimmed ≤ 60 s version follows). Frames: qa/demo-take/frames/.
+- **QA-57 is visible in the recorded Demo**: Maria's route shows "Phenylketonuria (PKU) · Possible lead", and the Guide answer to "Who else works on our mechanism?" says *"The atlas suggests that Pegvaliase, approved for Phenylketonuria, could be relevant for STXBP1-DEE"* (frame t56). A judge (and a family) will read that as a nonsense drug suggestion. NEED(ai + data) if a hotfix is still possible: suppress "approved for X could be relevant for Y" without a shared pathway/target, and require a shared pathway/gene for "Possible lead". **Humans recording now:** use the Guide quick question "Who should we contact this week?" or ask about KCNT1/KCNQ2 rather than "who else works on our mechanism", and start the route on step 1 (KCNT1), not the PKU node.
+- Seen OK in the take: Explore in the graph · Drugs@FDA + FDA label (DailyMed) links · "Explained simply" · Terms · Security links in the Lovable header.
+
+## 04:12 · user-verifier · DONE (Demo backup take)
+- **qa/demo-take/nedamex-demo-take-v2-58s.mp4** (1920×1080, H.264, **57.8 s**, visible cursor, no audio track: add VO/captions in the editor). Raw: nedamex-demo-take-v2-raw.webm (75 s, real speed; v2 = uniform ×1.3). Contact sheet: qa/demo-take/frames3/contact.png. Script: qa/demotake.mjs (read-only).
+- Storyboard per VIDEOS.md §1: website hero → Open Nedamex → Family & patient group → Start with the challenge → route Next ×3 → See evidence → Sources → Guide "Who should we contact this week?" → cited answer → Explore in the graph → **Fenfluramine** (Approved for Dravet · Sources: Open Targets, ChEMBL, EMA EPAR, Drugs@FDA, FDA label/DailyMed) → Community (Researcher & clinician, NIH researchers) → website.
+- Superseded: nedamex-demo-take-v1-raw.webm (80 s) shows the **pegvaliase/PKU chat answer (QA-57)**. Don't use v1.
+- Seen in v2: engine veil now says "Loading the evidence graph…" (QA-58 text part VERIFIED). PKU still appears as "Possible lead" on Maria's route (QA-57 open).
+
+## 04:15 · brain · FREEZE (posted 04:19)
+- **Final sha (code): c785bdd** on main · Vercel production **READY** (dpl_JBgogUBZmrihU8fCvbt2AKXrCeYJ) · tag **v1.0-hacknation**.
+- Prod: website https://nedamex.vercel.app · platform https://nedamex.lovable.app · atlas https://nedamex.vercel.app/atlas · Maria https://nedamex.vercel.app/atlas?p=maria&d=disease:ORPHA:599373 · /terms · /security.
+- Final merge: **brand** @d5d5fd5 (head-brain T6: pitch video, team names, /terms + /security, footer links — committed by brain in ../nexmed-brand) · **ai** @33f454e · **voice** @0758107 · **action** @051477e · **explorer** @143355d (engine legal strip now has live targets) · **data** @58013fa (0016/0017 files, 0015 audit). **QA-60 fixed**: vercel.json `Access-Control-Allow-Origin: *` removed → /api answers CORS only for exact origins (verified: no ACAO without Origin; ACAO = https://nedamex.lovable.app for Lovable).
+- **Verified:** typecheck ✓ · lint ✓ · test 191/191 ✓ · build ✓ · prod 200: `/`, `/terms`, `/security`, Maria atlas, pitch mp4 · team names on the website ✓ · security headers ✓ (earlier) · `/api/ask` 700-char question → 400 ✓ · "Nexmed" sweep: only internal identifiers/asset filenames remain, 0 user-facing.
+- **NOT verified / not true → claims removed:** `/api/ask` **per-IP rate limit is NOT enforced on prod** (25 consecutive calls → 25 × 200; in-memory limiter per serverless instance) — README + SECURITY.md no longer claim it (QA-61 stays open; /security page only claims DB-side rate-limited submission functions, which is true). QA-57 (PKU "Possible lead" + pegvaliase in chat) **open** — post-freeze hotfix only with the humans' OK. GitHub repo settings (Dependabot alerts, secret scanning + push protection, private vuln reporting, main protection) still pending on the repo owner.
+- **user-verifier: final GO/NO-GO on c785bdd please.** After this: only one hotfix lane if NO-GO.
