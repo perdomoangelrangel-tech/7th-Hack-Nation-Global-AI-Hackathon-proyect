@@ -1206,3 +1206,56 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - **Vercel: no deployment registered for 156ae68 after ~12 min** (GitHub shows no Vercel status at all; prod alias still READY on @20d22c1). Pushing this bitácora sync as a probe. If it stays missing: human/head-brain check Vercel → nedamex → Deployments (Git webhook / daily deploy limit) and "Redeploy" main.
 - Not merged (no checkpoint posted): ai @a629d99 (+3), explorer @7a977b8 (+4), data @83d8032 (+4). ai/explorer/data: post green checkpoints — C (medicine focus) and D (`focusOnEvidence`) and B (0015) gate READY TO RECORD.
 - QA-58 (blank loading veil blocks clicks) → explorer.
+
+## 01:43 · brand · PROGRESS: **green checkpoint, feat/brand @d8316be** (WAVE 6B-F Tech Video)
+- typecheck ✓ · lint ✓ · test 171/171 ✓ · build ✓. Not re-screenshotted in the browser after this commit; the Videos section code is unchanged since 0c20ec5.
+- **Tech Video, 58.0 s**, Remotion composition `TechVideo` (../nexmed-video), 8 scenes, captions are the VIDEOS.md v2 §2 lines verbatim. File: `public/videos/nedamex-tech.mp4` (3.5 MB, h264 1920×1080, faststart) + `nedamex-tech.jpg` poster. The Tech slot picks it up automatically, without a Draft badge, until `NEXT_PUBLIC_VIDEO_TECH` is set.
+- Removed the unreferenced 78 s `nedamex-what-was-hard.*` (−6 MB from public/).
+- **NEED(voice):** VO for the new Tech script (one calm ElevenLabs narrator, the 8 lines of VIDEOS.md v2 §2) → one MP3 + the measured seconds per line. I re-render with `--props '{"voiceOver":"tech-vo-en.mp3","sceneSeconds":[…]}'` (sum ≤ 60).
+- NEED(brain): merge feat/brand.
+
+## 02:58 · head-brain · START WAVE 7 FINAL → `ORDERS_WAVE7.md` (merges by 04:00 · freeze 04:15)
+- Human: Demo + Tech videos are being produced by the humans (no recording gate anymore). New asks: **pitch video on the website** (`w7/pitch/nedamex-pitch.mp4`, 60 s, 18.9 MB, faststart + poster) · **team names** (Ángel Perdomo Rangel — CEO & Founder · Yves Du Solier López — Executive Creative Director & Co-founder · Jhoel Francisco Velasco Bazan — Chief Marketing Officer) · **website graph = app graph** (engine Route view reused) · **Terms of Use + Security & Privacy everywhere** · **encryption + cybersecurity** on repo/platforms/tools · final check against the Challenge 05 PDF.
+- DONE by head-brain: Supabase **0016** applied (contact details encrypted at rest with pgcrypto + Vault key, plaintext forbidden, decrypt only service_role, submit_profile rate-limited; self-test round-trip OK and rolled back; anon cannot read contact data) · Supabase security advisors: 0 errors · **ElevenLabs** 4 agents: record_voice OFF, retention 30 days · Lovable deep-link role fix published; 6th pass running (/terms, /security, footer + consent links, veil `pointer-events:none` = QA-58, honeypots).
+- Vercel prod READY @e24d559 (01:40 merge set). Not yet on main: ai @a629d99 (medicine focus), explorer @7a977b8 (hl=/sfx), voice @5bc4997 (chat/mascot), brand @d8316be (Tech video), data 0015 → **NEED(brain): merge them now** (all posted green).
+- T7: final PDF checklist + security checks per ORDERS_WAVE7 → GO/NO-GO 04:05. Every line on /security must be true on prod or be removed.
+
+## 03:35 · head-brain · TIME CORRECTION
+- The entry above was posted at **03:34 CDMX** (not 02:58). Deadlines unchanged: **last merge 04:00 · freeze 04:15 · T7 GO/NO-GO 04:05**. If a WAVE 7 item cannot be merged and verified by 04:00, skip it (security claims that are not live must not appear on /security).
+
+## 03:45 · user-verifier · HANDOFF (T7 final gate, security) → qa/20261004-0341-gate-report.md
+- Product flow on prod is GO-grade (Challenge 05 checklist PASS except team names / DRAFT video label; graph still 0 % in 2D+3D; Guide works inside Lovable; Transcript links; OpenAI live; medicines 0 doses, 151/151 links). Security items below are what blocks a clean GO.
+- NEED(brain): QA-59 **WAVE 7 security is not in prod**: `next.config.ts` security headers, SECURITY.md, 0016 migration, dependabot.yml, codeql.yml are **uncommitted in ../nexmed** at 03:45. Prod `/` serves only HSTS (no nosniff / Referrer-Policy / CSP frame-ancestors). Commit + push + confirm the Vercel deploy by 04:00, or drop them from every claim · severity: major
+- NEED(brain): QA-60 **CORS wildcard on prod**: `vercel.json` adds `Access-Control-Allow-Origin: *` to `/api/(.*)` (since the foundation commit), so any site can call /api/ask, /api/extract (OpenAI spend) and /api/proposals from a browser; QA-24's exact-origin allow-list only applies on localhost. Remove the vercel.json header (proxy.ts already handles Lovable origins) · severity: major
+- NEED(ai/brain): QA-61 **no rate limit on /api/ask in prod**: 35 rapid POSTs → 35 × 200, no 429 (OpenAI cost exposure) · severity: major (don't claim rate limiting on /security unless this returns 429)
+- NEED(brand + head-brain): QA-62 **/terms and /security return 404** on Vercel and Lovable, and no footer links to them. If they can't ship verified by 04:00, ship nothing: no security page is better than an untrue one · severity: major per WAVE 7 §2
+- NEED(human): QA-63 website TEAM section shows no names; both video slots are labelled **DRAFT** (Demo60-draft.mp4 plays, 60 s). Replace with the final videos + names before submitting.
+- Still open: QA-57 (PKU lead / pegvaliase in chat, data+ai) · QA-58 (blank loading veil) · QA-38 (Lovable badge, human).
+- GO/NO-GO posted at 04:05 after re-checking prod.
+
+## 03:47 · data · PROGRESS — green checkpoint (WAVE 6 T1 + WAVE 7 T1)
+- `feat/data` @58013fa (main @3790393 merged): typecheck ✓ · lint ✓ · test 182/182 ✓ · build ✓. **Please merge.**
+- **WAVE 7:** `supabase/migrations/0016_nedamex_security_encryption.sql` committed verbatim (fbc343c), NOT re-applied. **0015 6B extension (rx_status/routes/dosage_forms/label_use/label_effective/papers + sources openfda/dailymed) stopped**: it could not land and be verified before 03:45, so live data stays as-is (no half-applied changes). No new diseases.
+- **0015 live + verified (WAVE 6 T1):** 327 medicines with `props.links` {fda_label (DailyMed), drugs_fda, ema_epar, chembl} = 297 / 297 / 185 / 624 + `props.regulatory` {fda_application, fda_brand, ema_status, ema_conditional, ema_product, checked_at}. Live links md5 == generated migration (byte-identical). 116 fda/ema evidence rows on APPROVAL edges whose label/EPAR names the disease (verbatim indication quote). Source `ema` added.
+- **Approved audit:** 97 live APPROVAL edges audited → `props.regulatory_check` confirmed_by_fda / _ema / _ema_fda, **20 not_confirmed_by_label** (file: 116 / 25; the extra 19 are salt/child ChEMBL ids that live puts on the parent). `medicines_public.approved_for_listed_disease` ignores flagged pairs → 77 medicines. QA-49 olipudase↔Gaucher flagged ✓ · QA-50 SMA: nusinersen/risdiplam/onasemnogene APPROVAL + confirmed by EMA/FDA label ✓ (phenylbutyrate→SMA flagged) · QA-51 ataluren: EMA EPAR Translarna **Expired (conditional)** shown in `regulatory.ema_status` ✓. Also flagged: ADHD drugs→Huntington, interferon γ-1b→CF, idebenone→Friedreich, miglustat→NPC/Pompe, idursulfase beta & pabinafusp→MPS II, cetiedil & lovotibeglogene→SCD, several factor products + tranexamic acid→hemophilia A, colistimethate→CF.
+- **32 diseases** live + file (11 new, ORPHA from Orphadata exact preferred term): CF 586, PKU 716, Huntington 399, Friedreich 95, Hemophilia A 98878, Sickle cell anemia 232, TSC 805, Fragile X 908, MPS II 580, Wilson 905, X-linked cerebral ALD 139396; every disease has a verified patient group (42 orgs).
+- Search: 0016_orphanet_group_aliases_wave6 (303 disease→group links, obsolete MONDO synonyms dropped) + 0017 (+119 HGNC gene aliases) applied live.
+- Integrity live: orphan_active_edges 0 · evidence_missing_url 0 · evidence_missing_external_id 0 · tables_without_rls 0 · anon_app_secrets 0 · info 32 diseases · 7,752 active edges · 9,724 evidence.
+- `/api/atlas/sources` on :3101: origin supabase · 14 sources · 32 diseases · 7,891 edges · 10,158 evidence (ema 58, fda 57, openai_extraction 68). Bundled `data/atlas.json` 7.95 MB (< 8 MiB), 8 clusters.
+- Note: right after a live update the loader may serve the bundled file for ≤ 5 min (Next fetch cache → coverage guard falls back safely to file + overlays).
+
+## 03:47 · data · CONTRACT
+- `medicines_public` (0015): same columns as 0014; `links` now filled; `indications[].regulatory_check` added; `approved_for_listed_disease` = stage APPROVAL and not `not_confirmed_by_label`.
+- Edge `props.regulatory_check` ∈ confirmed_by_fda | confirmed_by_ema | confirmed_by_ema_fda | not_confirmed_by_label (+ `regulatory_checked_at`). Treatment `props.links` / `props.regulatory` as above.
+- NOT shipped (6B-B): rx_status, routes, dosage_forms, label_use, label_url (use `links.fda_label`), label_effective, papers. UI keeps its null-safe "check the regulator" path.
+- NEED(ai) 01:21 (`treats.props.approved` is drug-level): not changed before the freeze; use `stage === "APPROVAL" && regulatory_check !== "not_confirmed_by_label"` (same rule as the view).
+- NEED(ai): SourceId union lacks `"ema"` (edge-facts exhaustive Record) — scripts cast it; please add label "European Medicines Agency (EPAR)".
+
+## 03:49 · brain · MERGED + PUSHED · deploy READY (WAVE 7 final merge)
+- Merged → main: **ai** @a629d99 · **explorer** @7a977b8 · **voice** @5bc4997 · **brand** @d8316be. data: no green checkpoint posted after 06:35 "in progress" → not merged (live Supabase changes stand; no new diseases before freeze).
+- **T0 security** @5caedd3: `next.config.ts` headers — enforced HSTS · nosniff · Referrer-Policy · Permissions-Policy (`microphone=(self)`) · COOP · CSP `frame-ancestors 'self' nedamex.lovable.app *.lovable.app` + base-uri/object-src/form-action; full CSP as **Report-Only**; no X-Frame-Options. Verified on prod with curl (all present; `/atlas?embed=1` 200). `SECURITY.md` (claims trimmed to what is true today), `.github/dependabot.yml`, `.github/workflows/codeql.yml`, `supabase/migrations/0016_nedamex_security_encryption.sql` (committed, NOT re-applied), `docs/TERMS.md`.
+- **Scans:** git history — no key patterns, no `.env*` ever committed (`.env*` git-ignored) · built JS `.next/static` — 0 key matches · `npm audit --omit=dev` — **0 vulnerabilities**.
+- README: Security & privacy · Terms of use · **Team** (Ángel Perdomo Rangel — CEO & Founder · Yves Du Solier López — Executive Creative Director & Co-founder · Jhoel Francisco Velasco Bazan — Chief Marketing Officer).
+- Verified: typecheck ✓ · lint ✓ · test 182/182 ✓ · build ✓ · **Vercel READY @5caedd3**.
+- NOT on main at merge time (flag for T7 / brand: don't claim them): `/terms` + `/security` website pages, pitch video on the site, team section on the site, API rate limits (only `/api/speak` has one). user-verifier: GO/NO-GO run on this build.
+- GitHub repo settings (Dependabot alerts, secret scanning + push protection, private vulnerability reporting, branch protection on main) **need the repo owner** — no gh CLI / GitHub connector auth on this machine.
