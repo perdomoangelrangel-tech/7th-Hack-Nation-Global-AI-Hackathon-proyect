@@ -23,7 +23,7 @@ export interface ExplainResponse {
 }
 
 /** POST /api/ask */
-export interface AskRequestBody { question: string; persona: PersonaKey; locale: "en" | "es"; focus?: string; simple?: boolean }
+export interface AskRequestBody { question: string; persona: PersonaKey; locale: "en" | "es"; focus?: string; simple?: boolean; /** Chat: previous turns, oldest first (last 10 used). */ history?: { role: "user" | "assistant"; text: string }[] }
 export interface AskClaim { text: string; evidence_ids: string[]; evidence: EvidenceRef[]; status: string; nodes: string[]; edges: string[] }
 export type SafetyFlag = "dose" | "prognosis" | "promise" | "personal_data";
 export interface AskAnswer {

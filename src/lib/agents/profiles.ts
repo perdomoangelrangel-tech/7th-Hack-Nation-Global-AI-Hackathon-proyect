@@ -9,7 +9,7 @@ export type FactKind = "disease" | "gene" | "variant_effect" | "neighbor" | "pat
 export interface Persona {
   id: PersonaId;
   name: string;
-  /** UI mode label shown in the persona selector (Patient · Family & patient group · Researcher · Pharma). */
+  /** UI mode label shown in the persona selector (Patient · Family & patient group · Researcher & clinician · Pharma). */
   mode: { en: string; es: string };
   role: { en: string; es: string };
   /** The question this person brings first; the answer opens with it. */
@@ -52,7 +52,7 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     maxClaims: 7,
   },
   osei: {
-    id: "osei", name: "Dr. Osei", mode: { en: "Researcher", es: "Investigador" }, role: { en: "Academic researcher / clinician-scientist", es: "Investigador académico / clínico-científico" },
+    id: "osei", name: "Dr. Osei", mode: { en: "Researcher & clinician", es: "Investigador y clínico" }, role: { en: "Academic researcher / clinician-scientist", es: "Investigador académico / clínico-científico" },
     firstQuestion: { en: "Which diseases share my mechanism under a different gene name, on what evidence, and what are the counterexamples?", es: "¿Qué enfermedades comparten mi mecanismo con otro nombre de gen, con qué evidencia, y cuáles son los contraejemplos?" },
     priorities: ["gene", "variant_effect", "pathway", "neighbor", "counterexample", "collaborator", "asset", "step"],
     tone: {
