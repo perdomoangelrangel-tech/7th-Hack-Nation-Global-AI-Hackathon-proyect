@@ -513,13 +513,13 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 }
 
 /** WAVE 6: no persona switcher inside the atlas — a static "You're here as: <role>" pill + "Change role".
- *  Embedded (Lovable) → the host app's role chooser; standalone → the home (role selection). */
+ *  Embedded (Lovable) → the host app's role chooser; standalone → /atlas?role=change (mvp-builder's role picker). */
 const ROLE_LABEL: Partial<Record<PersonaId, { en: string; es: string }>> = { osei: { en: "Researcher & clinician", es: "Investigador y clínico" } };
 function RolePill({ t, personas, persona, locale, embed }: { t: Dict; personas: PersonaOption[]; persona: PersonaId; locale: Locale; embed: boolean }) {
   const cur = personas.find((p) => p.id === persona)!;
   const label = ROLE_LABEL[persona]?.[locale] ?? cur.mode;
   const change = (e: React.MouseEvent) => {
-    if (!embed) return; // plain link to "/"
+    if (!embed) return; // plain link to the role picker (/atlas?role=change)
     e.preventDefault();
     try { window.top!.location.href = `${site.appUrl}/?role=change`; } catch { window.open(`${site.appUrl}/?role=change`, "_top"); }
   };
@@ -528,7 +528,7 @@ function RolePill({ t, personas, persona, locale, embed }: { t: Dict; personas: 
       <span className="flex items-center gap-1.5 rounded-full border border-line bg-brand-soft h-9 px-3 text-xs text-brand-ink" title={`${cur.name} · ${cur.role}`}>
         <ModeIcon id={persona} /><span className="hidden lg:inline text-ink-3">{t.here_as}</span><span className="hidden md:inline font-semibold">{label}</span>
       </span>
-      <a href={embed ? `${site.appUrl}/?role=change` : "/"} onClick={change} className="hidden sm:inline text-xs font-medium text-brand-deep underline-offset-2 hover:underline">{t.change_role}</a>
+      <a href={embed ? `${site.appUrl}/?role=change` : "/atlas?role=change"} onClick={change} className="hidden sm:inline text-xs font-medium text-brand-deep underline-offset-2 hover:underline">{t.change_role}</a>
     </div>
   );
 }
