@@ -9,7 +9,7 @@
  */
 import { structured, untrusted } from "./client";
 import { DraftSchema, factsBlock, templateDraft, verifyDraft, type Fact } from "./draft";
-import { SOURCE_LABEL } from "./edge-facts";
+import { approvedFor, SOURCE_LABEL } from "./edge-facts";
 import { systemPrompt } from "../agents/prompts";
 import { PERSONAS, type PersonaId } from "../agents/profiles";
 import type { Edge, Entity, Evidence } from "../atlas/types";
@@ -102,7 +102,7 @@ export function medicineFacts(idx: AtlasIndex, t: Entity, l: Locale, extras: Med
     simple: es ? `${t.name} es un medicamento${mechs.length ? ` que actúa sobre ${mechs[0].toLowerCase()}` : ""}.` : `${t.name} is a medicine${mechs.length ? ` that works as a ${mechs[0].toLowerCase()}` : ""}.`,
   });
 
-  const approved = treats.filter((e) => e.props.approved === true);
+  const approved = treats.filter((e) => approvedFor(e.props));
   if (approved.length) push({
     kind: "treatment", status: "observed", nodes: [t.id, ...approved.map((e) => e.to)], edges: approved.map((e) => e.id), evidence_ids: approved.flatMap((e) => e.evidence.map((v) => v.id)),
     text: es ? `Según ${sourcesOf(approved[0], es)}, está aprobado para ${approved.map(diseaseName).join(", ")}.` : `According to ${sourcesOf(approved[0], es)}, it is approved for ${approved.map(diseaseName).join(", ")}.`,
@@ -151,9 +151,16 @@ export function medicineFacts(idx: AtlasIndex, t: Entity, l: Locale, extras: Med
       simple: es ? `Hay estudios publicados sobre este medicamento; puedes abrirlos en las fuentes.` : `There are published studies about this medicine; you can open them in the sources.` });
   }
 
-  const studied = treats.filter((e) => e.props.approved !== true).sort((a, b) => Number(b.props.phase ?? 0) - Number(a.props.phase ?? 0)).slice(0, 3);
+  const studied = treats.filter((e) => !approvedFor(e.props)).sort((a, b) => Number(b.props.phase ?? 0) - Number(a.props.phase ?? 0)).slice(0, 3);
   for (const e of studied) {
     const stopped = (e.props.stopped_reports as unknown[] | undefined)?.length ? (es ? " Algunos estudios se detuvieron." : " Some studies were stopped.") : "";
+    if (String(e.props.stage ?? "").toUpperCase() === "APPROVAL" && e.props.regulatory_check === "not_confirmed_by_label") {
+      push({ kind: "treatment", status: "observed", nodes: [t.id, e.to], edges: [e.id], evidence_ids: e.evidence.map((v) => v.id),
+        text: es ? `${sourcesOf(e, es)} lo sitúa en etapa de aprobación para ${diseaseName(e)}, pero su ficha oficial de la FDA no nombra esa enfermedad; hay que confirmarlo con el regulador.`
+                 : `${sourcesOf(e, es)} lists it at the approval stage for ${diseaseName(e)}, but its official FDA label does not name that disease; check with the regulator.`,
+        simple: es ? `No está claro que esté aprobado para ${diseaseName(e)}.` : `It is not clear that it is approved for ${diseaseName(e)}.` });
+      continue;
+    }
     push({
       kind: "treatment", status: "observed", nodes: [t.id, e.to], edges: [e.id], evidence_ids: e.evidence.map((v) => v.id),
       text: es ? `Se está estudiando para ${diseaseName(e)} (${phaseText(e, true)}), según ${sourcesOf(e, es)}; no está aprobado para esa enfermedad.${stopped}`

@@ -7,6 +7,7 @@ import { atlas, neighborsOf } from "./atlas/store";
 import type { Edge, Evidence } from "./atlas/types";
 import { findDiseaseInText, reconcileOne } from "./ai/reconcile";
 import { explain } from "./ai/explain";
+import { approvedFor } from "./ai/edge-facts";
 import type { PersonaId } from "./agents/profiles";
 
 export type { Evidence };
@@ -59,7 +60,7 @@ export async function treatmentsFor(q: string): Promise<ToolResult<unknown> | nu
   const d = findDisease(q); if (!d) return null;
   const rows = inRel(d.id, "treats");
   return {
-    data: rows.map((e) => ({ id: atlas().byId.get(e.from)?.canonical_id, name: atlas().byId.get(e.from)?.name, ...atlas().byId.get(e.from)?.props, stage: e.props.stage, approved: e.props.approved, confidence: e.confidence, evidence_ids: ids(e) })),
+    data: rows.map((e) => ({ id: atlas().byId.get(e.from)?.canonical_id, name: atlas().byId.get(e.from)?.name, ...atlas().byId.get(e.from)?.props, stage: e.props.stage, approved: approvedFor(e.props), approved_basis: "indication stage APPROVAL, not rejected by the label audit", confidence: e.confidence, evidence_ids: ids(e) })),
     evidence: ev(rows), retrieved_at: now(), note: rows.length ? undefined : "No documented treatments in our sources for this disease.",
   };
 }
@@ -85,7 +86,7 @@ export async function gapsFor(q: string): Promise<ToolResult<unknown> | null> {
   const A = atlas().snap.analytics;
   const treatments = inRel(d.id, "treats");
   return {
-    data: { gaps: A?.gaps.filter((g) => g.disease === d.id) ?? [], has_approved_treatment: treatments.some((t) => t.props.approved), treatment_candidates: treatments.length },
+    data: { gaps: A?.gaps.filter((g) => g.disease === d.id) ?? [], has_approved_treatment: treatments.some((t) => approvedFor(t.props)), treatment_candidates: treatments.length },
     evidence: ev(treatments), retrieved_at: now(),
   };
 }

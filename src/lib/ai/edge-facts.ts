@@ -8,6 +8,15 @@ import type { Fact, FactStatus } from "./draft";
 
 type L = "en" | "es";
 
+/**
+ * Approved FOR THIS DISEASE: the indication's own stage is APPROVAL and the label audit (migration 0015) did not
+ * reject it. Open Targets' `approved: true` can describe the drug in general (it appears on PHASE_3 indications),
+ * so it is never enough on its own.
+ */
+export function approvedFor(props: Record<string, unknown>): boolean {
+  return String(props.stage ?? "").toUpperCase() === "APPROVAL" && props.regulatory_check !== "not_confirmed_by_label";
+}
+
 /** Every SourceId plus the regulatory sources of migration 0015 (ema, openfda, dailymed) — keyed by string so new ids degrade gracefully. */
 export const SOURCE_LABEL: Record<SourceId | "ema" | "openfda" | "dailymed", string> & Record<string, string | undefined> = {
   orphanet: "Orphanet", hpo: "the Human Phenotype Ontology", monarch: "Monarch", clinvar: "ClinVar", ctgov: "ClinicalTrials.gov",
@@ -59,7 +68,7 @@ export function edgeFact(idx: AtlasIndex, edge: Edge, id: string, l: L): Fact | 
       break;
     }
     case "treats": {
-      const approved = p.approved === true;
+      const approved = approvedFor(p);
       text = approved
         ? (es ? `${src} registra ${a} como fármaco aprobado para ${b}.` : `${src} lists ${a} as an approved drug for ${b}.`)
         : (es ? `${src} registra ${a} como candidato en estudio para ${b} (etapa: ${humanStatus(p.stage) || "desconocida"}); no es una recomendación.` : `${src} lists ${a} as a candidate being studied for ${b} (stage: ${humanStatus(p.stage) || "unknown"}); this is not a recommendation.`);

@@ -8,8 +8,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { atlas, loadAtlas } from "@/lib/atlas/store";
 import { isPersonaId } from "@/lib/agents/profiles";
-import { findTreatment, medicineSummary } from "@/lib/ai/medicine";
-import { medicineExtras } from "@/lib/ai/medicine-extras";
+import { medicineSummary } from "@/lib/ai/medicine";
+import { medicineExtras, resolveMedicine } from "@/lib/ai/medicine-extras";
 
 export const runtime = "nodejs";
 
@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "id required (e.g. treatment:CHEMBL2106217)" }, { status: 400 });
   const persona = sp.get("persona");
   await loadAtlas();
-  const t = findTreatment(atlas(), id);
-  if (!t) return NextResponse.json({ error: "medicine not in the atlas" }, { status: 404 });
+  const { entity: t, bankName } = await resolveMedicine(atlas(), id); // bank ids can differ from the graph's ChEMBL record
+  if (!t) return NextResponse.json({ error: bankName ? `${bankName} is in the medicines bank but not linked in the evidence graph yet` : "medicine not in the atlas", in_bank: !!bankName }, { status: 404 });
   const r = await medicineSummary(atlas(), {
     id: t.id, persona: isPersonaId(persona) ? persona : "maria", locale: sp.get("locale") === "es" ? "es" : "en",
     simple: sp.has("simple") ? sp.get("simple") === "1" || sp.get("simple") === "true" : undefined,

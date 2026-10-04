@@ -6,7 +6,9 @@
 import "server-only";
 import { publicClient } from "../supabase/server";
 import type { Entity } from "../atlas/types";
-import type { MedicineExtras } from "./medicine";
+import { findTreatment, type MedicineExtras } from "./medicine";
+import { reconcileOne } from "./reconcile";
+import type { AtlasIndex } from "./types";
 
 const TTL = 5 * 60_000;
 const cache = new Map<string, { at: number; v: MedicineExtras }>();
@@ -35,4 +37,25 @@ export async function medicineExtras(t: Entity): Promise<MedicineExtras> {
   const merged = Object.fromEntries(Object.entries({ ...fromProps, ...fromDb }).map(([k, v]) => [k, v ?? (fromProps as Record<string, unknown>)[k] ?? null])) as MedicineExtras;
   cache.set(t.id, { at: Date.now(), v: merged });
   return merged;
+}
+
+/**
+ * The graph record for a medicine id coming from the medicines bank. Bank rows (live DB) and the served graph can
+ * file the same drug under different ChEMBL records (e.g. "Fenfluramine Hydrochloride" CHEMBL2106217 vs "Fenfluramine"
+ * CHEMBL87493): id first, then the bank row's name matched salt-insensitively. `bankName` is set when the bank knows
+ * the id but the graph does not link it yet.
+ */
+export async function resolveMedicine(idx: AtlasIndex, idOrName: string): Promise<{ entity: Entity | null; bankName: string | null }> {
+  const direct = findTreatment(idx, idOrName);
+  if (direct) return { entity: direct, bankName: null };
+  const id = /^treatment:/i.test(idOrName) ? idOrName : /^CHEMBL\d+$/i.test(idOrName) ? `treatment:${idOrName.toUpperCase()}` : null;
+  if (!id) return { entity: null, bankName: null };
+  let name: string | null = null;
+  try {
+    const { data } = await publicClient().from("medicines_public").select("name").eq("entity_id", id).limit(1).abortSignal(AbortSignal.timeout(4000));
+    name = (data?.[0] as { name?: string } | undefined)?.name ?? null;
+  } catch { /* bank unavailable */ }
+  if (!name) return { entity: null, bankName: null };
+  const byName = findTreatment(idx, name) ?? (() => { const m = reconcileOne(idx, name, { type: "treatment", strict: true }); return m.entity_id ? idx.byId.get(m.entity_id) ?? null : null; })();
+  return { entity: byName, bankName: byName ? null : name };
 }

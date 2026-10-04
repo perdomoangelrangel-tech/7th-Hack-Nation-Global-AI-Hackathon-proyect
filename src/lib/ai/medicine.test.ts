@@ -121,3 +121,21 @@ describe("medicine names in text", () => {
     expect(findTreatmentInText(i2, "How does it work for the disease?")).toBeNull();
   });
 });
+
+describe("medicine · 'approved' means approved for THAT disease", () => {
+  it("approved:true on a PHASE_3 indication (Open Targets drug-level flag) is reported as studied, not approved", async () => {
+    setLlmClient(null);
+    const { fixtureSnapshot: snapFn, fixtureIndex: idxFn } = await import("./fixtures.test-util");
+    const snap = snapFn();
+    snap.edges.push({ id: "edge:t3", from: "treatment:CHEMBL1", to: "disease:ORPHA:3", relation: "treats", kind: "observed", confidence: 0.6, confidence_basis: "test",
+      props: { approved: true, stage: "PHASE_3", phase: 3 }, evidence: [{ id: "ev:t3", source: "opentargets", external_id: "x", url: "https://example.org/x", quote: null, published_on: null, retrieved_at: "2026-10-04T00:00:00Z" }] });
+    snap.edges.push({ id: "edge:t4", from: "treatment:CHEMBL1", to: "disease:ORPHA:4", relation: "treats", kind: "observed", confidence: 0.9, confidence_basis: "test",
+      props: { approved: true, stage: "APPROVAL", regulatory_check: "not_confirmed_by_label" }, evidence: [{ id: "ev:t4", source: "opentargets", external_id: "y", url: "https://example.org/y", quote: null, published_on: null, retrieved_at: "2026-10-04T00:00:00Z" }] });
+    const { medicineFacts } = await import("./medicine");
+    const text = medicineFacts(idxFn(snap), snap.entities.find((e) => e.id === "treatment:CHEMBL1")!, "en").facts.map((f) => f.text).join("\n");
+    expect(text).toMatch(/approved for Beta disease\./);
+    expect(text).not.toMatch(/approved for[^.]*Gamma lipofuscinosis 1/);
+    expect(text).toMatch(/studied for Gamma lipofuscinosis 1 \(phase 3\).*not approved/);
+    expect(text).toMatch(/approval stage for Gamma lipofuscinosis 2, but its official FDA label does not name that disease/); // label audit rejected it
+  });
+});
