@@ -11,7 +11,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
 import type { JourneyV2 } from "@/lib/journey/build";
-import { prefillDraft, type Draft } from "@/lib/journey/prefill";
+import { prefillDraft, prefillRequest, requestType, type Draft } from "@/lib/journey/prefill";
 import { PROPOSAL_EVENT, type ProposalSaved } from "@/lib/journey/proposals";
 import { COCREATE_EVENT, type CoCreateRequest } from "@/components/journey/events";
 import { isNoRoute, useJourney } from "@/components/journey/useJourney";
@@ -32,12 +32,19 @@ export function CoCreate({ persona, locale, disease, diseaseName, edgeIds }: CoC
 
   // UX_WAVE4 S2/S4: co-create is no longer a strip above the route. This mount only hosts the dialog and the
   // toast; the S4 card, step 3 partners and the evidence drawer open it with openCoCreate(kind, draft?).
-  const ctx = useRef({ j, disease, edgeIds });
-  useEffect(() => { ctx.current = { j, disease, edgeIds }; });
+  const ctx = useRef({ j, disease, edgeIds, locale });
+  useEffect(() => { ctx.current = { j, disease, edgeIds, locale }; });
   useEffect(() => {
     const onOpen = (e: Event) => {
       const { kind, draft: extra } = (e as CustomEvent<CoCreateRequest>).detail;
-      const { j: jj, disease: d, edgeIds: ids } = ctx.current;
+      const { j: jj, disease: d, edgeIds: ids, locale: l } = ctx.current;
+      // Search footer: openCoCreate("evidence", { title: "Disease request: …" | "Source suggestion: …" }).
+      // Works with or without a focused disease; saved as a community request, never as evidence.
+      if (kind === "evidence" && requestType(extra?.title)) {
+        const r = prefillRequest(extra!.title!, l, d);
+        setDraft({ ...r, ...(extra?.body ? { body: extra.body } : {}) });
+        return;
+      }
       if (!d) return;
       const base = jj ? prefillDraft(kind, jj, ids ?? []) : { kind, title: "", body: "", entities: [d], edges: ids ?? [] };
       setDraft({ ...base, ...(extra ?? {}) });
@@ -47,14 +54,14 @@ export function CoCreate({ persona, locale, disease, diseaseName, edgeIds }: CoC
   }, []);
   useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(null), 7000); return () => window.clearTimeout(id); }, [toast]);
 
-  if (!disease) return null;
   return (
     <>
       <ProposalDialog draft={draft} locale={locale} persona={persona} disease={disease} diseaseName={diseaseName ?? j?.disease.name ?? ""} journey={j}
         onClose={() => setDraft(null)}
         onSaved={(s) => {
           setDraft(null);
-          setToast({ text: s.stored === "supabase" ? c.saved_shared : c.saved_local, tone: s.stored === "supabase" ? "ok" : "warn" });
+          const isRequest = !!draft?.request;
+          setToast({ text: s.stored === "supabase" ? (isRequest ? c.saved_request : c.saved_shared) : c.saved_local, tone: s.stored === "supabase" ? "ok" : "warn" });
           window.dispatchEvent(new CustomEvent(PROPOSAL_EVENT, { detail: s.proposal }));
         }} />
       <div aria-live="polite" className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 pointer-events-none flex justify-end">
@@ -73,7 +80,7 @@ export function CoCreate({ persona, locale, disease, diseaseName, edgeIds }: CoC
 }
 
 function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey, onClose, onSaved }: {
-  draft: Draft | null; locale: Locale; persona: PersonaId; disease: string; diseaseName: string; journey: JourneyV2 | null;
+  draft: Draft | null; locale: Locale; persona: PersonaId; disease: string | null; diseaseName: string; journey: JourneyV2 | null;
   onClose: () => void; onSaved: (s: ProposalSaved) => void;
 }) {
   const c = coCopy[locale];
@@ -132,20 +139,20 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-widest text-ink-3">{diseaseName}</p>
-                <h2 id="cocreate-title" className="serif text-xl text-brand-ink mt-1">{c.actions[form.kind]}</h2>
+                <h2 id="cocreate-title" className="serif text-xl text-brand-ink mt-1">{form.request ? c.request_title[form.request] : c.actions[form.kind]}</h2>
               </div>
               <button type="button" onClick={onClose} className="rounded-full w-8 h-8 grid place-items-center text-ink-3 hover:bg-paper-2" aria-label={c.cancel}>✕</button>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label={c.kind_label}>
+            {!form.request && <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label={c.kind_label}>
               {(["hypothesis", "collaboration", "evidence"] as const).map((k) => (
                 <button key={k} type="button" role="radio" aria-checked={form.kind === k} onClick={() => setForm(journey ? prefillDraft(k, journey) : { ...form, kind: k })}
                   className={`rounded-full px-3 py-1 text-xs border ${form.kind === k ? "bg-brand-deep text-white border-brand-deep" : "border-line text-ink-2 hover:bg-paper-2"}`}>{c.actions[k]}</button>
               ))}
-            </div>
-            <ol className="mt-3 flex flex-wrap gap-1.5 text-[11px]" aria-label={c.progress_label}>
+            </div>}
+            {!form.request && <ol className="mt-3 flex flex-wrap gap-1.5 text-[11px]" aria-label={c.progress_label}>
               {c.progress.map((x, i) => <li key={x} className="rounded-full border border-brand/40 bg-brand-mist px-2 py-0.5 text-brand-deep"><span className="font-semibold mr-1">{i + 1}</span>{x}</li>)}
-            </ol>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-2"><KindBadge kind="proposed" c={jc} />{c.draft_note}</p>
+            </ol>}
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-2"><KindBadge kind="proposed" c={jc} />{form.request ? c.request_note : c.draft_note}</p>
           </header>
 
           <div className="px-5 py-4 overflow-y-auto space-y-4">
@@ -159,7 +166,8 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
               <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} required maxLength={4000} rows={8}
                 className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand/40" />
             </label>
-            <div>
+            {/* A request cites nothing: it asks the atlas team to look. */}
+            {!form.request && <div>
               <p className="text-xs font-medium text-ink-2">{c.cited_edges} ({form.edges.length})</p>
               {form.edges.length === 0 && <p className="text-xs text-ink-3 mt-1">{c.no_edges}</p>}
               <ul className="mt-1 flex flex-wrap gap-1.5">
@@ -170,7 +178,7 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
                   </li>
                 ))}
               </ul>
-            </div>
+            </div>}
             <fieldset className="rounded-lg border border-line p-3">
               <legend className="px-1 text-xs font-medium text-ink-2">{c.contact_legend}</legend>
               <label className="flex items-start gap-2 text-xs text-ink-2 cursor-pointer">
@@ -184,10 +192,10 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
           </div>
 
           <footer className="px-5 py-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[11px] text-ink-3 max-w-xs">{c.disclaimer}</p>
+            <p className="text-[11px] text-ink-3 max-w-xs">{form.request ? c.request_disclaimer : c.disclaimer}</p>
             <div className="flex gap-2 shrink-0">
               <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm text-ink-2 hover:bg-paper-2">{c.cancel}</button>
-              <button type="submit" disabled={busy} className="rounded-full bg-brand-deep px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink disabled:opacity-60">{busy ? c.saving : c.submit}</button>
+              <button type="submit" disabled={busy} className="rounded-full bg-brand-deep px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink disabled:opacity-60">{busy ? c.saving : form.request ? c.send_request : c.submit}</button>
             </div>
           </footer>
         </form>

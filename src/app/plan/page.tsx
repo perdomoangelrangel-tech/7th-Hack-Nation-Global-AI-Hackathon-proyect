@@ -9,6 +9,7 @@ import { journeyFor, graph, parseLocale, parsePersona } from "@/lib/journey/serv
 import { isNoRoute } from "@/lib/journey/noroute";
 import { journeyCopy } from "@/components/journey/copy";
 import { tenX } from "@/lib/journey/tenx";
+import { isAnalysisSource } from "@/lib/journey/graph";
 import { PrintButton } from "./PrintButton";
 
 export const metadata: Metadata = { title: `Meeting plan · ${site.company}`, description: "A one-page, sourced plan for a patient-group meeting.", robots: { index: false } };
@@ -47,7 +48,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const refs = (edges: string[]) => edges.slice(0, 4).map((id) => {
     const ev = g.edgeById.get(id)?.evidence[0]; if (!ev) return null;
     let s = sources.find((x) => x.url === ev.url);
-    if (!s) { s = { n: sources.length + 1, url: ev.url, label: ev.source === "atlas_analysis" ? "Nedamex analysis — inferred, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 90)}` : ""}` }; sources.push(s); }
+    if (!s) { s = { n: sources.length + 1, url: ev.url, label: isAnalysisSource(ev.source) ? "Nedamex analysis — inferred, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 90)}` : ""}` }; sources.push(s); }
     return s.n;
   }).filter((n): n is number => n !== null);
   // A plain function, not a component: it must run while this render builds `sources`, before the list below.

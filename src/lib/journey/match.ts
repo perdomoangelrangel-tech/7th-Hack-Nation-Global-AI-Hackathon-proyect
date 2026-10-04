@@ -6,7 +6,7 @@
 import type { Edge } from "../atlas/types";
 import type { PersonaId } from "../agents/profiles";
 import { leadStrength } from "./build";
-import { ACTIVE_STATUSES, cite, inOf, nameOf, other, outOf, tr, type Cite, type GraphIndex, type Locale } from "./graph";
+import { isAnalysisSource, ACTIVE_STATUSES, cite, inOf, nameOf, other, outOf, tr, type Cite, type GraphIndex, type Locale } from "./graph";
 
 export type ReasonCode = "shared_mechanism" | "works_on_ours" | "network_overlap" | "active_study" | "active_funding" | "patient_community";
 export interface MatchReason { code: ReasonCode; text: string; weight: number; edges: string[]; sources: { label: string; url: string }[] }
@@ -101,7 +101,7 @@ function sourcesFor(g: GraphIndex, edgeIds: string[]) {
   for (const id of edgeIds) {
     const ev = g.edgeById.get(id)?.evidence[0];
     if (!ev || out.some((o) => o.url === ev.url)) continue;
-    const label = ev.source === "atlas_analysis" ? "Nedamex analysis — inferred similarity, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 70)}` : ""}`;
+    const label = isAnalysisSource(ev.source) ? "Nedamex analysis — inferred similarity, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 70)}` : ""}`;
     out.push({ label, url: ev.url });
     if (out.length === 3) break;
   }

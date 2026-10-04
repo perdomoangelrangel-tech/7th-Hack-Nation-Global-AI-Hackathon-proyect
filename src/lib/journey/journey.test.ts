@@ -266,3 +266,80 @@ describe("wave 4 · mode variants", async () => {
     expect(csv[0]).toContain("Approved treatment?");
   });
 });
+
+describe("wave 5B · community requests + analysis label", async () => {
+  const { prefillRequest, requestType } = await import("./prefill");
+  const { ProposalInput } = await import("./proposals");
+  const { isAnalysisSource } = await import("./graph");
+  it("detects request titles from the search footer", () => {
+    expect(requestType("Disease request: Alexander disease")).toBe("disease");
+    expect(requestType("Source suggestion: Orphanet")).toBe("source");
+    expect(requestType("Missing evidence for STXBP1-DEE")).toBeNull();
+  });
+  it("prefills a request that cites nothing and says it is not evidence", () => {
+    for (const t of ["Disease request: Alexander disease", "Source suggestion: a registry list"]) {
+      const d = prefillRequest(t, "en", null);
+      expect(d.kind).toBe("evidence");
+      expect(d.edges).toHaveLength(0);
+      expect(d.body).toMatch(/not evidence/);
+      expect(ProposalInput.safeParse({ ...d, disease: null, persona: "maria" }).success).toBe(true);
+    }
+    expect(prefillRequest("Disease request: Alexander disease").body).toContain("Alexander disease");
+  });
+  it("labels Nedamex's analysis under both the new and the legacy source id", () => {
+    expect(isAnalysisSource("nexmed_analysis")).toBe(true);
+    expect(isAnalysisSource("atlas_analysis")).toBe(true);
+    expect(isAnalysisSource("orphanet")).toBe(false);
+    const j = buildJourney(g, STXBP1, "maria", "en")!;
+    expect(j.coverage.sources.map((s) => s.name).join(" ")).not.toMatch(/nexmed|Nexmed/);
+  });
+});
+
+describe("wave 6 · medicines bank", async () => {
+  const { medicinesFromGraph, medicineBankUrl, filterMedicines } = await import("./medicines");
+  const APP = "https://nedamex.lovable.app";
+  it("builds the bank from treats edges with linked sources for every indication", () => {
+    const r = medicinesFromGraph(g, APP, { limit: 500 });
+    expect(r.total).toBeGreaterThan(0);
+    for (const m of r.medicines) {
+      expect(m.indications.length).toBeGreaterThan(0);
+      for (const i of m.indications) { expect(g.byId.get(i.disease_id)?.type).toBe("disease"); for (const s of i.sources) expect(s.url).toMatch(/^https?:\/\//); }
+    }
+    expect(r.disclaimer).toMatch(/Not medical advice/);
+  });
+  it("filters by disease, approval and text; approved first", () => {
+    const all = medicinesFromGraph(g, APP, { limit: 500 }).medicines;
+    const dravet = filterMedicines(all, { d: "disease:ORPHA:33069", approved: true }, "graph").medicines;
+    for (const m of dravet) { expect(m.approved_for_listed_disease).toBe(true); expect(m.indications.some((i) => i.disease_id === "disease:ORPHA:33069")).toBe(true); }
+    const q = filterMedicines(all, { q: "FENFLUR" }, "graph").medicines;
+    expect(q.every((m) => /fenflur/i.test(m.name))).toBe(true);
+  });
+  it("only links ChEMBL compounds to the bank", () => {
+    expect(medicineBankUrl(APP + "/", "treatment:CHEMBL1009")).toBe(`${APP}/medicines/CHEMBL1009`);
+    expect(medicineBankUrl(APP, "treatment:NOT_A_CHEMBL")).toBeNull();
+    expect(medicineBankUrl(APP, null)).toBeNull();
+  });
+});
+
+describe("wave 6 · community", async () => {
+  const { communityFromGraph, ProfileInput, rankProfiles, BADGE } = await import("./community");
+  it("lists only researchers with a public NIH RePORTER record, each project linked", () => {
+    const ps = communityFromGraph(g, { d: STXBP1 });
+    expect(ps.length).toBeGreaterThan(0);
+    for (const p of ps) { expect(p.badge).toBe(BADGE.nih_record); expect(p.projects.every((x) => /reporter\.nih\.gov/.test(x.url ?? ""))).toBe(true); }
+  });
+  it("requires consent and validates ORCID and https links", () => {
+    const base = { display_name: "Dr Test", role: "researcher", diseases: [STXBP1] };
+    expect(ProfileInput.safeParse({ ...base, consent: false }).success).toBe(false);
+    expect(ProfileInput.safeParse({ ...base, consent: true }).success).toBe(true);
+    expect(ProfileInput.safeParse({ ...base, consent: true, orcid: "0000-0002-1825-0097" }).success).toBe(true);
+    expect(ProfileInput.safeParse({ ...base, consent: true, orcid: "1234" }).success).toBe(false);
+    expect(ProfileInput.safeParse({ ...base, consent: true, link: "http://x.org" }).success).toBe(false);
+  });
+  it("ranks public records before self-submitted, unverified profiles", () => {
+    const nih = communityFromGraph(g, { d: STXBP1 }).slice(0, 2);
+    const self = { ...nih[0], id: "profile:x", kind: "self_submitted" as const, badge: BADGE.self_submitted, verified: false, diseases: [...nih[0].diseases, ...nih[0].diseases] };
+    const r = rankProfiles([self, ...nih]);
+    expect(r[r.length - 1].kind).toBe("self_submitted");
+  });
+});
