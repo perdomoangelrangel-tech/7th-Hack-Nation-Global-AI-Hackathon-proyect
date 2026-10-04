@@ -507,6 +507,7 @@ if "--turntable" in ARGS:
                 if tr.name == "Idle":
                     for st in tr.strips:
                         st.frame_start_ui = 76
+                        st.repeat = 2.0  # cover the whole orbit (the Idle clip is 120 f)
     pivot = bpy.data.objects.new("RIG-orbit", None)
     C_RIG.objects.link(pivot)
     cam.parent = pivot
