@@ -390,3 +390,38 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - Vercel: waiting for the human's dashboard import; will set `OPENAI_MODEL`, `OPENAI_MODEL_FAST`, `NEXT_PUBLIC_PROGRAM_URL` and post the URL.
 - Not yet merged: explorer @e0be1d2 (after 0d305de, no checkpoint). Voice: no new checkpoint since 7bb5484 — NEED(voice): explorer's 18:31 handoff (hydration, idle subtitle, pill overlap), AgentOrb swap, `<StoryNarration>` CONTRACT for brand.
 - user-verifier: refresh `../nexmed-qa` and re-test (QA-18/19/21/23 + ai P1 endpoints).
+
+## 18:37 · head-brain · CONTRACT — WAVE 3
+- **Read `../nexmed-shared/ORDERS_WAVE3.md` now (supersedes WAVE 2 where different).** Name is **Nedamex** (product + company) — no "Nexmed" in any user-facing string. **Two deliverables, same Supabase:** (1) Website on Vercel (pitch · demo · functionality videos, ElevenLabs narration, CTA **"Open Nedamex"** → Lovable); (2) MVP app on Lovable (website colors + Blender 3D, intuitive), backend = Vercel API + Supabase.
+- New lane **mvp-builder** (Terminal 8) leads the Lovable app; explorer + action port their components there.
+- Head brain done: QA-22 test draft hidden (status rejected, contact cleared) · source names → Nedamex · graph-vs-brief audit in ORDERS_WAVE3 §4 (data P0 live ingest, P1 mechanism nodes + patient groups).
+- localhost:3000 (brain's old server) serves a stale unstyled build → brain: restart `npm run dev` on main.
+
+## 18:40 · brand · HANDOFF
+- (Timestamp fix: my "00:2x · brand · PROGRESS — green checkpoint (wave 2)" entry was UTC — Git Bash ignores `TZ=America/Mexico_City` on this machine; plain `date` is CDMX. It was 18:2x.)
+- Merged main after 18:30 MERGED (clean). brand @9cd595c is on main → **`@/components/three/AgentOrb` and `@/components/three/glyphs` are importable from main now.**
+- NEED(voice) — concrete swap for "when the voice pops up the animations appear" (user request), against your current VoiceDock/VoiceSession:
+  1. `VoiceDock.tsx` L16: `import { AgentOrb } from "@/components/three/AgentOrb";` (delete `./AgentOrb` or keep it as dead code).
+  2. L91: `<AgentOrb state={!sessionOn ? "idle" : state === "connecting" || state === "asking-mic" ? "connecting" : state === "speaking" ? "speaking" : "listening"} size={sessionOn ? 88 : 48} reduce={prefs.reduceMotion} getLevel={() => levelRef.current()} />` — it pops in with the Blender "Appear" clip when the panel opens, leans in while listening, spins its helix halo while connecting, opens its petals while speaking.
+  3. Level: `const levelRef = useRef<() => number>(() => 0)` in VoiceDock, pass `levelRef` to `<VoiceSession>`, and inside `Session` take `getInputVolume, getOutputVolume` from `useConversation(...)` and `useEffect(() => { levelRef.current = () => (isSpeaking ? getOutputVolume() : getInputVolume()); })`.
+  4. NarrationBar while narration plays: `<AgentOrb state={playing ? "speaking" : "hidden"} size={56} reduce={prefs.reduceMotion} />` (no level needed; the Speak clip animates on its own).
+  Reduced motion / no WebGL → static poster with a state ring, so no extra branch needed on your side.
+
+## 18:40 · user-verifier · PROGRESS
+- Re-tested `main` @7c4ddb2 (ai P1 + explorer + brand wave 2) on :3007 → `qa/20261003-1830-report.md`. All journeys PASS (deterministic); red-team ✓ 10/10; integrity 10/10; 0 Spanish leaks.
+- VERIFIED QA-18 (atlas APIs warm 30–70 ms) · VERIFIED QA-19 (3D labels readable) · VERIFIED QA-21 (landing 390 px, scrollWidth 390) · VERIFIED QA-23 (no /api/reconcile 404s)
+- ai P1 smoke (deterministic): /api/reconcile Munc18-1 → STXBP1 (alias 0.95) ✓ · /api/extract text → exact matches, `saved:false` without key ✓ · /api/explain simple → cited plain sentence ✓ · ExplainButton in inspector ✓
+- Still open: QA-14 hydration warning on /atlas?d=… (voice) · QA-20 GitHub provenance link 404 (brain: needs push) · QA-22 QA draft in live proposals (data, awaiting human OK)
+- When the prod URL appears I run the full suite there, plus OpenAI extract/explain with the key. I'll extract with `text` only, never a PMID, so I don't persist extractions.
+
+## 00:50 · explorer · PROGRESS — green checkpoint
+- feat/explorer @81555fe (merged main after 18:30 MERGED, clean): typecheck ✓ · lint ✓ · test 100/100 ✓ · build ✓. Ready to merge.
+- GraphCanvas3D uses brand's Blender glyphs (`useGlyphGeometries`) for every non-disease type (diseases stay cluster-colored spheres for centrality); primitives remain the fallback. `<ExtractPanel pmid>` mounted in EdgeInspector when the edge has PubMed evidence. Explorer strings renamed to Nedamex (page title, inferred-edge sentence, source names incl. `nexmed_analysis`/`community`/`fda`). `site.name` is still "Nexmed" in brand's `site.ts` → header shows it until brand renames.
+- WAVE 3 acknowledged: explorer supports mvp-builder — I port `src/components/atlas/**` (3D with glyphs + 2D, EdgeInspector, SearchBox, modes, prefs) into `../nexmed-lovable` as soon as `CONTRACT lovable-repo` lands; file map + replacements in `docs/LOVABLE_PORT.md`. Plan B `/atlas` stays green.
+
+## 18:54 · brain · CONTRACT (CORS)
+- `src/proxy.ts` (Next 16 Proxy, matcher `/api/:path*`) + `src/lib/cors.ts` (+ tests). Allowed origins: `https://*.lovable.app`, `https://*.lovableproject.com`, `http://localhost:8080`, `http://localhost:5173`, the origin of `NEXT_PUBLIC_PROGRAM_URL`, and `CORS_EXTRA_ORIGINS` (comma-separated, for a custom domain). Methods GET, POST, OPTIONS · headers `content-type, x-atlas-key` · preflight 204 · `Vary: Origin`. Other origins get no CORS headers.
+- Verified on main (next start): preflight from a lovable.app origin → 204 + headers; evil.example → no ACAO; localhost:8080 → ACAO; `/atlas?d=disease:ORPHA:599373&p=maria` 200. typecheck ✓ · lint ✓ · test 103/103 ✓ · build ✓.
+- mvp-builder / explorer: call `${VITE_NEXMED_API_URL}/api/*` directly once Vercel exists; until then Vite proxy to localhost.
+- No lane merges this tick (no new green checkpoints: explorer @b8ba51d +2, brand @4009861 +3).
+- Still NOT pushed: origin/main reconciliation needs the human's confirmation in the brain session (head-brain relayed approval; the safety check requires it first-hand). Port 3000 PID 9764 is not a brain process (the brain's servers run on 3010 and are stopped after each check) — whoever owns it, restart it on main if you need it.
