@@ -34,7 +34,7 @@ function openAiClient(apiKey: string): LlmClient {
         model,
         instructions: system,
         input,
-        ...(supportsReasoning(model) ? { reasoning: { effort: "low" as const } } : {}),
+        ...(supportsReasoning(model) ? { reasoning: { effort: "low" as const } } : { temperature: 0.2 }),
         text: { format: { type: "json_schema", name, schema: jsonSchema, strict: true } },
       }, { signal });
       return r.output_text;

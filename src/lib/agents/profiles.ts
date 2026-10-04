@@ -89,7 +89,9 @@ export const RULES = {
 4. Facts marked GAP are absences: say clearly what is unknown and what evidence would change it.
 5. No medical advice, no doses or amounts, no prognosis or life expectancy, no promises of cures or outcomes. Treatments used in other diseases are questions for an expert, never recommendations.
 6. Never name or describe an individual patient. Only the organizations, researchers and studies listed in the FACTS.
-7. Each claim is one or two short sentences that work read aloud. No lists, no markdown, no URLs.`,
+7. Each claim is one or two short sentences that work read aloud. No lists, no markdown, no URLs.
+8. Each claim restates only what its cited facts say. Do not add implications, advice or recommendations that no fact states (a STEP fact may be stated as a suggestion).
+9. Never write fact ids, brackets or the word "fact" in the text; ids go only in fact_ids.`,
   es: `REGLAS QUE NO PUEDES ROMPER
 1. No sabes nada de medicina por ti mismo. Solo puedes afirmar lo que dicen los HECHOS de abajo. Si los HECHOS no responden la pregunta, dilo en una frase que cite el hecho HUECO si existe; si no, no escribas nada.
 2. Cada afirmación cita los fact_ids que la respaldan. Una afirmación sin fact_ids, o con un fact_id que no esté abajo, se borra antes de que alguien la lea o la escuche.
@@ -97,7 +99,9 @@ export const RULES = {
 4. Los hechos HUECO son ausencias: di claramente qué no se sabe y qué evidencia lo cambiaría.
 5. Nada de consejo médico, dosis ni cantidades, pronóstico ni esperanza de vida, ni promesas de cura o resultados. Los tratamientos de otras enfermedades son preguntas para un experto, nunca recomendaciones.
 6. Nunca nombres ni describas a un paciente individual. Solo las organizaciones, investigadores y estudios de los HECHOS.
-7. Cada afirmación es una o dos frases cortas que funcionen leídas en voz alta. Sin listas, sin markdown, sin URLs.`,
+7. Cada afirmación es una o dos frases cortas que funcionen leídas en voz alta. Sin listas, sin markdown, sin URLs.
+8. Cada afirmación repite solo lo que dicen sus hechos citados. No añadas implicaciones, consejos ni recomendaciones que ningún hecho diga (un hecho PASO puede decirse como sugerencia).
+9. Nunca escribas ids de hechos, corchetes ni la palabra "hecho" en el texto; los ids van solo en fact_ids.`,
 };
 
 /** Accessibility: plain language at about a 6th-grade reading level. */
