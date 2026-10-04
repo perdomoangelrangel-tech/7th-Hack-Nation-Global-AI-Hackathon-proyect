@@ -8,7 +8,7 @@
  * - Soft camera fly-to on focus; narration frames the cited nodes; hover lifts a node; idle spin off by default.
  * Three objects are built once per node/link and restyled in place (no rebuild on every highlight).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ForceGraph3D, { type ForceGraphMethods, type LinkObject, type NodeObject } from "react-force-graph-3d";
 import * as THREE from "three";
 import SpriteText from "three-spritetext";
@@ -56,6 +56,29 @@ function assets() {
   return shared;
 }
 
+interface StyleState { highlightNodes: Set<string>; highlightEdges: Set<string>; selected: string | null; hover: string | null; clusterFilter: string | null; narrating: boolean; still?: boolean; labelIds: Set<string> | null }
+
+function styleNode(n: N, p: NodeParts, st: StyleState) {
+  const id = String(n.id);
+  const lit = st.highlightNodes.has(id) || n.id === st.selected || n.id === st.hover;
+  const dim = st.narrating ? !st.highlightNodes.has(id) : !!st.clusterFilter && n.type === "disease" && n.cluster !== st.clusterFilter;
+  const isDisease = n.type === "disease";
+  p.mat.opacity = dim ? CANVAS.dimAlpha : n.draft ? 0.35 : 1;
+  p.mat.emissive.set(lit && !dim ? p.mat.color : 0x000000).multiplyScalar(lit ? 0.25 : 0);
+  (p.halo.material as THREE.SpriteMaterial).opacity = dim ? 0 : lit ? 0.45 : isDisease ? 0.28 : 0;
+  (p.ring.material as THREE.SpriteMaterial).opacity = dim ? 0 : n.focus || n.id === st.selected ? 0.9 : n.bridge ? 0.7 : 0;
+  p.label.visible = !dim && (lit || (st.labelIds ? st.labelIds.has(id) : isDisease));
+  // Hover lift (P2 micro-interaction): the hovered node grows.
+  p.mesh.scale.setScalar(p.base * (n.id === st.hover && !st.still ? 1.25 : 1));
+}
+
+function styleLink(l: L, p: LinkParts, st: StyleState) {
+  const s = KIND_STYLE[kindOf(l.kind)];
+  const lit = st.highlightEdges.has((l as GLink).id);
+  p.mat.color.set(lit ? CANVAS.ink : l.bridge ? CANVAS.bridge : s.color);
+  p.mat.opacity = st.narrating && !lit ? 0.05 : lit ? 1 : l.bridge ? 0.9 : s.opacity;
+}
+
 const radiusOf = (n: GNode) => nodeSize(n.size) * (n.type === "disease" ? 0.95 : 0.85);
 
 export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, hiddenKinds, still, labelIds = null, command = null, spin = false, onNode, onLink, onLinkHover, onBackground }: GraphCanvasProps) {
@@ -63,6 +86,9 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
   const wrap = useRef<HTMLDivElement>(null);
   const nodeParts = useRef(new Map<string, NodeParts>());
   const linkParts = useRef(new Map<string, LinkParts>());
+  const narrating = highlightNodes.size > 0;
+  // Latest styling inputs, read by the object builders (the library may build objects after the restyle effect).
+  const styleState = useRef<StyleState>({ highlightNodes, highlightEdges, selected, hover: null, clusterFilter, narrating, still, labelIds });
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState<string | null>(null);
   // Blender glyphs per entity type (brand lane); procedural primitives until loaded / if loading fails.
@@ -120,7 +146,9 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     label.renderOrder = 10;
     group.add(haloSprite, mesh, ringSprite, label);
     nodeParts.current.get(String(n.id))?.mat.dispose();
-    nodeParts.current.set(String(n.id), { group, mesh, mat, halo: haloSprite, ring: ringSprite, label, base: glyph ? r * 1.7 : r });
+    const parts = { group, mesh, mat, halo: haloSprite, ring: ringSprite, label, base: glyph ? r * 1.7 : r };
+    nodeParts.current.set(String(n.id), parts);
+    styleNode(n, parts, styleState.current);
     return group;
   }, [glyphs]);
 
@@ -137,6 +165,7 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     const prev = linkParts.current.get(id);
     if (prev) { prev.mat.dispose(); prev.line.geometry.dispose(); }
     linkParts.current.set(id, { line, mat });
+    styleLink(l, { line, mat }, styleState.current);
     return line;
   }, []);
 
@@ -160,29 +189,12 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
   }, []);
 
   /* ---------- Restyle on highlight / hover / filter (no rebuild) ---------- */
-  const narrating = highlightNodes.size > 0;
-  useEffect(() => {
-    for (const n of data.nodes) {
-      const p = nodeParts.current.get(String(n.id)); if (!p) continue;
-      const lit = highlightNodes.has(String(n.id)) || n.id === selected || n.id === hover;
-      const dim = narrating ? !highlightNodes.has(String(n.id)) : !!clusterFilter && n.type === "disease" && n.cluster !== clusterFilter;
-      const isDisease = n.type === "disease";
-      p.mat.opacity = dim ? CANVAS.dimAlpha : n.draft ? 0.35 : 1;
-      p.mat.emissive.set(lit && !dim ? p.mat.color : 0x000000).multiplyScalar(lit ? 0.25 : 0);
-      (p.halo.material as THREE.SpriteMaterial).opacity = dim ? 0 : lit ? 0.45 : isDisease ? 0.28 : 0;
-      (p.ring.material as THREE.SpriteMaterial).opacity = dim ? 0 : n.focus || n.id === selected ? 0.9 : n.bridge ? 0.7 : 0;
-      p.label.visible = !dim && (lit || (labelIds ? labelIds.has(String(n.id)) : isDisease));
-      // Hover lift (P2 micro-interaction): the hovered node grows.
-      const lift = n.id === hover && !still ? 1.25 : 1;
-      p.mesh.scale.setScalar(p.base * lift);
-    }
-    for (const l of data.links) {
-      const p = linkParts.current.get((l as GLink).id); if (!p) continue;
-      const s = KIND_STYLE[kindOf(l.kind)];
-      const lit = highlightEdges.has((l as GLink).id);
-      p.mat.color.set(lit ? CANVAS.ink : l.bridge ? CANVAS.bridge : s.color);
-      p.mat.opacity = narrating && !lit ? 0.05 : lit ? 1 : l.bridge ? 0.9 : s.opacity;
-    }
+  // The library may (re)build three objects after this effect runs (new data, glyphs loaded), so the styling lives in
+  // functions that read the latest state from a ref and run both here and inside nodeObject/linkObject.
+  useLayoutEffect(() => {
+    styleState.current = { highlightNodes, highlightEdges, selected, hover, clusterFilter, narrating, still, labelIds };
+    for (const n of data.nodes) { const p = nodeParts.current.get(String(n.id)); if (p) styleNode(n, p, styleState.current); }
+    for (const l of data.links) { const p = linkParts.current.get((l as GLink).id); if (p) styleLink(l, p, styleState.current); }
   }, [data, highlightNodes, highlightEdges, selected, hover, clusterFilter, narrating, still, labelIds]);
 
   /* ---------- Camera ---------- */
@@ -223,11 +235,16 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
   }, [data, view]);
 
   const frameStory = useCallback((ms: number) => frame(focusComponent, ms), [frame, focusComponent]);
+  /** After the layout settles: frame what is lit (a narrated claim, a picked cluster), else the story. */
+  const frameSettled = useCallback((ms: number) => {
+    const lit = styleState.current.highlightNodes;
+    if (lit.size) frame(lit, ms); else frameStory(ms);
+  }, [frame, frameStory]);
 
   useEffect(() => {
     settled.current = false; stopFramed.current = false;
     // Fallback framing in case the engine is slow to stop (software WebGL).
-    const tm = setTimeout(() => { if (!settled.current) { settled.current = true; frameStory(800); } }, 2600);
+    const tm = setTimeout(() => { if (!settled.current) { settled.current = true; frameSettled(800); } }, 2600);
     return () => clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
@@ -237,8 +254,8 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     // Frame once when the layout has settled (the early fallback may have framed a still-expanding layout).
     if (stopFramed.current) return;
     stopFramed.current = true; settled.current = true;
-    frameStory(still ? 0 : 1000);
-  }, [data, frameStory, still]);
+    frameSettled(still ? 0 : 1000);
+  }, [data, frameSettled, still]);
 
   useEffect(() => {
     const g = fg.current; if (!g) return;

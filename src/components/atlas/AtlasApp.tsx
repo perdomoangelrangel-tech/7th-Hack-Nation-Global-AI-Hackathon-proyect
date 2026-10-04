@@ -9,7 +9,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Box, ChevronRight, CircleHelp, Focus, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Network, Rotate3d, Square, Target, UserRound, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
+import { Box, ChevronRight, CircleHelp, Focus, Map as MapIcon, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Network, Rotate3d, Square, Target, UserRound, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { dict, type Locale } from "@/lib/i18n";
@@ -30,6 +30,7 @@ import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
+import { ClusterTable } from "@/components/journey/ClusterTable";
 import { api } from "./api";
 
 const Loading = () => <div className="absolute inset-0 grid place-items-center text-ink-3 text-sm" aria-busy>…</div>;
@@ -62,6 +63,10 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [railTab, setRailTab] = useState<RailTab | null>(defaultRailTab(initialPersona));
   const [command, setCommand] = useState<GraphCommand | null>(null);
   const [spin, setSpin] = useState(false);
+  // Spotlight: nodes to keep lit + framed (a cluster picked in the table). Unlike hover, the pointer does not clear it.
+  const [spotlight, setSpotlight] = useState<string[]>([]);
+  // Pharma starts on the ranked cluster table (UX_WAVE4 S2); everyone else on the map.
+  const [center, setCenter] = useState<"map" | "table">(initialPersona === "priya" ? "table" : "map");
   const cmd = (kind: GraphCommand["kind"]) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 }));
   const pendingNarration = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
@@ -157,7 +162,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 
   const { stop: stopNarration } = n;
   const goTo = useCallback((d: string, narrate = autoNarrate) => {
-    stopNarration(); setInspect(null); setClusterFilter(null); setDrafts([]);
+    stopNarration(); setInspect(null); setClusterFilter(null); setDrafts([]); setSpotlight([]);
     pendingNarration.current = narrate;
     setFocus(d);
   }, [autoNarrate, stopNarration]);
@@ -175,7 +180,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (l) setInspect(l.id);
   };
   const onLink = (l: GLink) => setInspect(l.kind === "proposed" ? String(l.source) : l.id);
-  const switchPersona = (p: PersonaId) => { setPersona(p); setRailTab(defaultRailTab(p)); if (focus && (n.state === "playing" || n.state === "paused")) void n.start(focus, p, locale); };
+  const switchPersona = (p: PersonaId) => { setPersona(p); setRailTab(defaultRailTab(p)); setCenter(p === "priya" ? "table" : "map"); if (focus && (n.state === "playing" || n.state === "paused")) void n.start(focus, p, locale); };
   const switchLocale = (l: Locale) => { n.stop(); setLocale(l); };
   const toggleKind = (k: LinkKind) => setHiddenKinds((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
   const onRailHover = useCallback((nodes: string[], edges: string[]) => setHover({ nodes, edges }), []);
@@ -185,10 +190,11 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   // "The map responds": a hovered / selected edge lights its two endpoints too, so the canvas dims the rest and
   // the camera frames the pair (card ↔ edge sync both ways).
   const highlightNodes = useMemo(() => {
+    if (!spoken && spotlight.length) return new Set(spotlight); // a picked cluster wins until dismissed
     const ids = new Set(spoken ? spoken.nodes : hover.nodes);
     for (const l of fullView?.links ?? []) if (highlightEdges.has(l.id)) { ids.add(linkEnd(l.source)); ids.add(linkEnd(l.target)); }
     return ids.size ? ids : EMPTY;
-  }, [spoken, hover.nodes, highlightEdges, fullView]);
+  }, [spoken, hover.nodes, highlightEdges, fullView, spotlight]);
   // Breadcrumb: what the map is showing, in words.
   const crumb = useMemo(() => {
     const id = hover.edges[0] ?? inspect; if (!id || !fullView) return null;
@@ -200,7 +206,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const Canvas = graph.mode === "3d" ? GraphCanvas3D : GraphCanvas;
   const draft = inspect && isDraftId(inspect) ? drafts.find((d) => `draft:${d.id}` === inspect) ?? null : null;
 
-  const railProps = { t, persona, view: shownView, clusterFilter, onCluster: setClusterFilter, hiddenKinds, onToggleKind: toggleKind, onHover: onRailHover, presentKinds, centrality, onInspect: setInspect };
+  const railProps = { t, persona, view: shownView, clusterFilter, onCluster: (id: string | null) => { setClusterFilter(id); if (!id) setSpotlight([]); }, hiddenKinds, onToggleKind: toggleKind, onHover: onRailHover, presentKinds, centrality, onInspect: setInspect };
 
   return (
     <MotionConfig reducedMotion={prefs.reduceMotion ? "always" : "user"}>
@@ -235,10 +241,13 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         <main id="atlas-main" className="relative h-[62vh] min-h-[380px] lg:h-auto lg:min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_30%_20%,var(--paper)_0%,var(--brand-mist)_55%,var(--brand-soft)_100%)]">
           {graph.ready && <Canvas view={shownView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={focus ? barH : 0} hiddenKinds={hiddenKinds} still={reduce}
             labelIds={labelIds} command={command} spin={spin} onNode={onNode} onLink={onLink}
-            onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); }} />}
+            onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); }} />}
 
           {/* Floating controls: 2D/3D · Focus/All · zoom · fit · rotate (3D) */}
-          <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-2">
+          <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-2">
+            <Segmented label={t.ctrl.center} value={center} onChange={(v) => setCenter(v as "map" | "table")}
+              options={[{ v: "map", label: t.ctrl.map, icon: MapIcon }, { v: "table", label: t.ctrl.table, icon: Table2 }]} />
+            {center === "map" && <>
             <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => graph.setMode(m as "2d" | "3d")}
               options={[{ v: "2d", label: t.view_2d, icon: Square }, { v: "3d", label: t.view_3d, icon: Box, disabled: !graph.webgl }]} />
             {focus && <Segmented label={t.ctrl.focus} value={focusMode ? "focus" : "all"} onChange={(v) => { setFocusMode(v === "focus"); cmd("fit"); }}
@@ -250,11 +259,25 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
               {graph.mode === "3d" && <IconBtn icon={Rotate3d} label={spin ? t.ctrl.stop_rotate : t.ctrl.rotate} pressed={spin} onClick={() => setSpin((x) => !x)} disabled={reduce} />}
             </div>
             {graph.mode === "2d" && graph.reason && <span className="hidden sm:inline rounded-full bg-paper/90 px-2 py-0.5 text-[11px] text-ink-3">{t.fallback_reason[graph.reason]}</span>}
+            </>}
           </div>
-          <div className="absolute right-3 top-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>
+
+          {/* Pharma table (action lane): ranked clusters; a row focuses that cluster on the map. */}
+          {center === "table" && (
+            <div className="absolute inset-0 z-10 overflow-auto bg-paper px-3 pt-16 pb-4">
+              <ClusterTable locale={locale}
+                onFocusCluster={(id) => {
+                  // Show the whole view, highlight the cluster and frame its diseases (the rest dims).
+                  setClusterFilter(id); setFocusMode(false); setRailTab("clusters"); setCenter("map");
+                  setSpotlight(view?.clusters.find((c) => c.id === id)?.diseases ?? []);
+                }}
+                onFocusDisease={(d) => { setCenter("map"); goTo(d); }} />
+            </div>
+          )}
+          <div className="absolute right-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>
 
           {/* Breadcrumb: what the map is highlighting, in words. */}
-          {focus && (
+          {focus && center === "map" && (
             <p aria-live="polite" className="absolute left-3 right-3 top-14 z-10 truncate text-xs text-ink-2 md:right-auto md:max-w-[70%]">
               {crumb ? <span className="rounded-full bg-paper/90 px-2.5 py-1 shadow-sm"><b className="font-semibold text-ink">{crumb.from}</b> <ChevronRight aria-hidden size={12} className="inline -mt-0.5" /> {crumb.rel} <ChevronRight aria-hidden size={12} className="inline -mt-0.5" /> <b className="font-semibold text-ink">{crumb.to}</b> · {t.status[crumb.kind]}</span>
                 : <span className="rounded-full bg-paper/80 px-2.5 py-1 text-ink-3">{t.breadcrumb_hint}</span>}
