@@ -8,6 +8,7 @@ import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
 import { StoryPlayer } from "@/components/landing/StoryPlayer";
+import { HowToUse } from "@/components/landing/HowToUse";
 import { neighborhood } from "@/components/landing/neighborhood";
 import { Logo } from "@/components/brand/Logo";
 import { Hero3D } from "@/components/three/Hero3D";
@@ -172,6 +173,8 @@ export default async function Home() {
           </div>
         </section>
 
+        <HowToUse />
+
         {/* The problem */}
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="problem">
           <p className="eyebrow">The problem</p>
@@ -214,27 +217,29 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Inside the atlas: a real neighbourhood in 3D (Blender glyphs) */}
+        {/* Inside the atlas: a real neighbourhood, ordered radial layout, Blender glyphs */}
         {hood && (
           <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="inside-title">
-            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.25fr_.75fr] [&>*]:min-w-0">
-              <AtlasPreview data={hood} />
+            <div className="grid grid-cols-1 items-end gap-6 lg:grid-cols-[1.1fr_.9fr] [&>*]:min-w-0">
               <div>
                 <p className="eyebrow">Inside the atlas</p>
                 <h2 id="inside-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">One disease, in its neighbourhood.</h2>
                 <p className="mt-3 text-ink-2">
-                  A live slice around <span className="font-semibold text-brand-ink">{hood.centerName}</span>: the gene behind it, the pathways and variants that gene touches, the symptoms, trials, papers, patient groups and researchers — and the diseases {site.name} infers may share its mechanism.
+                  A live slice around <span className="font-semibold text-brand-ink">{hood.centerName}</span>: the gene and pathways behind it (ring 1), the diseases {site.name} infers may share its mechanism, ordered by how strong each lead is (ring 2), and the studies, people and symptoms around it (outer sectors).
                 </p>
-                <ul className="mt-5 grid grid-cols-2 gap-2 text-sm text-ink-2">
-                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "disease")}</span> inferred neighbours <span className="text-ink-3">(dashed)</span></li>
+              </div>
+              <div>
+                <ul className="grid grid-cols-2 gap-2 text-sm text-ink-2">
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "disease")}</span> similar diseases <span className="text-ink-3">(dashed · inferred)</span></li>
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "pathway")}</span> pathways</li>
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "trial" || t === "study")}</span> trials &amp; papers</li>
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "organization" || t === "investigator")}</span> groups &amp; researchers</li>
                 </ul>
-                <p className="mt-4 text-xs text-ink-3">In the 3D view each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
-                <Link href={programHref({ p: "maria", d: MARIA_DISEASE })} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in {site.name} →</Link>
+                <Link href={programHref({ p: "maria", d: MARIA_DISEASE })} className="mt-4 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in {site.name} →</Link>
               </div>
             </div>
+            <div className="mt-8"><AtlasPreview data={hood} /></div>
+            <p className="mt-3 text-xs text-ink-3">In the 3D view each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
           </section>
         )}
 
