@@ -1,0 +1,459 @@
+{
+  "ARSA": {
+    "hgnc": "HGNC:713",
+    "symbol": "ARSA",
+    "name": "arylsulfatase A",
+    "aliases": [
+      "arylsulfatase A"
+    ]
+  },
+  "BICD2": {
+    "hgnc": "HGNC:17208",
+    "symbol": "BICD2",
+    "name": "BICD cargo adaptor 2",
+    "aliases": [
+      "BICD cargo adaptor 2",
+      "KIAA0699"
+    ]
+  },
+  "CDKL5": {
+    "hgnc": "HGNC:11411",
+    "symbol": "CDKL5",
+    "name": "cyclin dependent kinase like 5",
+    "aliases": [
+      "cyclin dependent kinase like 5",
+      "EIEE2",
+      "CFAP247",
+      "STK9"
+    ]
+  },
+  "CHCHD10": {
+    "hgnc": "HGNC:15559",
+    "symbol": "CHCHD10",
+    "name": "coiled-coil-helix-coiled-coil-helix domain containing 10",
+    "aliases": [
+      "coiled-coil-helix-coiled-coil-helix domain containing 10",
+      "N27C7-4",
+      "MIX17A",
+      "C22orf16",
+      "MIX17 homolog A"
+    ]
+  },
+  "CLN3": {
+    "hgnc": "HGNC:2074",
+    "symbol": "CLN3",
+    "name": "CLN3 lysosomal/endosomal transmembrane protein, battenin",
+    "aliases": [
+      "CLN3 lysosomal/endosomal transmembrane protein, battenin",
+      "BTN1",
+      "JNCL",
+      "SLC29B1"
+    ]
+  },
+  "CLN8": {
+    "hgnc": "HGNC:2079",
+    "symbol": "CLN8",
+    "name": "CLN8 transmembrane ER and ERGIC protein",
+    "aliases": [
+      "CLN8 transmembrane ER and ERGIC protein",
+      "FLJ39417",
+      "TLCD6",
+      "EPMR",
+      "C8orf61"
+    ]
+  },
+  "DMD": {
+    "hgnc": "HGNC:2928",
+    "symbol": "DMD",
+    "name": "dystrophin",
+    "aliases": [
+      "DXS142",
+      "DXS164",
+      "DXS206",
+      "DXS230",
+      "DXS239",
+      "DXS268",
+      "DXS269",
+      "DXS270",
+      "DXS272",
+      "MRX85"
+    ]
+  },
+  "DYNC1H1": {
+    "hgnc": "HGNC:2961",
+    "symbol": "DYNC1H1",
+    "name": "dynein cytoplasmic 1 heavy chain 1",
+    "aliases": [
+      "dynein cytoplasmic 1 heavy chain 1",
+      "Dnchc1",
+      "HL-3",
+      "DHC1",
+      "CMT2O",
+      "DNECL",
+      "DNCL",
+      "DNCH1"
+    ]
+  },
+  "FOXG1": {
+    "hgnc": "HGNC:3811",
+    "symbol": "FOXG1",
+    "name": "forkhead box G1",
+    "aliases": [
+      "forkhead box G1",
+      "HFK2",
+      "HFK1",
+      "HFK3",
+      "HBF-3",
+      "FKHL2",
+      "FOXG1B",
+      "FKHL4",
+      "FKH2",
+      "FKHL1",
+      "FOXG1C",
+      "FKHL3",
+      "FOXG1A",
+      "brain factor 1"
+    ]
+  },
+  "GAA": {
+    "hgnc": "HGNC:4065",
+    "symbol": "GAA",
+    "name": "alpha glucosidase",
+    "aliases": [
+      "alpha glucosidase",
+      "lysosomal alpha-glucosidase"
+    ]
+  },
+  "GABRA1": {
+    "hgnc": "HGNC:4075",
+    "symbol": "GABRA1",
+    "name": "gamma-aminobutyric acid type A receptor subunit alpha1",
+    "aliases": [
+      "gamma-aminobutyric acid type A receptor subunit alpha1",
+      "EJM5",
+      "GABA(A) receptor, alpha 1"
+    ]
+  },
+  "GABRG2": {
+    "hgnc": "HGNC:4087",
+    "symbol": "GABRG2",
+    "name": "gamma-aminobutyric acid type A receptor subunit gamma2",
+    "aliases": [
+      "gamma-aminobutyric acid type A receptor subunit gamma2",
+      "GABA(A) receptor, gamma 2"
+    ]
+  },
+  "GALC": {
+    "hgnc": "HGNC:4115",
+    "symbol": "GALC",
+    "name": "galactosylceramidase",
+    "aliases": [
+      "galactosylceramidase"
+    ]
+  },
+  "GBA1": {
+    "hgnc": "HGNC:4177",
+    "symbol": "GBA1",
+    "name": "glucosylceramidase beta 1",
+    "aliases": [
+      "glucosylceramidase beta 1",
+      "GLUC",
+      "glucocerebrosidase"
+    ]
+  },
+  "GLA": {
+    "hgnc": "HGNC:4296",
+    "symbol": "GLA",
+    "name": "galactosidase alpha",
+    "aliases": [
+      "galactosidase alpha",
+      "GALA"
+    ]
+  },
+  "IDUA": {
+    "hgnc": "HGNC:5391",
+    "symbol": "IDUA",
+    "name": "alpha-L-iduronidase",
+    "aliases": [
+      "alpha-L-iduronidase",
+      "MPS1",
+      "MPSI"
+    ]
+  },
+  "KCNQ2": {
+    "hgnc": "HGNC:6296",
+    "symbol": "KCNQ2",
+    "name": "potassium voltage-gated channel subfamily Q member 2",
+    "aliases": [
+      "potassium voltage-gated channel subfamily Q member 2",
+      "Kv7.2",
+      "ENB1",
+      "BFNC",
+      "KCNA11",
+      "HNSPC",
+      "EBN1"
+    ]
+  },
+  "KCNT1": {
+    "hgnc": "HGNC:18865",
+    "symbol": "KCNT1",
+    "name": "potassium sodium-activated channel subfamily T member 1",
+    "aliases": [
+      "potassium sodium-activated channel subfamily T member 1",
+      "KCa4.1",
+      "KIAA1422",
+      "SLACK",
+      "Slo2.2",
+      "Sequence like a calcium-activated K+ channel"
+    ]
+  },
+  "LTBP4": {
+    "hgnc": "HGNC:6717",
+    "symbol": "LTBP4",
+    "name": "latent transforming growth factor beta binding protein 4",
+    "aliases": [
+      "latent transforming growth factor beta binding protein 4",
+      "LTBP-4",
+      "LTBP-4L",
+      "FLJ46318",
+      "FLJ90018"
+    ]
+  },
+  "MECP2": {
+    "hgnc": "HGNC:6990",
+    "symbol": "MECP2",
+    "name": "methyl-CpG binding protein 2",
+    "aliases": [
+      "methyl-CpG binding protein 2",
+      "MRX16",
+      "MRX79"
+    ]
+  },
+  "NPC1": {
+    "hgnc": "HGNC:7897",
+    "symbol": "NPC1",
+    "name": "NPC intracellular cholesterol transporter 1",
+    "aliases": [
+      "NPC intracellular cholesterol transporter 1",
+      "SLC65A1"
+    ]
+  },
+  "NPC2": {
+    "hgnc": "HGNC:14537",
+    "symbol": "NPC2",
+    "name": "NPC intracellular cholesterol transporter 2",
+    "aliases": [
+      "NPC intracellular cholesterol transporter 2",
+      "NP-C2",
+      "EDDM1",
+      "epididymal protein 1"
+    ]
+  },
+  "PCDH19": {
+    "hgnc": "HGNC:14270",
+    "symbol": "PCDH19",
+    "name": "protocadherin 19",
+    "aliases": [
+      "protocadherin 19",
+      "KIAA1313",
+      "EIEE9",
+      "EFMR"
+    ]
+  },
+  "PIGA": {
+    "hgnc": "HGNC:8957",
+    "symbol": "PIGA",
+    "name": "phosphatidylinositol glycan anchor biosynthesis class A",
+    "aliases": [
+      "phosphatidylinositol glycan anchor biosynthesis class A",
+      "GPI3",
+      "PIG-A",
+      "Phosphatidylinositol N-acetylglucosaminyltransferase subunit A",
+      "GPI3 (SPT14) homolog (S. cerevisiae)"
+    ]
+  },
+  "PLCB1": {
+    "hgnc": "HGNC:15917",
+    "symbol": "PLCB1",
+    "name": "phospholipase C beta 1",
+    "aliases": [
+      "phospholipase C beta 1",
+      "KIAA0581",
+      "PLC-I",
+      "PLC154",
+      "phosphoinositide phospholipase C"
+    ]
+  },
+  "PSAP": {
+    "hgnc": "HGNC:9498",
+    "symbol": "PSAP",
+    "name": "prosaposin",
+    "aliases": [
+      "prosaposin",
+      "SAP1",
+      "GLBA",
+      "SAP2",
+      "saposin-A",
+      "saposin-B",
+      "saposin-C",
+      "saposin-D",
+      "precursor of saposins"
+    ]
+  },
+  "SCN1A": {
+    "hgnc": "HGNC:10585",
+    "symbol": "SCN1A",
+    "name": "sodium voltage-gated channel alpha subunit 1",
+    "aliases": [
+      "sodium voltage-gated channel alpha subunit 1",
+      "Nav1.1",
+      "GEFSP2",
+      "HBSCI",
+      "NAC1",
+      "SMEI",
+      "SCN1",
+      "FEB3"
+    ]
+  },
+  "SCN1B": {
+    "hgnc": "HGNC:10586",
+    "symbol": "SCN1B",
+    "name": "sodium voltage-gated channel beta subunit 1",
+    "aliases": [
+      "sodium voltage-gated channel beta subunit 1"
+    ]
+  },
+  "SCN2A": {
+    "hgnc": "HGNC:10588",
+    "symbol": "SCN2A",
+    "name": "sodium voltage-gated channel alpha subunit 2",
+    "aliases": [
+      "sodium voltage-gated channel alpha subunit 2",
+      "Nav1.2",
+      "HBSCII",
+      "HBSCI",
+      "SCN2A1",
+      "SCN2A2"
+    ]
+  },
+  "SCN9A": {
+    "hgnc": "HGNC:10597",
+    "symbol": "SCN9A",
+    "name": "sodium voltage-gated channel alpha subunit 9",
+    "aliases": [
+      "sodium voltage-gated channel alpha subunit 9",
+      "Nav1.7",
+      "NE-NA",
+      "NENA",
+      "ETHA"
+    ]
+  },
+  "SLC12A5": {
+    "hgnc": "HGNC:13818",
+    "symbol": "SLC12A5",
+    "name": "solute carrier family 12 member 5",
+    "aliases": [
+      "solute carrier family 12 member 5",
+      "KIAA1176",
+      "KCC2",
+      "hKCC2",
+      "K-Cl cotransporter 2"
+    ]
+  },
+  "SLC25A22": {
+    "hgnc": "HGNC:19954",
+    "symbol": "SLC25A22",
+    "name": "solute carrier family 25 member 22",
+    "aliases": [
+      "solute carrier family 25 member 22",
+      "FLJ13044",
+      "NET44",
+      "EIEE3",
+      "GC-1"
+    ]
+  },
+  "SMN1": {
+    "hgnc": "HGNC:11117",
+    "symbol": "SMN1",
+    "name": "survival of motor neuron 1, telomeric",
+    "aliases": [
+      "survival of motor neuron 1, telomeric",
+      "BCD541",
+      "SMNT",
+      "SMA1",
+      "SMA2",
+      "SMA3",
+      "GEMIN1",
+      "TDRD16A",
+      "SMA@",
+      "gemin-1",
+      "tudor domain containing 16A"
+    ]
+  },
+  "STXBP1": {
+    "hgnc": "HGNC:11444",
+    "symbol": "STXBP1",
+    "name": "syntaxin binding protein 1",
+    "aliases": [
+      "syntaxin binding protein 1",
+      "hUNC18",
+      "MUNC18-1",
+      "UNC18",
+      "rbSec1",
+      "nSec1",
+      "syntaxin-binding protein 1"
+    ]
+  },
+  "SYNGAP1": {
+    "hgnc": "HGNC:11497",
+    "symbol": "SYNGAP1",
+    "name": "synaptic Ras GTPase activating protein 1",
+    "aliases": [
+      "synaptic Ras GTPase activating protein 1",
+      "SYNGAP",
+      "RASA5",
+      "KIAA1938"
+    ]
+  },
+  "TBC1D24": {
+    "hgnc": "HGNC:29203",
+    "symbol": "TBC1D24",
+    "name": "TBC1 domain family member 24",
+    "aliases": [
+      "TBC1 domain family member 24",
+      "KIAA1171",
+      "TLDC6",
+      "DFNA65",
+      "DFNB86",
+      "TBC/LysM-associated domain containing 6",
+      "skywalker homolog (Drosophila)"
+    ]
+  },
+  "TPP1": {
+    "hgnc": "HGNC:2073",
+    "symbol": "TPP1",
+    "name": "tripeptidyl peptidase 1",
+    "aliases": [
+      "tripeptidyl peptidase 1",
+      "LPIC",
+      "TPP-1",
+      "CLN2",
+      "SCAR7",
+      "TPP I",
+      "lysosomal pepstatin-insensitive carboxypeptidase"
+    ]
+  },
+  "UBE3A": {
+    "hgnc": "HGNC:12496",
+    "symbol": "UBE3A",
+    "name": "ubiquitin protein ligase E3A",
+    "aliases": [
+      "ubiquitin protein ligase E3A",
+      "ANCR",
+      "E6-AP",
+      "FLJ26981",
+      "EPVE6AP",
+      "HPVE6A"
+    ]
+  }
+}
