@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { BadgeCheck, ChevronRight, Footprints, Info, Languages, Play, Search, X, type LucideIcon } from "lucide-react";
+import { BadgeCheck, ChevronRight, Footprints, Info, Languages, Search, X, type LucideIcon } from "lucide-react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { SearchHit } from "@/lib/atlas/store";
 import { dict, type Locale } from "@/lib/i18n";
@@ -29,9 +29,9 @@ import { HelpButton, Tour } from "./Tour";
 const STEP_ICON: LucideIcon[] = [Search, Footprints, BadgeCheck];
 
 /** `embed`: the server saw ?embed=1; inside any frame useEmbed() also turns it on after mount (Lovable has its own header). */
-interface Props { initialLocale: Locale; stats: { diseases: number; sources: number }; maria: string; diseaseNames: Record<string, string>; embed?: boolean }
+interface Props { initialLocale: Locale; stats: { diseases: number; sources: number }; maria: string; diseaseNames: Record<string, string>; embed?: boolean; changeRole?: boolean }
 
-export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedParam = false }: Props) {
+export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedParam = false, changeRole = false }: Props) {
   const router = useRouter();
   const embed = useEmbed() || embedParam;
   const [pending, startTransition] = useTransition();
@@ -48,8 +48,8 @@ export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedPa
     const id = requestAnimationFrame(() => { const m = readMemory(); setMemory(m); if (m.role) setRole(m.role); });
     return () => cancelAnimationFrame(id);
   }, []);
-  // QA-39: the demo path is the most clicked one — have it ready before the click.
-  useEffect(() => { router.prefetch(atlasHref({ p: "maria", d: maria, l: locale })); }, [router, maria, locale]);
+  // QA-39: the challenge is the most clicked path — have it ready before the click.
+  useEffect(() => { router.prefetch(atlasHref({ p: role ?? "maria", d: maria, mode: "challenge", l: locale })); }, [router, maria, locale, role]);
 
   const pickRole = (p: PersonaId) => { setRole(p); writeMemory({ role: p }); };
   const open = (d: string, c?: string) => {
@@ -131,17 +131,9 @@ export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedPa
                 {role ? c.roles[role].greeting : c.greeting_default}
               </motion.p>
             </AnimatePresence>
-            <RoleChooser locale={locale} role={role} onPick={pickRole} />
+            <RoleChooser locale={locale} role={role} onPick={pickRole} maria={maria} initialChoosing={changeRole}
+              onStart={(mode) => writeMemory(mode === "challenge" ? { role: role ?? "maria", disease: maria } : { role: role ?? "maria" })} />
           </section>
-
-          {/* Primary path: Maria's case */}
-          <div className="mt-8 flex justify-center">
-            <Link href={atlasHref({ p: "maria", d: maria, l: locale })} aria-label={c.maria_aria}
-              onClick={() => writeMemory({ role: "maria", disease: maria })}
-              className="inline-flex min-h-12 items-center gap-2.5 rounded-full bg-brand-deep px-6 text-base font-semibold text-paper shadow-[var(--shadow-soft)] transition-colors hover:bg-brand-ink">
-              <Play aria-hidden size={18} strokeWidth={2} fill="currentColor" />{c.maria_cta}<PendingHint label={c.opening} />
-            </Link>
-          </div>
 
           {/* 3-step strip */}
           <section className="mt-12" aria-label={c.steps_label}>

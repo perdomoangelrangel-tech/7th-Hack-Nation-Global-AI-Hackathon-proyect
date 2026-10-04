@@ -11,13 +11,13 @@ interface HomeCopy {
   title: string; lead: string;
   try_label: string;
   who: string; who_hint: string; greeting_default: string;
-  maria_cta: string; maria_aria: string;
   steps: [string, string, string];
   steps_label: string;
   footer: (d: number, s: number) => string;
   welcome_back: string; continue_with: (name: string) => string; dismiss: string;
   help: string; lang_aria: string; example_label: string;
-  here_as: string; you_get: string; you_ask: string; continue_as: (name: string) => string; change_role: string; opening: string;
+  here_as: string; you_get: string; you_ask: string; change_role: string; opening: string;
+  how_start: string; challenge: string; challenge_sub: string; explore: string; explore_sub: string;
   example_none: (q: string) => string;
   roles: Record<PersonaId, RoleCopy>;
 }
@@ -34,19 +34,18 @@ export const homeCopy: Record<Locale, HomeCopy> = {
     try_label: "Try:",
     who: "Who are you?", who_hint: "You can switch anytime.",
     greeting_default: "Pick the one closest to you — the atlas changes what it shows first.",
-    maria_cta: "Try Maria's case: STXBP1 — 60 seconds",
-    maria_aria: "Try Maria's case: open the STXBP1 route as a patient group leader",
     steps: ["Search", "Follow your route", "Tap any line to see the proof"],
     steps_label: "How it works",
     footer: (d, s) => `Not medical advice · ${d} diseases · ${s} open sources`,
     welcome_back: "Welcome back", continue_with: (name) => `Continue with ${name}`, dismiss: "Dismiss",
     help: "Help", lang_aria: "Cambiar a español", example_label: "Example searches",
-    here_as: "You're here as", you_get: "What you get", you_ask: "A question you can ask", continue_as: (name) => `Continue as ${name}`, change_role: "Change role", opening: "Opening your route…",
+    here_as: "You're here as", you_get: "What you get", you_ask: "A question you can ask", change_role: "Change role", opening: "Opening your route…",
+    how_start: "How do you want to start?", challenge: "Start with the challenge", challenge_sub: "Follow Maria's STXBP1 case, one question at a time", explore: "Explore freely", explore_sub: "Search any disease, gene or symptom on the map",
     example_none: (q) => `No match for “${q}” yet.`,
     roles: {
       devon: { title: "Patient or caregiver", persona: "e.g. Devon", get: "Understand it in plain words and find people like you", example: "“Is there a community for my exact diagnosis?”", greeting: "Take your time. We'll start with plain words and people like you." },
       maria: { title: "Family & patient group", persona: "e.g. Maria", get: "Partners, a reusable asset and a next step", example: "“Which disease shares our mechanism, and who do we call?”", greeting: "Let's find your next step — and who could take it with you." },
-      osei: { title: "Researcher", persona: "e.g. Dr. Osei", get: "Who else works on my mechanism — with counterexamples", example: "“Which diseases share my mechanism under another gene name?”", greeting: "Shared mechanisms first, each with its sources and counterexamples." },
+      osei: { title: "Researcher & clinician", persona: "e.g. Dr. Osei", get: "Who else works on my mechanism — with counterexamples", example: "“Which diseases share my mechanism under another gene name?”", greeting: "Shared mechanisms first, each with its sources and counterexamples." },
       priya: { title: "Pharma & biotech", persona: "e.g. Priya", get: "Rank clusters for your mechanism by unmet need", example: "“Where else could this mechanism apply?”", greeting: "Mechanism clusters first, ranked by unmet need." },
     },
   },
@@ -56,19 +55,18 @@ export const homeCopy: Record<Locale, HomeCopy> = {
     try_label: "Prueba:",
     who: "¿Quién eres?", who_hint: "Puedes cambiarlo cuando quieras.",
     greeting_default: "Elige el más cercano a ti — el atlas cambia lo que muestra primero.",
-    maria_cta: "Prueba el caso de Maria: STXBP1 — 60 segundos",
-    maria_aria: "Prueba el caso de Maria: abre la ruta de STXBP1 como líder de un grupo de pacientes",
     steps: ["Busca", "Sigue tu ruta", "Toca cualquier línea para ver la prueba"],
     steps_label: "Cómo funciona",
     footer: (d, s) => `No es consejo médico · ${d} enfermedades · ${s} fuentes abiertas`,
     welcome_back: "Bienvenido de nuevo", continue_with: (name) => `Continuar con ${name}`, dismiss: "Descartar",
     help: "Ayuda", lang_aria: "Switch to English", example_label: "Búsquedas de ejemplo",
-    here_as: "Estás aquí como", you_get: "Lo que obtienes", you_ask: "Una pregunta que puedes hacer", continue_as: (name) => `Continuar como ${name}`, change_role: "Cambiar de rol", opening: "Abriendo tu ruta…",
+    here_as: "Estás aquí como", you_get: "Lo que obtienes", you_ask: "Una pregunta que puedes hacer", change_role: "Cambiar de rol", opening: "Abriendo tu ruta…",
+    how_start: "¿Cómo quieres empezar?", challenge: "Empezar con el reto", challenge_sub: "Sigue el caso STXBP1 de Maria, una pregunta a la vez", explore: "Explorar libremente", explore_sub: "Busca cualquier enfermedad, gen o síntoma en el mapa",
     example_none: (q) => `Aún no hay resultados para «${q}».`,
     roles: {
       devon: { title: "Paciente o cuidador", persona: "p. ej. Devon", get: "Entenderla en palabras simples y encontrar personas como tú", example: "«¿Hay una comunidad para mi diagnóstico exacto?»", greeting: "Tómate tu tiempo. Empezamos con palabras simples y personas como tú." },
       maria: { title: "Familia y grupo de pacientes", persona: "p. ej. Maria", get: "Aliados, un recurso reutilizable y un siguiente paso", example: "«¿Qué enfermedad comparte nuestro mecanismo y a quién llamamos?»", greeting: "Encontremos tu siguiente paso — y quién podría darlo contigo." },
-      osei: { title: "Investigador", persona: "p. ej. Dr. Osei", get: "Quién más trabaja en mi mecanismo — con contraejemplos", example: "«¿Qué enfermedades comparten mi mecanismo con otro gen?»", greeting: "Primero los mecanismos compartidos, cada uno con sus fuentes y contraejemplos." },
+      osei: { title: "Investigador y clínico", persona: "p. ej. Dr. Osei", get: "Quién más trabaja en mi mecanismo — con contraejemplos", example: "«¿Qué enfermedades comparten mi mecanismo con otro gen?»", greeting: "Primero los mecanismos compartidos, cada uno con sus fuentes y contraejemplos." },
       priya: { title: "Farma y biotech", persona: "p. ej. Priya", get: "Clusters para tu mecanismo, ordenados por necesidad no cubierta", example: "«¿Dónde más podría aplicar este mecanismo?»", greeting: "Primero los clusters de mecanismo, ordenados por necesidad no cubierta." },
     },
   },

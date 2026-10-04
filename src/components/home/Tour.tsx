@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { BadgeCheck, ChevronLeft, ChevronRight, CircleHelp, Footprints, GitCompareArrows, Handshake, MousePointerClick, Recycle, Sigma, X } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { motionTokens } from "@/lib/motion";
+import { isEmbedded } from "@/components/atlas/useEmbed";
 import { tourCopy } from "./copy";
 import { readMemory, writeMemory } from "./memory";
 
@@ -46,7 +47,8 @@ export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; 
     };
     window.addEventListener(TOUR_EVENT, show);
     window.addEventListener("keydown", onKey);
-    const timer = auto && !readMemory().tourSeen ? window.setTimeout(show, AUTO_DELAY_MS) : undefined;
+    // Never auto-open inside the platform shell (it has its own onboarding; Help / "?" still open it).
+    const timer = auto && !readMemory().tourSeen && !isEmbedded() ? window.setTimeout(show, AUTO_DELAY_MS) : undefined;
     return () => { window.removeEventListener(TOUR_EVENT, show); window.removeEventListener("keydown", onKey); window.clearTimeout(timer); };
   }, [auto, show]);
 
