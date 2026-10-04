@@ -72,6 +72,10 @@ export interface Cluster {
   diseases: string[];          // Entity.id
   shared_pathways: { id: string; name: string; diseases: number }[];
   shared_phenotypes: { id: string; name: string; ic: number; diseases: number }[];
+  /** Orphanet classification groups shared by >= half of the members (>= 2), e.g. "Lysosomal disease". */
+  orphanet_groups?: { orpha: string; name: string; diseases: number }[];
+  /** Search terms for the cluster: its label + those groups' names and Orphanet synonyms ("lysosomal storage disease"). */
+  aliases?: string[];
 }
 
 export interface SimilarityExplanation {

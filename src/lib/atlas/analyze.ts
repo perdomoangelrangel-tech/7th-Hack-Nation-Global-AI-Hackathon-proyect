@@ -251,6 +251,11 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   const groups = new Map<number, string[]>();
   for (const d of diseases) { const c = communities[d.id] ?? -1; groups.set(c, [...(groups.get(c) ?? []), d.id]); }
 
+  const orphanetGroups = (d: string) => ((entities.get(d)?.props.orphanet_groups as { orpha: string; name: string; synonyms?: string[] }[] | undefined) ?? [])
+    .filter((g, i, arr) => arr.findIndex((x) => x.orpha === g.orpha) === i);
+  const groupSize = new Map<string, number>();
+  for (const d of diseases) for (const g of orphanetGroups(d.id)) groupSize.set(g.orpha, (groupSize.get(g.orpha) ?? 0) + 1);
+  const groupAtlasSize = (orpha: string) => groupSize.get(orpha) ?? 0;
   const pathwayGenes = new Map<string, number>();
   for (const e of edges) if (e.relation === "participates_in") pathwayGenes.set(e.to, (pathwayGenes.get(e.to) ?? 0) + 1);
   const genesIn = (pathway: string) => pathwayGenes.get(pathway) ?? 0;
@@ -285,18 +290,37 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
         .sort((a, b) => genesIn(a.id) - genesIn(b.id) || b.spec - a.spec || a.id.localeCompare(b.id))[0]
       : best;
     const ph = shared_phenotypes[0];
-    const byPathway = !!pw && pw.spec > 0;
+    // Orphanet classification groups (disease props.orphanet_groups) shared by >= half of the members (>= 2).
+    const groupCount = new Map<string, { orpha: string; name: string; synonyms: string[]; n: number }>();
+    for (const m of members) for (const g of orphanetGroups(m)) {
+      const prev = groupCount.get(g.orpha);
+      groupCount.set(g.orpha, { orpha: g.orpha, name: g.name, synonyms: g.synonyms ?? [], n: (prev?.n ?? 0) + 1 });
+    }
+    const orphanet_groups = [...groupCount.values()].filter((g) => g.n >= 2 && g.n >= members.length / 2)
+      .sort((a, b) => b.n - a.n || groupAtlasSize(a.orpha) - groupAtlasSize(b.orpha) || a.name.localeCompare(b.name));
+    // Naming precedence: a member-specific Reactome pathway that covers >= half of the members (mechanism) →
+    // the most specific Orphanet class covering >= half of the members (fewest atlas diseases outside) →
+    // the most informative shared phenotype.
+    const byPathway = !!pw && pw.spec > 0 && pw.diseases >= members.length / 2;
+    // Best class = highest F1 between the class and the cluster (precision: share of the class's atlas diseases inside
+    // the cluster; recall: share of the cluster inside the class), so neither a tiny nor an umbrella class wins.
+    const f1 = (g: { orpha: string; n: number }) => { const pr = g.n / Math.max(1, groupAtlasSize(g.orpha)), rc = g.n / members.length; return (2 * pr * rc) / (pr + rc); };
+    const grp = !byPathway ? [...orphanet_groups].sort((a, b) => f1(b) - f1(a) || b.n - a.n || a.name.localeCompare(b.name))[0] : undefined;
     const only = members.length === 1 ? entities.get(members[0]) : undefined;
-    const label = only ? `${String(only.props.short_name ?? only.name)} (no close neighbor)` : byPathway ? pw.name : ph?.name ?? "Cluster";
+    const label = only ? `${String(only.props.short_name ?? only.name)} (no close neighbor)` : byPathway ? pw.name : grp?.name ?? ph?.name ?? "Cluster";
     const label_basis = only
       ? "Only member: no other atlas disease passes the similarity threshold, so no shared mechanism is claimed"
       : byPathway
       ? `Shared Reactome pathway: ${pw.diseases} of ${members.length} member diseases participate in it vs ${Math.round(specificity(pw.id, "leaf") * 100)}% outside the cluster${pw !== best ? ` (chosen over the broader "${best.name}", ${best.diseases} of ${members.length}, because fewer atlas genes take part in it: ${genesIn(pw.id)} vs ${genesIn(best.id)})` : ""}`
-      : ph
-        ? `Most informative shared phenotype (IC ${ph.ic}): present in ${ph.diseases} of ${members.length} member diseases${members.length > 1 ? "; no member-specific Reactome pathway" : ""}`
-        : "Single disease without shared pathways or phenotypes";
+      : grp
+        ? `Orphanet classification group ${grp.orpha}: ${grp.n} of ${members.length} member diseases belong to it, ${groupAtlasSize(grp.orpha) - grp.n} atlas disease(s) outside the cluster${pw && pw.spec > 0 ? `; the most specific shared Reactome pathway ("${pw.name}") covers only ${pw.diseases} of ${members.length}` : ""}`
+        : ph
+          ? `Most informative shared phenotype (IC ${ph.ic}): present in ${ph.diseases} of ${members.length} member diseases; no member-specific Reactome pathway or Orphanet class`
+          : "No shared pathway, class or phenotype";
+    const aliases = [...new Set([label, ...orphanet_groups.flatMap((g) => [g.name, ...g.synonyms])])];
     return {
       id: `cluster:${i + 1}`, label, label_basis, color: PALETTE[i % PALETTE.length], diseases: members,
+      orphanet_groups: orphanet_groups.map(({ orpha, name, n }) => ({ orpha, name, diseases: n })), aliases,
       shared_pathways: shared_pathways.map(({ id, name, diseases }) => ({ id, name, diseases })),
       shared_phenotypes: shared_phenotypes.map(({ id, name, ic, diseases }) => ({ id, name, ic, diseases })),
     };
