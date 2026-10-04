@@ -8,6 +8,8 @@ Nedamex is an evidence knowledge graph of rare diseases — diseases, genes and 
 
 **Not medical advice.** Nedamex shows sourced information to discuss with a clinician.
 
+**Open source · [MIT License](LICENSE).** The code, the ingestion pipeline and the analytics are open so any patient group, lab or company can reuse, audit and extend the atlas. Data keeps the license of each source (see [Data and licenses](#data-and-licenses)).
+
 ## Live
 
 | Deliverable | URL |
@@ -21,7 +23,7 @@ Nedamex is an evidence knowledge graph of rare diseases — diseases, genes and 
 
 The flow is **website → "Open Nedamex" → platform home (who are you?) → your route in the atlas**. The Lovable platform embeds the same atlas engine (`?embed=1`) and reads the same Supabase graph, so both deliverables show one atlas.
 
-Videos: **pitch** — on the website ([`public/videos/nedamex-pitch.mp4`](public/videos/nedamex-pitch.mp4)) · demo and tech videos — `[links added when published]`.
+Videos (also on the website, section "See it"): **Pitch** [`public/videos/nedamex-pitch.mp4`](public/videos/nedamex-pitch.mp4) · **Demo (60 s)** [`public/videos/nedamex-demo.mp4`](public/videos/nedamex-demo.mp4) · **Tech (60 s)** [`public/videos/nedamex-tech-final.mp4`](public/videos/nedamex-tech-final.mp4).
 
 ## How to use it
 
@@ -107,7 +109,7 @@ Checks: `npm run typecheck && npm run lint && npm test && npm run build`.
 
 ## Reproduce the dataset
 
-1. **Disease slice.** `npx tsx scripts/resolve-seed.ts` resolves and verifies every id of the 21 diseases (Orphadata preferred term + disease-causing gene, HGNC, MONDO, OMIM, ClinVar trait). Unverifiable candidates are left out, never guessed.
+1. **Disease slice.** `npx tsx scripts/resolve-seed.ts` resolves and verifies every id of the 32 diseases (Orphadata preferred term + disease-causing gene, HGNC, MONDO, OMIM, ClinVar trait). Unverifiable candidates are left out, never guessed.
 2. **Ingest to the bundled snapshot.** `npm run ingest` runs the local pipeline over all sources into `data/atlas.json` (`--orpha=ORPHA:…` for one disease, `--only=<source>` for one source, `--fresh` to rebuild).
 3. **Analytics.** `npm run analyze` computes mechanism clusters, similarity explanations, bridges, gaps and counterexamples (`src/lib/atlas/analyze.ts`, pure and deterministic).
 4. **Live graph.** Apply `supabase/migrations/*` to a Supabase project, deploy the Edge Function `supabase/functions/ingest`, and trigger it per disease (`pg_net`, or the `ingest` GitHub workflow); `0012_nexmed_cron.sql` schedules a daily refresh. `npm run snapshot` exports the live graph back to the snapshot format.
@@ -134,7 +136,7 @@ Integrity checks: `.claude/qa/integrity.sql` (every `expect = 0` row must be 0).
 | Patient organizations | Public information from each organization's official site |
 | UI sound effects (Kenney "Interface Sounds" + "RPG Audio", `public/sfx/`) | CC0 1.0 |
 
-Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Code license: `[to be chosen by the team]`.
+Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Code license: **MIT** ([`LICENSE`](LICENSE)) — Nedamex is open source.
 
 ## Security & privacy
 
@@ -147,6 +149,17 @@ Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Cod
 ## Terms of use
 
 Nedamex is a research and information prototype, **not medical advice**: it never shows doses, inferred and AI-extracted links need expert review, and community drafts are never evidence. Full terms: [`docs/TERMS.md`](docs/TERMS.md).
+
+## Known limitations
+
+- Disease similarity also uses phenotype overlap, so generic shared symptoms (seizures, intellectual disability) can surface a weak "Possible lead" — e.g. phenylketonuria next to STXBP1-DEE. Such links are always shown as *inferred · needs expert review*; next step: require a shared pathway or gene before a disease can be shown as a lead.
+- "Approved" means the indication reached the approval stage in Open Targets/ChEMBL **and** is not contradicted by the FDA label / EMA EPAR (20 pairs are flagged `not_confirmed_by_label`). Prescription status, official label text and PubMed "scientific backing" columns are not ingested yet; the UI links to the regulator instead.
+- API rate limits are enforced per serverless instance (in-memory); the database-side limits on public submissions always apply.
+- 32 diseases today; growing by mechanism family (DEE/channelopathies, lysosomal, neuromuscular, leukodystrophies) with the same verified pipeline.
+
+## Open source
+
+Nedamex is released under the [MIT License](LICENSE). Contributions are welcome: new diseases and sources follow [`docs/ADD_A_DISEASE.md`](docs/ADD_A_DISEASE.md) (verified ids only, never guessed), and security issues go through [`SECURITY.md`](SECURITY.md).
 
 ## Team
 

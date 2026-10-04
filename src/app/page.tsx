@@ -17,6 +17,9 @@ import { Logo } from "@/components/brand/Logo";
 import { Hero3D } from "@/components/three/Hero3D";
 import { NodeOrb, type OrbKind } from "@/components/three/NodeOrb";
 import { atlas, loadAtlas, stats } from "@/lib/atlas/store";
+import { buildJourney } from "@/lib/journey/build";
+import { tenX } from "@/lib/journey/tenx";
+import { TenX } from "@/components/journey/TenX";
 import type { Edge } from "@/lib/atlas/types";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { ACTION_ICON, ICON, MODE_COPY, MODE_ICON, NAV_ICON, NODE_ICON, STEP_ICON } from "@/lib/icons";
@@ -107,6 +110,9 @@ export default async function Home() {
   const idx = atlas();
   const { snap, byId } = idx;
   const hood = neighborhood(idx, MARIA_DISEASE);
+  // 10× moonshot for Maria's route, computed from the same journey engine the atlas uses (durations = labelled assumptions).
+  const mariaJourney = buildJourney(idx, MARIA_DISEASE, "maria", "en");
+  const tenx = mariaJourney ? tenX(mariaJourney) : null;
   const hoodCount = (pred: (t: string) => boolean) => hood?.nodes.filter((n) => !n.center && pred(n.type)).length ?? 0;
   const name = (id: string) => byId.get(id)?.name ?? id.split(":").slice(1).join(":");
   const causes = snap.edges.find((e) => e.to === MARIA_DISEASE && e.relation === "causes" && e.kind === "observed");
@@ -140,7 +146,7 @@ export default async function Home() {
       : { title, purpose, url: fallback.src, poster: fallback.poster, draft };
   const videos: VideoItem[] = [
     toItem("Pitch", "Why Nedamex exists, in 60 seconds", site.videos.pitch, site.draftVideos.pitch, false),
-    toItem("Demo", "The project in action: Maria's route, evidence, guide, medicines, community", site.videos.demo, site.draftVideos.demo, true),
+    toItem("Demo", "The project in action: Maria's route, evidence, guide, medicines, community", site.videos.demo, site.draftVideos.demo, false),
     toItem("Tech", "How we built it, what worked, what didn't, key tools", site.videos.tech, techLocal ? site.draftVideos.tech : site.draftVideos.techStoryboard, !techLocal),
   ];
   const Challenge = STEP_ICON[3];
@@ -203,6 +209,24 @@ export default async function Home() {
           </ul>
           <p className="mt-3 text-xs text-ink-3">Source: Hack-Nation Challenge 05 brief.</p>
         </section>
+
+        {/* 2b · The 10× moonshot (same engine as the atlas "See the 10× route") */}
+        {tenx && (
+          <section id="tenx" className="border-y border-line bg-brand-mist" aria-labelledby="tenx-title">
+            <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+              <SectionHead id="tenx-title" eyebrow="The 10× moonshot" title="From an isolated diagnosis to a shared study — faster.">
+                Milestone: launch a shared natural-history study. {site.name} shortens the discovery phase — who shares our mechanism, which studies we could reuse, who bridges both communities. Every duration below is a labelled assumption with its rationale; only the links and studies are sourced. Protocol, ethics and enrollment are not shortened unless an existing study already includes the disease.
+              </SectionHead>
+              <div className="card mt-8 bg-paper p-5 sm:p-8">
+                <TenX data={tenx} locale="en" />
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <SfxLink href={programHref({ p: "maria", d: MARIA_DISEASE, mode: "challenge" })} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}>Follow Maria&apos;s route in {site.name}</SfxLink>
+                <a href="#videos" className={`${btn} border border-brand/40 bg-paper text-brand-deep hover:bg-brand-soft`}>Watch the demo</a>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* 3 · How Nedamex works: sources → evidence graph → route */}
         <section id="how" className="border-y border-line bg-brand-mist" aria-labelledby="how-title">

@@ -25,8 +25,8 @@ export const site = {
   /** Fallbacks until the env URLs exist: the Demo storyboard draft and our Remotion Tech video (draft = Tech60 storyboard). */
   draftVideos: {
     pitch: { src: "/videos/nedamex-pitch.mp4", poster: "/videos/nedamex-pitch.jpg" },
-    demo: { src: "/videos/Demo60-draft.mp4", poster: "/videos/Demo60-draft.jpg" },
-    tech: { src: "/videos/nedamex-tech.mp4", poster: "/videos/nedamex-tech.jpg" },
+    demo: { src: "/videos/nedamex-demo.mp4", poster: "/videos/nedamex-demo.jpg" },
+    tech: { src: "/videos/nedamex-tech-final.mp4", poster: "/videos/nedamex-tech-final.jpg" },
     techStoryboard: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
   },
   /** Team cards (names and roles given by the team, 4 Oct 2026). */
