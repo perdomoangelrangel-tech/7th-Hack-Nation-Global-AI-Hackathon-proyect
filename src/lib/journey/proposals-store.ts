@@ -30,11 +30,11 @@ export async function saveProposal(g: GraphIndex, input: ProposalInput): Promise
       p_kind: base.kind, p_title: base.title, p_body: base.body, p_persona: base.persona, p_disease: base.disease,
       p_entities: base.entities, p_edges: base.edges, p_contact: contact,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     const id = String(data);
     return { ok: true, id, stored: "supabase", dropped_edges, proposal: { ...base, id, status: "draft", created_at: new Date().toISOString(), stored: "supabase", edge_kind: "proposed" } };
   } catch (e) {
-    console.warn("[proposals] RPC submit_proposal unavailable, keeping the draft in memory:", (e as Error).message);
+    console.warn("[proposals] RPC submit_proposal unavailable, keeping the draft in memory", (e as { code?: string }).code ?? "error");
     const proposal: ProposalPublic = { ...base, id: `local-${randomUUID()}`, status: "draft", created_at: new Date().toISOString(), stored: "local", edge_kind: "proposed" };
     MEMORY.unshift(proposal);
     MEMORY.length = Math.min(MEMORY.length, MEMORY_CAP);
@@ -50,11 +50,11 @@ export async function listProposals(disease: string | null, limit = 50): Promise
     let q = publicClient().from("proposals_public").select("id,kind,title,body,persona,disease,entities,edges,status,created_at").order("created_at", { ascending: false }).limit(limit);
     if (disease) q = q.eq("disease", disease);
     const { data, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     remote = (data ?? []).map((r) => ({ ...(r as Omit<ProposalPublic, "stored" | "edge_kind">), entities: r.entities ?? [], edges: r.edges ?? [], stored: "supabase" as const, edge_kind: "proposed" as const }));
     remoteOk = true;
   } catch (e) {
-    console.warn("[proposals] view proposals_public unavailable:", (e as Error).message);
+    console.warn("[proposals] view proposals_public unavailable", (e as { code?: string }).code ?? "error");
   }
   const sources: ("supabase" | "local")[] = [...(remoteOk ? ["supabase" as const] : []), ...(local.length || !remoteOk ? ["local" as const] : [])];
   return { proposals: [...local, ...remote].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit), sources };

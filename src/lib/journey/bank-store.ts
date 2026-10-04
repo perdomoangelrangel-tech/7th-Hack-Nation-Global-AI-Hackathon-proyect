@@ -18,12 +18,12 @@ export async function getMedicines(query: MedicineQuery): Promise<MedicinesResul
   try {
     if (!medCache || Date.now() - medCache.at > TTL) {
       const { data, error } = await publicClient().from("medicines_public").select("*").limit(2000);
-      if (error) throw new Error(error.message);
+      if (error) throw error;
       medCache = { at: Date.now(), rows: (data ?? []).map((r) => fromView(r as Record<string, unknown>, site.appUrl)) };
     }
     return filterMedicines(medCache.rows, query, "supabase");
   } catch (e) {
-    console.warn("[medicines] medicines_public unavailable, using the graph:", (e as Error).message);
+    console.warn("[medicines] medicines_public unavailable, using the graph", (e as { code?: string }).code ?? "error");
     return medicinesFromGraph(await graph(), site.appUrl, query);
   }
 }
@@ -36,13 +36,13 @@ export async function getCommunity(query: CommunityQuery): Promise<CommunityResu
   try {
     if (!nihCache || Date.now() - nihCache.at > TTL) {
       const { data, error } = await publicClient().from("community_profiles_public").select("*").limit(5000);
-      if (error) throw new Error(error.message);
+      if (error) throw error;
       nihCache = { at: Date.now(), rows: (data ?? []).map((r) => fromProfileView(r as Record<string, unknown>)) };
     }
     nih = nihCache.rows.filter((p) => !query.d || p.diseases.some((x) => x.disease_id === query.d));
     sources.push("supabase");
   } catch (e) {
-    console.warn("[community] community_profiles_public unavailable, using the graph:", (e as Error).message);
+    console.warn("[community] community_profiles_public unavailable, using the graph", (e as { code?: string }).code ?? "error");
     nih = communityFromGraph(g, { d: query.d });
     sources.push("graph");
   }
@@ -51,10 +51,10 @@ export async function getCommunity(query: CommunityQuery): Promise<CommunityResu
     let q = publicClient().from("profile_submissions").select("id,display_name,role,institution,diseases,focus,orcid,link,status,created_at").neq("status", "rejected").order("created_at", { ascending: false }).limit(500);
     if (query.d) q = q.contains("diseases", [query.d]);
     const { data, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     self = (data ?? []).map((r) => fromSubmission(r as Record<string, unknown>, name));
   } catch (e) {
-    console.warn("[community] profile_submissions unavailable:", (e as Error).message);
+    console.warn("[community] profile_submissions unavailable", (e as { code?: string }).code ?? "error");
   }
   let all = [...nih, ...self];
   if (query.q) all = all.filter((p) => matchesProfile(p, query.q!));
@@ -71,6 +71,9 @@ export async function submitProfile(input: ProfileInput): Promise<{ ok: true; id
     p_display_name: input.display_name, p_role: input.role, p_institution: input.institution ?? null, p_diseases: diseases,
     p_focus: input.focus ?? null, p_orcid: input.orcid ?? null, p_link: input.link ?? null, p_consent: input.consent,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.warn("[community] submit_profile failed", error.code ?? "error");
+    return { ok: false, error: /rate|too many/i.test(error.message) ? "too many profiles from here — try again later" : "could not save the profile — try again later" };
+  }
   return { ok: true, id: String(data), dropped_diseases };
 }

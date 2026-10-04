@@ -343,3 +343,25 @@ describe("wave 6 · community", async () => {
     expect(r[r.length - 1].kind).toBe("self_submitted");
   });
 });
+
+describe("wave 7 · request guards", async () => {
+  const { rateLimit, stripControl, honeypotTripped, HONEYPOT_FIELD } = await import("./guard");
+  const req = (ip: string) => new Request("http://x/api/proposals", { method: "POST", headers: { "x-forwarded-for": `${ip}, 10.0.0.1` } });
+  it("allows 5 per minute per IP, then 429 with a Retry-After, and frees up after the window", () => {
+    const t0 = 1_000_000;
+    for (let i = 0; i < 5; i++) expect(rateLimit(req("1.1.1.1"), "t", 5, 60_000, t0 + i).ok).toBe(true);
+    const blocked = rateLimit(req("1.1.1.1"), "t", 5, 60_000, t0 + 10);
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.retryAfter).toBeGreaterThan(0);
+    expect(rateLimit(req("2.2.2.2"), "t", 5, 60_000, t0 + 10).ok).toBe(true);     // other IPs unaffected
+    expect(rateLimit(req("1.1.1.1"), "t", 5, 60_000, t0 + 60_001).ok).toBe(true); // window slid
+  });
+  it("strips control characters but keeps newlines and tabs", () => {
+    expect(stripControl({ a: "x\u0000y\u0007z", b: ["\u001Fq"], c: "line\n\tok" })).toEqual({ a: "xyz", b: ["q"], c: "line\n\tok" });
+  });
+  it("rejects a filled honeypot and accepts an empty one", () => {
+    expect(honeypotTripped({ [HONEYPOT_FIELD]: "http://spam" })).toBe(true);
+    expect(honeypotTripped({ [HONEYPOT_FIELD]: "" })).toBe(false);
+    expect(honeypotTripped({ title: "x" })).toBe(false);
+  });
+});

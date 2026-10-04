@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PencilLine } from "lucide-react";
 import { playSfx } from "@/lib/sfx";
+import { HONEYPOT_FIELD } from "@/lib/journey/guard-shared";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
@@ -90,12 +91,13 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
   const [form, setForm] = useState<Draft | null>(draft);
   const [contact, setContact] = useState("");
   const [consent, setConsent] = useState(false);
+  const [trap, setTrap] = useState(""); // honeypot: people never see it; bots fill it
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   // Sync the dialog with the requested draft (open with a fresh prefill, close when cleared).
   const [shown, setShown] = useState<Draft | null>(null);
-  if (draft !== shown) { setShown(draft); if (draft) { setForm(draft); setContact(""); setConsent(false); setErr(null); } }
+  if (draft !== shown) { setShown(draft); if (draft) { setForm(draft); setContact(""); setConsent(false); setErr(null); setTrap(""); } }
   useEffect(() => {
     const el = ref.current; if (!el) return;
     if (draft && !el.open) { el.showModal(); playSfx("open"); }
@@ -123,7 +125,7 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
     try {
       const r = await fetch("/api/proposals", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: form.kind, title: form.title, body: form.body, persona, disease, entities: form.entities, edges: form.edges, contact: consent && contact.trim() ? contact.trim() : null, consent }),
+        body: JSON.stringify({ kind: form.kind, title: form.title, body: form.body, persona, disease, entities: form.entities, edges: form.edges, contact: consent && contact.trim() ? contact.trim() : null, consent, [HONEYPOT_FIELD]: trap }),
       });
       const b = await r.json();
       if (!r.ok || !b.ok) throw new Error(b.issues?.join("; ") ?? b.error ?? String(r.status));
@@ -184,6 +186,10 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
                 ))}
               </ul>
             </div>}
+            {/* Honeypot (WAVE 7): off-screen, not focusable, ignored by screen readers and autofill. */}
+            <div aria-hidden="true" className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
+              <label>Website <input type="text" name={HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} /></label>
+            </div>
             <fieldset className="rounded-lg border border-line p-3">
               <legend className="px-1 text-xs font-medium text-ink-2">{c.contact_legend}</legend>
               <label className="flex items-start gap-2 text-xs text-ink-2 cursor-pointer">
