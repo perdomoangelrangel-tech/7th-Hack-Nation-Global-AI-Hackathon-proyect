@@ -30,7 +30,7 @@ export function VideoGallery({ videos }: { videos: VideoItem[] }) {
   const v = open !== null ? videos[open] : null;
   return (
     <>
-      <div className="mt-8 grid gap-5 md:grid-cols-2">
+      <div className={`mt-8 grid gap-5 md:grid-cols-2 ${videos.length >= 3 ? "lg:grid-cols-3" : ""}`}>
         {videos.map((item, i) => (
           <figure key={item.title} className="overflow-hidden rounded-xl border border-line bg-paper shadow-[var(--shadow-soft)]">
             <button

@@ -139,6 +139,7 @@ export default async function Home() {
       ? { title, purpose, url, embed: /\.mp4($|\?)/.test(url) ? undefined : toEmbed(url), draft: false }
       : { title, purpose, url: fallback.src, poster: fallback.poster, draft };
   const videos: VideoItem[] = [
+    toItem("Pitch", "Why Nedamex exists, in 60 seconds", site.videos.pitch, site.draftVideos.pitch, false),
     toItem("Demo", "The project in action: Maria's route, evidence, guide, medicines, community", site.videos.demo, site.draftVideos.demo, true),
     toItem("Tech", "How we built it, what worked, what didn't, key tools", site.videos.tech, techLocal ? site.draftVideos.tech : site.draftVideos.techStoryboard, !techLocal),
   ];
@@ -342,7 +343,7 @@ export default async function Home() {
         {/* 7 · Videos */}
         <section id="videos" className="border-y border-line bg-brand-mist" aria-labelledby="videos-title">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <SectionHead id="videos-title" eyebrow="See it" title="The demo, and how we built it." />
+            <SectionHead id="videos-title" eyebrow="See it" title="The pitch, the demo, and how we built it." />
             <VideoGallery videos={videos} />
             {videos.some((v) => v.draft) && <p className="mt-3 text-xs text-ink-3">Drafts: storyboards with placeholders. Final cuts replace them before submission.</p>}
           </div>
@@ -440,12 +441,14 @@ export default async function Home() {
               <li><Link href={site.appUrl} className="text-brand-deep hover:underline">Open {site.name}</Link></li>
               <li><Link href={appPath("/medicines")} className="text-brand-deep hover:underline">Medicines bank</Link></li>
               <li><Link href={appPath("/community")} className="text-brand-deep hover:underline">Community</Link></li>
-              <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
+              <li><a href={site.github} target="_blank" rel="noopener noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
+              <li><Link href="/terms" className="text-brand-deep hover:underline">Terms of Use</Link></li>
+              <li><Link href="/security" className="text-brand-deep hover:underline">Security &amp; Privacy</Link></li>
               <li className="text-ink-3">{site.challenge}</li>
             </ul>
           </div>
         </div>
-        <p className="border-t border-line py-4 text-center text-xs text-ink-3">© {new Date().getFullYear()} {site.company}. 3D assets made in Blender from the {site.name} logo. Sound effects: Kenney (CC0).</p>
+        <p className="border-t border-line py-4 text-center text-xs text-ink-3">© {new Date().getFullYear()} {site.company}. 3D assets made in Blender from the {site.name} logo. Sound effects: Kenney (CC0). · <Link href="/terms" className="hover:underline">Terms of Use</Link> · <Link href="/security" className="hover:underline">Security &amp; Privacy</Link> · Not medical advice.</p>
       </footer>
     </>
   );

@@ -18,20 +18,22 @@ export const site = {
   appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "https://nedamex.lovable.app").replace(/\/$/, "") || "/",
   /** The two submission videos (form: Demo ≤ 60 s · Tech ≤ 60 s). Final URLs come from env. */
   videos: {
+    pitch: process.env.NEXT_PUBLIC_VIDEO_PITCH ?? "",
     demo: process.env.NEXT_PUBLIC_VIDEO_DEMO ?? "",
     tech: process.env.NEXT_PUBLIC_VIDEO_TECH ?? "",
   },
   /** Fallbacks until the env URLs exist: the Demo storyboard draft and our Remotion Tech video (draft = Tech60 storyboard). */
   draftVideos: {
+    pitch: { src: "/videos/nedamex-pitch.mp4", poster: "/videos/nedamex-pitch.jpg" },
     demo: { src: "/videos/Demo60-draft.mp4", poster: "/videos/Demo60-draft.jpg" },
     tech: { src: "/videos/nedamex-tech.mp4", poster: "/videos/nedamex-tech.jpg" },
     techStoryboard: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
   },
-  /** Team cards. Placeholders until the team fills them in — never invent people. */
+  /** Team cards (names and roles given by the team, 4 Oct 2026). */
   team: [
-    { name: "[Name]", role: "[Role]" },
-    { name: "[Name]", role: "[Role]" },
-    { name: "[Name]", role: "[Role]" },
+    { name: "Ángel Perdomo Rangel", role: "CEO & Founder" },
+    { name: "Yves Du Solier López", role: "Executive Creative Director & Co-founder" },
+    { name: "Jhoel Francisco Velasco Bazan", role: "Chief Marketing Officer" },
   ],
   /** Data licenses shown in the footer (see docs/DATA_SOURCES.md). */
   licenses: [
