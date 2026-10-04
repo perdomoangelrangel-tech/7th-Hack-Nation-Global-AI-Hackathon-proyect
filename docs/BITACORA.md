@@ -783,3 +783,21 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - **QA-40 BLOCKER fixed by brain** (voice lane idle since 19:58, privacy leak to a third-party host): all 10 ElevenLabs tools `nedamex_{disease,trials,treatments,literature,communities,gaps,neighbors,cluster,explain_path,resolve}` repointed from `nexmed.vercel.app` → **`https://nedamex.vercel.app/api/tools/*`** (URL only; names, descriptions, params, dynamic vars unchanged; usage_stats were 0 — no user query had reached the third-party host). Each endpoint answers 200 on prod (0.24–0.62 s), explain_path with a real edge id 200.
 - QA-41 (legacy `ask_nedamex_{clinical,research,family}` → `/api/tools/ask` 404 + plaintext x-atlas-key in config): **NOT changed** — detaching tools from agents + key rotation needs voice/human. NEED(voice) or human: detach those 3 from the agents; human: treat that key as exposed (don't reuse it as ATLAS_TOOLS_KEY).
 - NEED(voice/user-verifier): one live call per agent that triggers a `nedamex_*` tool (proof in the ElevenLabs conversation log).
+
+## 22:55 · user-verifier · PROGRESS
+- VERIFIED QA-40 (read-only via ElevenLabs API): all 10 `nedamex_*` tools → `https://nedamex.vercel.app/api/tools/*`; the Maria agent's tool_ids are exactly those 10 (gpt-4o-mini, tool-first prompt). All 10 endpoints 200 on prod (explain_path → "The atlas suggests KCNT1 epilepsy and STXBP1-DEE are related due to shared signs." with edge + evidence ids, 0.23 s).
+- QA-41 downgraded to minor: the 3 legacy `ask_nedamex_*` tools are NOT attached to the Maria agent (still in the workspace with a plaintext header value) → delete them + treat that key as exposed (human/voice).
+- NEED(voice/human): QA-43 privacy settings on the agents (checked on Maria): `record_voice: true`, `retention_days: -1` (keep forever), `delete_transcript_and_pii: false`, no PII redaction. For patients and caregivers talking about a child's diagnosis this is a bad default and contradicts the site's "we never sell patient data" promise. Set a short retention (e.g. 30 days) and enable PII redaction/zero-retention on all 4 agents · severity: major (trust / judges' privacy questions)
+- One live tool call per agent: NOT RUN by me (needs a real mic session in the browser). Tool usage_stats are still 0 → whoever records the demo video: ask one question per agent, then I re-check usage_stats > 0.
+
+## 22:45 · head-brain · PROGRESS (Lovable published + prod checks)
+- Lovable 2nd pass DONE and PUBLISHED → https://nedamex.lovable.app : role collapse ("You're here as … / Continue as … / Change role", localStorage), search dropdown "Browse diseases" (all 21 from Supabase, ORPHA codes) + "Can't find a disease? Request it" / "Suggest a data source" dialogs (RPC submit_proposal kind=evidence), live coverage block (21 diseases · 3,539 entities · 4,439 links · 5,080 evidence).
+- Lovable 3rd pass queued (QA-37): /research shows atlas names only, no raw scores, "Open in the atlas"; role pill on every route; footer + not-medical-advice.
+- Prod health: openai_env set · elevenlabs_env set · graph 3571 entities. Website CTAs already point to nedamex.lovable.app.
+- NEED(brand): hero/nav "Open Nedamex" must go to the platform HOME (`NEXT_PUBLIC_APP_URL` = https://nedamex.lovable.app, where you pick your role), not straight to /atlas. Persona cards may keep deep links to /atlas?p=…
+- NEED(human): hide the "Edit with Lovable" badge (Lovable → Project settings → toggle badge off) · QA-38.
+
+## 22:45 · brain · PROGRESS (README)
+- **README.md rewritten (English, final draft) and pushed** @b35b7e1: live URLs (website · app · Lovable · Maria's route), what it does, Mermaid architecture (sources → Supabase/snapshot → Vercel API + verifier → UI; OpenAI · ElevenLabs · Lovable · Blender), local run (zero-config), optional env, dataset reproduction (resolve-seed → ingest → analyze → Edge Function/pg_cron → snapshot → extract), licenses, team placeholders. Every path it cites verified to exist. Video links + team names + code license are placeholders until the human provides them.
+- No merges this tick (no new checkpoints). Idle since ~20:57: data, ai, voice, action, brand, mvp. WAVE 5B P0s with owners idle → human may need to restart those sessions.
+- QA-43 (ElevenLabs agents record + keep audio forever, no PII redaction) → human decision; brain asked.
