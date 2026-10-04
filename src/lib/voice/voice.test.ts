@@ -163,3 +163,19 @@ describe("guide chat", () => {
     expect(answerToTurn({ ...base, claims: [claim] }, 2, "x")).toMatchObject({ text: "A fact.", claims: [claim] });
   });
 });
+
+import { displayId, focusFrom, sourceLabel } from "./explore";
+
+describe("explore in the graph", () => {
+  it("builds a deduplicated focus request and opens the drawer only when there are edges", () => {
+    expect(focusFrom([{ edges: ["edge:a", "edge:a"], nodes: ["disease:ORPHA:1"] }, { edges: ["edge:b"], nodes: ["disease:ORPHA:1"] }]))
+      .toEqual({ edgeIds: ["edge:a", "edge:b"], entityIds: ["disease:ORPHA:1"], openDrawer: true });
+    expect(focusFrom([{ nodes: ["gene:HGNC:1"] }])).toEqual({ edgeIds: [], entityIds: ["gene:HGNC:1"], openDrawer: false });
+    expect(focusFrom([{}])).toBeNull();
+  });
+  it("never shows raw analysis ids (QA-47)", () => {
+    expect(sourceLabel("nexmed_analysis")).toBe("Nedamex analysis");
+    expect(displayId("nexmed_analysis", "nedamex_similarity_v2")).toBe("shared-mechanism analysis");
+    expect(sourceLabel("orphanet")).toBe("Orphanet");
+  });
+});

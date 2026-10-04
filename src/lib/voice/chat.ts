@@ -20,7 +20,7 @@ export interface ChatTurn {
 }
 
 /** Keep the last MAX_TURNS turns (a turn = one message). */
-export function trimTurns(turns: ChatTurn[], max = MAX_TURNS): ChatTurn[] {
+export function trimTurns<T extends ChatTurn>(turns: T[], max = MAX_TURNS): T[] {
   return turns.length > max ? turns.slice(-max) : turns;
 }
 

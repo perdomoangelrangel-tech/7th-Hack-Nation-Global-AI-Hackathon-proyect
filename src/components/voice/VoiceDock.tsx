@@ -19,11 +19,14 @@ import { usePrefs } from "@/lib/prefs";
 import { agentIds } from "@/lib/voice/agents";
 import { setGuideOpen, useNarrationLink, type NarrationLink } from "@/lib/voice/bridge";
 import { answerToTurn, askGraph, suggestions, trimTurns, type ChatTurn } from "@/lib/voice/chat";
-import { stopSpeaking } from "@/lib/voice/client";
+import { primeAudio, speechLevel, speechPlaying, stopSpeaking } from "@/lib/voice/client";
+import { displayId, exploreInGraph, sourceLabel } from "@/lib/voice/explore";
+import { playSfx, type SfxName } from "@/lib/sfx";
+import { POSTERS } from "@/components/three/palette";
 import { voiceCopy, type VoiceCopy } from "@/lib/voice/copy";
 import { VOICE_LIVE_EVENT } from "@/lib/voice/events";
 import { STATUS_STYLE } from "@/components/atlas/NarrationBar";
-import { PersonaOrb } from "./PersonaOrb";
+import { PERSONA_TINT, PersonaOrb } from "./PersonaOrb";
 import { VoiceSettings } from "./VoiceSettings";
 import type { Line, LiveState } from "./VoiceSession";
 
@@ -53,6 +56,7 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
   const [lines, setLines] = useState<Line[]>([]);
   const [muted, setMuted] = useState(false);
   const [endSignal, setEndSignal] = useState(0);
+  const [peek, setPeek] = useState(false);
   const levelRef = useRef<() => number>(() => 0);
   const cancelled = useRef(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -62,12 +66,24 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
   const callOn = live || talk === "asking-mic";
   const n = link?.n;
   const narrating = n?.state === "playing" || n?.state === "loading";
+  const liveRef = useRef(false);
+  useEffect(() => { liveRef.current = live; }, [live]);
+
+  /** Mascot level: the agent's voice/mic during a call, otherwise the narration's TTS output. */
+  const getLevel = useCallback(() => (liveRef.current ? levelRef.current() : speechLevel()), []);
+  /** UI sounds never play over narration or agent audio. */
+  const cue = useCallback((name: SfxName) => { if (!speechPlaying() && !liveRef.current) playSfx(name); }, []);
 
   // The caption strip over the map hides while the Guide shows the written route or plays audio.
   useEffect(() => { setGuideOpen(open && tab !== "chat"); }, [open, tab]);
   useEffect(() => () => setGuideOpen(false), []);
 
-  const close = useCallback(() => { setOpen(false); requestAnimationFrame(() => buttonRef.current?.focus()); }, []);
+  const close = useCallback(() => { cue("close"); setOpen(false); setPeek(false); requestAnimationFrame(() => buttonRef.current?.focus()); }, [cue]);
+  const openGuide = useCallback(() => { primeAudio(); playSfx("open"); setOpen(true); }, []);
+  const switchTab = useCallback((k: Tab) => { if (k === "transcript") cue("page"); setTab(k); setPeek(false); }, [cue]);
+  const onExplore = useCallback((items: { edges?: string[]; nodes?: string[] }[]) => {
+    if (exploreInGraph(items)) { cue("select"); if (window.matchMedia("(max-width: 640px)").matches) setPeek(true); }
+  }, [cue]);
 
   // Esc closes from anywhere while open.
   useEffect(() => {
@@ -107,7 +123,7 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
     } catch (e) {
       const name = (e as DOMException)?.name;
       setProblem(name === "NotFoundError" || name === "OverconstrainedError" ? t.no_mic : t.mic_denied);
-      setTalk("idle");
+      setTalk("idle"); playSfx("error");
       return;
     }
     if (cancelled.current) return;
@@ -117,12 +133,15 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
   }, [agentId, t]);
 
   const onState = useCallback((s: LiveState, p?: string) => {
-    setTalk(s === "ended" ? "idle" : s === "error" ? "idle" : s);
-    if (p) setProblem(p);
+    setTalk((prev) => {
+      if ((s === "listening" || s === "speaking") && (prev === "connecting" || prev === "asking-mic")) playSfx("start"); // session connected
+      return s === "ended" ? "idle" : s === "error" ? "idle" : s;
+    });
+    if (p) { setProblem(p); playSfx("error"); }
   }, []);
   const onLine = useCallback((l: Line) => setLines((ls) => [...ls.slice(-19), l]), []);
 
-  const orbState = talk === "speaking" || (tab === "talk" && n?.state === "playing") ? "speaking"
+  const orbState = talk === "speaking" || n?.state === "playing" ? "speaking"
     : talk === "connecting" || talk === "asking-mic" ? "connecting"
     : talk === "listening" ? "listening" : "idle";
 
@@ -144,9 +163,9 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
             exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
             transition={calm ? { duration: PANEL_MS, ease: "easeOut" } : { type: "spring", duration: PANEL_MS, bounce: 0.12 }}
             style={{ transformOrigin: "bottom right" }}
-            className="pointer-events-auto w-[24rem] max-w-full h-[min(78vh,38rem)] flex flex-col rounded-2xl border border-line bg-paper/95 backdrop-blur-md shadow-xl shadow-brand-ink/10 text-ink">
+            className={`pointer-events-auto w-[24rem] max-w-full ${peek ? "h-auto" : "h-[min(80vh,40rem)]"} flex flex-col rounded-2xl border border-line bg-paper/95 backdrop-blur-md shadow-xl shadow-brand-ink/10 text-ink`}>
             <header className="flex items-center gap-3 p-3 pb-2">
-              <PersonaOrb persona={persona} state={orbState} size={64} reduce={prefs.reduceMotion} getLevel={() => levelRef.current()} />
+              <PersonaOrb persona={persona} state={orbState} size={84} reduce={prefs.reduceMotion} getLevel={getLevel} />
               <div className="min-w-0 flex-1">
                 <h2 className="text-sm font-semibold">{t.guide_title(mode)}</h2>
                 <p className="text-xs text-ink-2 line-clamp-2" role="status" aria-live="polite">{status}</p>
@@ -157,9 +176,15 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
               <IconButton label={t.close} onClick={close}><path d="M6 6l12 12M18 6L6 18" /></IconButton>
             </header>
 
+            {peek && (
+              <div className="px-3 pb-3">
+                <button type="button" onClick={() => setPeek(false)} className="w-full rounded-full border border-line py-1.5 text-xs font-semibold text-brand-deep hover:bg-brand-mist focus-visible:outline-2 focus-visible:outline-brand">{t.back_to_chat}</button>
+              </div>
+            )}
+            {!peek && <>
             <div role="tablist" aria-label={t.guide} className="mx-3 grid grid-cols-3 rounded-xl bg-brand-mist p-1 text-sm">
               {TABS.map((k) => (
-                <button key={k} type="button" role="tab" id={`${ids}-tab-${k}`} aria-selected={tab === k} aria-controls={`${ids}-pane-${k}`} onClick={() => setTab(k)}
+                <button key={k} type="button" role="tab" id={`${ids}-tab-${k}`} aria-selected={tab === k} aria-controls={`${ids}-pane-${k}`} onClick={() => switchTab(k)}
                   className={`rounded-lg py-1.5 font-semibold focus-visible:outline-2 focus-visible:outline-brand ${tab === k ? "bg-paper text-brand-ink shadow-sm" : "text-ink-2 hover:text-ink"}`}>
                   {tabLabel[k]}
                 </button>
@@ -171,9 +196,9 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
             <div role="tabpanel" id={`${ids}-pane-${tab}`} aria-labelledby={`${ids}-tab-${tab}`} className="min-h-0 flex-1 flex flex-col">
               {tab === "chat" && (
                 <ChatPane persona={persona} locale={locale} disease={disease} t={t} inputRef={inputRef} calm={calm}
-                  onMic={() => { setTab("talk"); if (!callOn) void startTalk(); }} micDisabled={!agentId} />
+                  onMic={() => { switchTab("talk"); if (!callOn) void startTalk(); }} micDisabled={!agentId} onExplore={onExplore} cue={cue} />
               )}
-              {tab === "transcript" && <TranscriptPane link={link} disease={disease} persona={persona} locale={locale} t={t} />}
+              {tab === "transcript" && <TranscriptPane link={link} disease={disease} persona={persona} locale={locale} t={t} onExplore={onExplore} />}
               {tab === "talk" && (
                 <div className="min-h-0 flex-1 overflow-y-auto p-3 pt-2 space-y-4">
                   <NarrationPlayer link={link} disease={disease} persona={persona} locale={locale} t={t} disabled={callOn} />
@@ -208,7 +233,7 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
                           {t.talk_mode(mode)}
                         </button>
                       ) : (
-                        <button type="button" onClick={() => setTab("transcript")}
+                        <button type="button" onClick={() => switchTab("transcript")}
                           className="ml-auto rounded-full border border-line px-4 py-1.5 text-xs font-semibold text-brand-deep hover:bg-brand-mist focus-visible:outline-2 focus-visible:outline-brand">
                           {t.tab_transcript}
                         </button>
@@ -219,11 +244,12 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
               )}
             </div>
             <p className="px-3 pb-2.5 pt-1 text-[11px] text-ink-3">{t.not_advice}</p>
+            </>}
           </motion.section>
         )}
       </AnimatePresence>
 
-      <button ref={buttonRef} type="button" onClick={() => (open ? close() : setOpen(true))} aria-expanded={open} aria-controls={open ? `${ids}-panel` : undefined} aria-haspopup="dialog"
+      <button ref={buttonRef} type="button" onClick={() => (open ? close() : openGuide())} aria-expanded={open} aria-controls={open ? `${ids}-panel` : undefined} aria-haspopup="dialog"
         className={`pointer-events-auto flex items-center gap-2 rounded-full pl-2 pr-4 py-2 shadow-lg shadow-brand-ink/15 border focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand ${callOn ? "bg-brand-ink text-paper border-brand-ink" : "bg-paper text-ink border-line hover:bg-brand-mist"}`}>
         <span className={`relative grid place-items-center w-9 h-9 rounded-full ${callOn ? "bg-paper/15" : "bg-brand-deep text-paper"}`} aria-hidden>
           {/* MessageCircle + AudioLines feel: chat bubble with sound bars */}
@@ -243,12 +269,16 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
 
 // ───────────────────────────── Chat (text → /api/ask) ─────────────────────────────
 
-function ChatPane({ persona, locale, disease, t, inputRef, calm, onMic, micDisabled }: {
+const timeOf = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+type Turn = ChatTurn & { at: string; question?: string };
+type ExploreItems = { edges?: string[]; nodes?: string[] }[];
+
+function ChatPane({ persona, locale, disease, t, inputRef, calm, onMic, micDisabled, onExplore, cue }: {
   persona: PersonaId; locale: Locale; disease: string | null; t: VoiceCopy; inputRef: React.RefObject<HTMLTextAreaElement | null>;
-  calm: boolean; onMic: () => void; micDisabled: boolean;
+  calm: boolean; onMic: () => void; micDisabled: boolean; onExplore: (items: ExploreItems) => void; cue: (s: SfxName) => void;
 }) {
   const { prefs } = usePrefs();
-  const [turns, setTurns] = useState<ChatTurn[]>([]);
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const nextId = useRef(1);
@@ -261,18 +291,20 @@ function ChatPane({ persona, locale, disease, t, inputRef, calm, onMic, micDisab
   async function send(text: string) {
     const q = text.trim();
     if (!q || busy) return;
-    const user: ChatTurn = { id: nextId.current++, role: "user", text: q };
+    cue("send");
     const history = turns;
-    setTurns((ts) => trimTurns([...ts, user]));
+    setTurns((ts) => trimTurns([...ts, { id: nextId.current++, role: "user" as const, text: q, at: timeOf(new Date()) }]));
     setDraft(""); setBusy(true);
     abort.current?.abort();
     const ac = new AbortController(); abort.current = ac;
     try {
       const a = await askGraph({ question: q, persona, locale, focus: disease, history, simple: prefs.simpleLanguage }, ac.signal);
-      setTurns((ts) => trimTurns([...ts, answerToTurn(a, nextId.current++, t.not_found_graph)]));
+      setTurns((ts) => trimTurns([...ts, { ...answerToTurn(a, nextId.current++, t.not_found_graph), at: timeOf(new Date()) }]));
+      cue("message");
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
-      setTurns((ts) => trimTurns([...ts, { id: nextId.current++, role: "guide", text: t.chat_error, error: true }]));
+      setTurns((ts) => trimTurns([...ts, { id: nextId.current++, role: "guide" as const, text: t.chat_error, error: true, at: timeOf(new Date()), question: q }]));
+      cue("error");
     } finally {
       setBusy(false);
       inputRef.current?.focus();
@@ -281,46 +313,60 @@ function ChatPane({ persona, locale, disease, t, inputRef, calm, onMic, micDisab
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 pt-2 space-y-2.5" aria-live="polite" aria-busy={busy}>
-        {turns.length === 0 && (
-          <div>
-            <p className="text-sm text-ink-2">{t.chat_intro}</p>
-            <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-3">{t.suggested}</p>
-            <ul className="mt-1.5 space-y-1.5">
-              {suggestions(persona, locale).map((s) => (
-                <li key={s}>
-                  <button type="button" onClick={() => void send(s)}
-                    className="w-full text-left rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink hover:bg-brand-mist focus-visible:outline-2 focus-visible:outline-brand">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 space-y-4" aria-live="polite" aria-busy={busy}>
+        <div className="flex items-start gap-2">
+          <GuideAvatar persona={persona} />
+          <div className="min-w-0 max-w-[88%]">
+            <div className="rounded-2xl rounded-tl-sm border border-line bg-brand-mist px-3 py-2 text-sm text-ink">{t.chat_intro}</div>
+            {turns.length === 0 && (
+              <div className="mt-3 flex flex-wrap gap-2" aria-label={t.suggested}>
+                {suggestions(persona, locale).map((s) => (
+                  <button key={s} type="button" onClick={() => void send(s)}
+                    className="rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-medium text-brand-deep hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand">
                     {s}
                   </button>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {turns.length > 0 && (
+          <div className="flex justify-center">
+            <button type="button" onClick={() => { abort.current?.abort(); setTurns([]); setBusy(false); inputRef.current?.focus(); }}
+              className="rounded-full border border-line px-3 py-1 text-[11px] font-semibold text-ink-2 hover:bg-brand-mist focus-visible:outline-2 focus-visible:outline-brand">
+              + {t.new_chat}
+            </button>
           </div>
         )}
-        {turns.map((m) => <ChatBubble key={m.id} m={m} t={t} />)}
+        {turns.map((m) => (
+          <ChatBubble key={m.id} m={m} t={t} persona={persona} calm={calm} onExplore={onExplore}
+            onRetry={m.question ? () => void send(m.question as string) : undefined} />
+        ))}
         {busy && (
-          <div className="flex items-center gap-2 text-xs text-ink-3" role="status">
-            <span className="inline-flex gap-1" aria-hidden>
-              {[0, 1, 2].map((i) => <span key={i} className={`w-1.5 h-1.5 rounded-full bg-brand ${calm ? "" : "animate-bounce"}`} style={{ animationDelay: `${i * 120}ms` }} />)}
+          <div className="flex items-center gap-2" role="status">
+            <GuideAvatar persona={persona} />
+            <span className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-sm border border-line bg-brand-mist px-3 py-2 text-xs text-ink-3">
+              <span className="inline-flex gap-1" aria-hidden>
+                {[0, 1, 2].map((i) => <span key={i} className={`w-1.5 h-1.5 rounded-full bg-brand ${calm ? "" : "animate-bounce"}`} style={{ animationDelay: `${i * 120}ms` }} />)}
+              </span>
+              {t.typing}
             </span>
-            {t.typing}
           </div>
         )}
         <div ref={endRef} />
       </div>
-      <form className="flex items-end gap-2 border-t border-line p-2.5" onSubmit={(e) => { e.preventDefault(); void send(draft); }}>
+      <form className="sticky bottom-0 flex items-end gap-2 border-t border-line bg-paper/95 p-3" onSubmit={(e) => { e.preventDefault(); void send(draft); }}>
         <label htmlFor="guide-input" className="sr-only">{t.chat_placeholder}</label>
         <textarea id="guide-input" ref={inputRef} value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} maxLength={500}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(draft); } }}
           placeholder={t.chat_placeholder}
           className="min-h-12 max-h-28 flex-1 resize-none rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-brand" />
         <button type="button" onClick={onMic} disabled={micDisabled} aria-label={t.mic} title={t.mic}
-          className="w-10 h-10 grid place-items-center rounded-full border border-line text-brand-deep hover:bg-brand-mist disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand">
+          className="w-11 h-11 grid place-items-center rounded-full border border-line text-brand-deep hover:bg-brand-mist disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
         </button>
         <button type="submit" disabled={busy || !draft.trim()} aria-label={t.send} title={t.send}
-          className="w-10 h-10 grid place-items-center rounded-full bg-brand-deep text-paper hover:bg-brand-ink disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+          className="w-11 h-11 grid place-items-center rounded-full bg-brand-deep text-paper hover:bg-brand-ink disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </button>
       </form>
@@ -328,36 +374,85 @@ function ChatPane({ persona, locale, disease, t, inputRef, calm, onMic, micDisab
   );
 }
 
-function ChatBubble({ m, t }: { m: ChatTurn; t: VoiceCopy }) {
-  if (m.role === "user") {
-    return <div className="flex justify-end"><p className="max-w-[85%] rounded-2xl rounded-br-sm bg-brand-deep text-paper px-3 py-2 text-sm">{m.text}</p></div>;
-  }
+function GuideAvatar({ persona }: { persona: PersonaId }) {
   return (
-    <div className="max-w-[92%] rounded-2xl rounded-bl-sm border border-line bg-brand-mist px-3 py-2 text-sm text-ink">
-      {m.notice && <p className="mb-1.5 text-xs text-amber">{m.notice}</p>}
-      {m.claims?.length ? (
-        <ul className="space-y-2">
-          {m.claims.map((c, i) => (
-            <li key={i}>
-              <p>
-                {c.status && STATUS_STYLE[c.status] && <span className={`inline-block align-middle mr-1.5 text-[10px] uppercase tracking-widest border rounded-full px-1.5 py-px ${STATUS_STYLE[c.status]}`}>{c.status}</span>}
-                {c.text}
-              </p>
-              {c.evidence.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {c.evidence.slice(0, 3).map((e) => (
-                    <a key={e.id} href={e.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] rounded-full border border-line bg-paper px-2 py-0.5 text-ink-2 hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand">
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand" aria-hidden />{e.source} · {e.external_id.length > 22 ? `${e.external_id.slice(0, 21)}…` : e.external_id}
+    <span className="relative mt-0.5 grid w-7 h-7 shrink-0 place-items-center rounded-full bg-paper" style={{ boxShadow: `0 0 0 2px ${PERSONA_TINT[persona]}` }} aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element -- tiny static poster */}
+      <img src={POSTERS.agent} alt="" width={24} height={24} className="rounded-full" />
+    </span>
+  );
+}
+
+function ChatBubble({ m, t, persona, calm, onExplore, onRetry }: {
+  m: Turn; t: VoiceCopy; persona: PersonaId; calm: boolean; onExplore: (items: ExploreItems) => void; onRetry?: () => void;
+}) {
+  if (m.role === "user") {
+    return (
+      <div className="flex flex-col items-end">
+        <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-brand-deep text-paper px-3 py-2 text-sm">{m.text}</p>
+        <span className="mt-1 text-[10px] text-ink-3">{t.you} · {m.at}</span>
+      </div>
+    );
+  }
+  const claims = m.claims ?? [];
+  const sources = [...new Map(claims.flatMap((c) => c.evidence).map((e) => [e.id, e])).values()];
+  const canExplore = claims.some((c) => c.edges.length > 0 || c.nodes.length > 0);
+  return (
+    <div className="flex items-start gap-2">
+      <GuideAvatar persona={persona} />
+      <div className="min-w-0 max-w-[88%]">
+        <div className="rounded-2xl rounded-tl-sm border border-line bg-brand-mist px-3 py-2.5 text-sm text-ink">
+          {m.notice && <p className="mb-2 text-xs text-amber">{m.notice}</p>}
+          {claims.length ? (
+            <ul className="space-y-2">
+              {claims.map((c, i) => (
+                <motion.li key={i} initial={calm ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: calm ? 0 : i * 0.06, duration: 0.18 }}>
+                  {c.status && STATUS_STYLE[c.status] && (
+                    <span className={`inline-block align-middle mr-1.5 text-[10px] uppercase tracking-widest border rounded-full px-1.5 py-px ${STATUS_STYLE[c.status]}`}>{c.status}</span>
+                  )}
+                  {c.text}
+                </motion.li>
+              ))}
+            </ul>
+          ) : (
+            <p className={m.error ? "text-amber" : ""}>{m.text}</p>
+          )}
+          {sources.length > 0 && (
+            <details className="mt-3 group">
+              <summary className="cursor-pointer list-none text-xs font-semibold text-brand-deep hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand rounded">
+                <span className="inline-block transition-transform group-open:rotate-90" aria-hidden>›</span> {t.sources} ({sources.length})
+              </summary>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {sources.map((e) => (
+                  <li key={e.id}>
+                    <a href={e.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] rounded-full border border-line bg-paper px-2 py-0.5 text-ink-2 hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand" aria-hidden />{sourceLabel(e.source)} · {displayId(e.source, e.external_id)}
                     </a>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : <p className={m.error ? "text-amber" : ""}>{m.text}</p>}
-      {m.empty && <p className="mt-1 text-xs text-ink-3">{t.chat_intro}</p>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          {canExplore && <ExploreButton label={t.explore_graph} onClick={() => onExplore(claims)} />}
+          {m.error && onRetry && (
+            <button type="button" onClick={onRetry} className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-2 hover:bg-brand-mist focus-visible:outline-2 focus-visible:outline-brand">{t.retry}</button>
+          )}
+          <span className="text-[10px] text-ink-3">{t.agent} · {m.at}</span>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function ExploreButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-full bg-paper border border-brand px-3 py-1 text-xs font-semibold text-brand-deep hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="8" r="2.5" /><circle cx="10" cy="18" r="2.5" /><path d="M8.2 7l7.4.6M7 8.3l2.2 7.4M16.6 10.1l-5 6" /></svg>
+      {label}
+    </button>
   );
 }
 
@@ -370,7 +465,7 @@ function useLoadedNarration(link: NarrationLink | null, disease: string | null, 
   return n;
 }
 
-function TranscriptPane({ link, disease, persona, locale, t }: { link: NarrationLink | null; disease: string | null; persona: PersonaId; locale: Locale; t: VoiceCopy }) {
+function TranscriptPane({ link, disease, persona, locale, t, onExplore }: { link: NarrationLink | null; disease: string | null; persona: PersonaId; locale: Locale; t: VoiceCopy; onExplore: (items: ExploreItems) => void }) {
   const n = useLoadedNarration(link, disease, persona, locale);
   const [copied, setCopied] = useState(false);
   if (!link || !n || !disease) return <p className="p-3 text-sm text-ink-2">{t.listen_pick}</p>;
@@ -409,7 +504,7 @@ function TranscriptPane({ link, disease, persona, locale, t }: { link: Narration
                     {c.evidence.map((e) => (
                       <li key={e.id}>
                         <a href={e.url} target="_blank" rel="noreferrer" className="text-xs text-brand-deep underline underline-offset-2 break-all hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand rounded">
-                          {e.source} · {e.external_id}
+                          {sourceLabel(e.source)} · {e.external_id}
                         </a>
                       </li>
                     ))}
@@ -417,9 +512,7 @@ function TranscriptPane({ link, disease, persona, locale, t }: { link: Narration
                 </div>
               )}
               {(c.edges.length > 0 || c.nodes.length > 0) && (
-                <button type="button" onClick={() => n.select(i)} className="mt-2 text-[11px] font-semibold text-brand-deep underline underline-offset-2 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand rounded">
-                  {t.see_on_map}
-                </button>
+                <div className="mt-2"><ExploreButton label={t.explore_graph} onClick={() => { n.select(i); onExplore([c]); }} /></div>
               )}
             </li>
           ))}
