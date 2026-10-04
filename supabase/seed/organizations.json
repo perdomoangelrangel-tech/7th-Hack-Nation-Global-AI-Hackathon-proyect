@@ -253,7 +253,8 @@
     "url": "https://mpssociety.org",
     "kind": "patient_org",
     "diseases": [
-      "ORPHA:579"
+      "ORPHA:579",
+      "ORPHA:580"
     ],
     "verified": "official site answered 200 and names the disease; checked 2026-10-03"
   },
@@ -326,5 +327,105 @@
       "ORPHA:98896"
     ],
     "verified": "official site answered 200 and names the disease; checked 2026-10-03"
+  },
+  {
+    "name": "Cystic Fibrosis Foundation",
+    "country": "US",
+    "url": "https://www.cff.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:586"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "National PKU Alliance",
+    "country": "US",
+    "url": "https://www.npkua.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:716"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "Huntington's Disease Society of America",
+    "country": "US",
+    "url": "https://hdsa.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:399"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "Friedreich's Ataxia Research Alliance",
+    "country": "US",
+    "url": "https://www.curefa.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:95"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "World Federation of Hemophilia",
+    "country": "International",
+    "url": "https://wfh.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:98878"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "Sickle Cell Disease Association of America",
+    "country": "US",
+    "url": "https://sicklecelldisease.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:232"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "TSC Alliance",
+    "country": "US",
+    "url": "https://www.tscalliance.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:805"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "National Fragile X Foundation",
+    "country": "US",
+    "url": "https://fragilex.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:908"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "Wilson Disease Association",
+    "country": "US",
+    "url": "https://wilsondisease.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:905"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
+  },
+  {
+    "name": "ALD Connect",
+    "country": "US",
+    "url": "https://aldconnect.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:139396"
+    ],
+    "verified": "official site answered 200 and names the disease; checked 2026-10-04"
   }
 ]

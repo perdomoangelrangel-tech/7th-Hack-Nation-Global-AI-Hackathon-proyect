@@ -578,7 +578,10 @@
     ],
     "verified": "ORPHA:70 preferred term from Orphadata; SMN1 HGNC:11117 via Monarch causal gene for MONDO:0019079 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0019079 via Monarch Orphanet mapping, Open Targets name \"proximal spinal muscular atrophy\"; checked 2026-10-03",
     "short_name": "Spinal muscular atrophy",
-    "short_name_es": "Atrofia muscular espinal"
+    "short_name_es": "Atrofia muscular espinal",
+    "efo_extra": [
+      "MONDO_0001516"
+    ]
   },
   {
     "slug": "duchenne",
@@ -608,5 +611,327 @@
     "short_name_es": "Distrofia muscular de Duchenne",
     "omim": "OMIM:310200",
     "clinvar_disease": "Duchenne muscular dystrophy"
+  },
+  {
+    "slug": "cf",
+    "orpha": "ORPHA:586",
+    "mondo": "MONDO:0009061",
+    "efo": "MONDO_0009061",
+    "name": "Cystic fibrosis",
+    "name_es": "Fibrosis quística",
+    "genes": [
+      "CFTR"
+    ],
+    "hgnc": {
+      "CFTR": "HGNC:1884"
+    },
+    "search_terms": [
+      "Cystic fibrosis",
+      "CF",
+      "Mucoviscidosis"
+    ],
+    "trial_keywords": [
+      "cftr",
+      "cystic fibrosis",
+      "cf",
+      "mucoviscidosis"
+    ],
+    "verified": "ORPHA:586 preferred term from Orphadata; CFTR HGNC:1884 via Orphadata: \"Disease-causing germline mutation(s) (loss of function) in\", HGNC cross-checked with genenames.org; MONDO:0009061 via Monarch Orphanet mapping, Open Targets name \"cystic fibrosis\"; checked 2026-10-04",
+    "omim": "OMIM:219700",
+    "clinvar_disease": "Cystic fibrosis",
+    "short_name": "Cystic fibrosis",
+    "short_name_es": "Fibrosis quística"
+  },
+  {
+    "slug": "pku",
+    "orpha": "ORPHA:716",
+    "mondo": "MONDO:0009861",
+    "efo": "MONDO_0009861",
+    "name": "Phenylketonuria",
+    "name_es": "Fenilcetonuria",
+    "genes": [
+      "PAH"
+    ],
+    "hgnc": {
+      "PAH": "HGNC:8582"
+    },
+    "search_terms": [
+      "Phenylketonuria",
+      "PKU"
+    ],
+    "trial_keywords": [
+      "pah",
+      "phenylketonuria",
+      "pku"
+    ],
+    "verified": "ORPHA:716 preferred term from Orphadata; PAH HGNC:8582 via Monarch causal gene for MONDO:0009861 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0009861 via Monarch Orphanet mapping, Open Targets name \"phenylketonuria\"; checked 2026-10-04",
+    "short_name": "Phenylketonuria (PKU)",
+    "short_name_es": "Fenilcetonuria"
+  },
+  {
+    "slug": "huntington",
+    "orpha": "ORPHA:399",
+    "mondo": "MONDO:0007739",
+    "efo": "MONDO_0007739",
+    "name": "Huntington disease",
+    "name_es": "Enfermedad de Huntington",
+    "genes": [
+      "HTT"
+    ],
+    "hgnc": {
+      "HTT": "HGNC:4851"
+    },
+    "search_terms": [
+      "Huntington disease",
+      "Huntington chorea"
+    ],
+    "trial_keywords": [
+      "htt",
+      "huntington disease",
+      "huntington chorea"
+    ],
+    "verified": "ORPHA:399 preferred term from Orphadata; HTT HGNC:4851 via Orphadata: \"Disease-causing germline mutation(s) (gain of function) in\", HGNC cross-checked with genenames.org; MONDO:0007739 via Monarch Orphanet mapping, Open Targets name \"Huntington disease\"; checked 2026-10-04",
+    "omim": "OMIM:143100",
+    "clinvar_disease": "Huntington disease",
+    "short_name": "Huntington disease",
+    "short_name_es": "Enfermedad de Huntington"
+  },
+  {
+    "slug": "friedreich",
+    "orpha": "ORPHA:95",
+    "mondo": "MONDO:0100339",
+    "efo": "MONDO_0100339",
+    "name": "Friedreich ataxia",
+    "name_es": "Ataxia de Friedreich",
+    "genes": [
+      "FXN"
+    ],
+    "hgnc": {
+      "FXN": "HGNC:3951"
+    },
+    "search_terms": [
+      "Friedreich ataxia",
+      "FA",
+      "FRDA"
+    ],
+    "trial_keywords": [
+      "fxn",
+      "friedreich ataxia",
+      "fa",
+      "frda"
+    ],
+    "verified": "ORPHA:95 preferred term from Orphadata; FXN HGNC:3951 via Orphadata: \"Disease-causing germline mutation(s) (loss of function) in\", HGNC cross-checked with genenames.org; MONDO:0100339 via Monarch Orphanet mapping, Open Targets name \"Friedreich ataxia\"; checked 2026-10-04",
+    "omim": "OMIM:229300",
+    "clinvar_disease": "Friedreich ataxia",
+    "short_name": "Friedreich ataxia",
+    "short_name_es": "Ataxia de Friedreich"
+  },
+  {
+    "slug": "hemophilia-a",
+    "orpha": "ORPHA:98878",
+    "mondo": "MONDO:0010602",
+    "efo": "MONDO_0010602",
+    "name": "Hemophilia A",
+    "name_es": "Hemofilia A",
+    "genes": [
+      "F8"
+    ],
+    "hgnc": {
+      "F8": "HGNC:3546"
+    },
+    "search_terms": [
+      "Hemophilia A",
+      "Congenital F8 deficiency",
+      "Congenital FVIII deficiency",
+      "Congenital Factor VIII deficiency"
+    ],
+    "trial_keywords": [
+      "f8",
+      "hemophilia a",
+      "congenital f8 deficiency",
+      "congenital fviii deficiency",
+      "congenital factor viii deficiency"
+    ],
+    "verified": "ORPHA:98878 preferred term from Orphadata; F8 HGNC:3546 via Monarch causal gene for MONDO:0010602 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0010602 via Monarch Orphanet mapping, Open Targets name \"hemophilia A\"; checked 2026-10-04",
+    "omim": "OMIM:306700",
+    "clinvar_disease": "Hereditary factor VIII deficiency disease",
+    "short_name": "Hemophilia A",
+    "short_name_es": "Hemofilia A"
+  },
+  {
+    "slug": "sickle-cell",
+    "orpha": "ORPHA:232",
+    "mondo": "MONDO:0011382",
+    "efo": "MONDO_0011382",
+    "name": "Sickle cell anemia",
+    "name_es": "Anemia falciforme",
+    "genes": [
+      "HBB"
+    ],
+    "hgnc": {
+      "HBB": "HGNC:4827"
+    },
+    "search_terms": [
+      "Sickle cell anemia",
+      "Homozygous hemoglobin S",
+      "Homozygous sickle cell anemia SS"
+    ],
+    "trial_keywords": [
+      "hbb",
+      "sickle cell anemia",
+      "homozygous hemoglobin s",
+      "homozygous sickle cell anemia ss"
+    ],
+    "verified": "ORPHA:232 preferred term from Orphadata; HBB HGNC:4827 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0011382 via Monarch Orphanet mapping, Open Targets name \"sickle cell disease\"; checked 2026-10-04",
+    "omim": "OMIM:603903",
+    "clinvar_disease": "Hb SS disease",
+    "short_name": "Sickle cell disease",
+    "short_name_es": "Anemia de células falciformes"
+  },
+  {
+    "slug": "tsc",
+    "orpha": "ORPHA:805",
+    "mondo": "MONDO:0001734",
+    "efo": "MONDO_0001734",
+    "name": "Tuberous sclerosis complex",
+    "name_es": "Complejo esclerosis tuberosa",
+    "genes": [
+      "TSC2"
+    ],
+    "hgnc": {
+      "TSC2": "HGNC:12363"
+    },
+    "search_terms": [
+      "Tuberous sclerosis complex",
+      "Bourneville syndrome",
+      "Tuberous sclerosis"
+    ],
+    "trial_keywords": [
+      "tsc2",
+      "tuberous sclerosis complex",
+      "bourneville syndrome",
+      "tuberous sclerosis"
+    ],
+    "verified": "ORPHA:805 preferred term from Orphadata; TSC2 HGNC:12363 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0001734 via Monarch Orphanet mapping, Open Targets name \"tuberous sclerosis\"; checked 2026-10-04",
+    "short_name": "Tuberous sclerosis complex",
+    "short_name_es": "Complejo esclerosis tuberosa"
+  },
+  {
+    "slug": "fragile-x",
+    "orpha": "ORPHA:908",
+    "mondo": "MONDO:0010383",
+    "efo": "MONDO_0010383",
+    "name": "Fragile X syndrome",
+    "name_es": "Síndrome X frágil",
+    "genes": [
+      "FMR1"
+    ],
+    "hgnc": {
+      "FMR1": "HGNC:3775"
+    },
+    "search_terms": [
+      "Fragile X syndrome",
+      "FRAXA syndrome",
+      "FXS",
+      "FraX syndrome",
+      "Martin-Bell syndrome"
+    ],
+    "trial_keywords": [
+      "fmr1",
+      "fragile x syndrome",
+      "fraxa syndrome",
+      "fxs",
+      "frax syndrome"
+    ],
+    "verified": "ORPHA:908 preferred term from Orphadata; FMR1 HGNC:3775 via Orphadata: \"Disease-causing germline mutation(s) (loss of function) in\", HGNC cross-checked with genenames.org; MONDO:0010383 via Monarch Orphanet mapping, Open Targets name \"fragile X syndrome\"; checked 2026-10-04",
+    "short_name": "Fragile X syndrome",
+    "short_name_es": "Síndrome X frágil"
+  },
+  {
+    "slug": "mps2",
+    "orpha": "ORPHA:580",
+    "mondo": "MONDO:0010674",
+    "efo": "MONDO_0010674",
+    "name": "Mucopolysaccharidosis type 2",
+    "name_es": "Mucopolisacaridosis tipo 2",
+    "genes": [
+      "IDS"
+    ],
+    "hgnc": {
+      "IDS": "HGNC:5389"
+    },
+    "search_terms": [
+      "Mucopolysaccharidosis type 2",
+      "Hunter syndrome",
+      "Iduronate 2-sulfatase deficiency",
+      "MPS2",
+      "MPSII"
+    ],
+    "trial_keywords": [
+      "ids",
+      "mucopolysaccharidosis type 2",
+      "hunter syndrome",
+      "iduronate 2-sulfatase deficiency",
+      "mps2"
+    ],
+    "verified": "ORPHA:580 preferred term from Orphadata; IDS HGNC:5389 via Monarch causal gene for MONDO:0010674 (Orphadata lists no gene for this ORPHAcode), HGNC cross-checked with genenames.org; MONDO:0010674 via Monarch Orphanet mapping, Open Targets name \"mucopolysaccharidosis type 2\"; checked 2026-10-04",
+    "omim": "OMIM:309900",
+    "clinvar_disease": "Mucopolysaccharidosis, MPS-II",
+    "short_name": "MPS II (Hunter)",
+    "short_name_es": "MPS II (Hunter)"
+  },
+  {
+    "slug": "wilson",
+    "orpha": "ORPHA:905",
+    "mondo": "MONDO:0010200",
+    "efo": "MONDO_0010200",
+    "name": "Wilson disease",
+    "name_es": "Enfermedad de Wilson",
+    "genes": [
+      "ATP7B"
+    ],
+    "hgnc": {
+      "ATP7B": "HGNC:870"
+    },
+    "search_terms": [
+      "Wilson disease",
+      "Hepatolenticular degeneration"
+    ],
+    "trial_keywords": [
+      "atp7b",
+      "wilson disease",
+      "hepatolenticular degeneration"
+    ],
+    "verified": "ORPHA:905 preferred term from Orphadata; ATP7B HGNC:870 via Orphadata: \"Disease-causing germline mutation(s) (loss of function) in\", HGNC cross-checked with genenames.org; MONDO:0010200 via Monarch Orphanet mapping, Open Targets name \"Wilson disease\"; checked 2026-10-04",
+    "omim": "OMIM:277900",
+    "clinvar_disease": "Wilson disease",
+    "short_name": "Wilson disease",
+    "short_name_es": "Enfermedad de Wilson"
+  },
+  {
+    "slug": "x-ald",
+    "orpha": "ORPHA:139396",
+    "mondo": "MONDO:0010247",
+    "efo": "MONDO_0010247",
+    "name": "X-linked cerebral adrenoleukodystrophy",
+    "name_es": "Adrenoleucodistrofia cerebral ligada al cromosoma X",
+    "genes": [
+      "ABCD1"
+    ],
+    "hgnc": {
+      "ABCD1": "HGNC:61"
+    },
+    "search_terms": [
+      "X-linked cerebral adrenoleukodystrophy",
+      "X-CALD"
+    ],
+    "trial_keywords": [
+      "abcd1",
+      "x-linked cerebral adrenoleukodystrophy",
+      "x-cald"
+    ],
+    "verified": "ORPHA:139396 preferred term from Orphadata; ABCD1 HGNC:61 via Orphadata: \"Disease-causing germline mutation(s) in\", HGNC cross-checked with genenames.org; MONDO:0010247 via Monarch Orphanet mapping, Open Targets name \"X-linked cerebral adrenoleukodystrophy\"; checked 2026-10-04",
+    "short_name": "X-linked adrenoleukodystrophy",
+    "short_name_es": "Adrenoleucodistrofia ligada al X"
   }
 ]
