@@ -14,6 +14,7 @@ const en = {
   legend_size: "Disease size = centrality",
   rail_label: "Map tools",
   rail_close: "Close panel",
+  rail_evidence: "Evidence",
   rail: {
     clusters: { title: "Mechanism clusters", subtitle: "Diseases grouped by shared biology, not by name.", info: "Groups built from informative symptoms, Reactome pathways and shared genes." },
     legend: { title: "How to read the map", subtitle: "Line style shows how sure we are.", info: "Solid: a source states it. Dashed: Nedamex analysis, needs expert review. Dotted: extracted by AI from a cited paper, needs review. Ghost: a community draft, never evidence." },
@@ -161,6 +162,7 @@ const es: typeof en = {
   legend_size: "Tamaño de la enfermedad = centralidad",
   rail_label: "Herramientas del mapa",
   rail_close: "Cerrar panel",
+  rail_evidence: "Evidencia",
   rail: {
     clusters: { title: "Clusters de mecanismo", subtitle: "Enfermedades agrupadas por biología compartida, no por nombre.", info: "Grupos construidos con síntomas informativos, vías Reactome y genes compartidos." },
     legend: { title: "Cómo leer el mapa", subtitle: "El estilo de línea dice qué tan seguros estamos.", info: "Sólida: una fuente lo afirma. Rayada: análisis de Nedamex, requiere revisión experta. Punteada: extraída por IA de un artículo citado. Fantasma: borrador de la comunidad, nunca evidencia." },
