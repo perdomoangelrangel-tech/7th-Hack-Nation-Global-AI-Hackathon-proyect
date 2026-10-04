@@ -179,3 +179,42 @@ describe("explore in the graph", () => {
     expect(sourceLabel("orphanet")).toBe("Orphanet");
   });
 });
+
+import { clientIp, createLimiter, stripControl } from "./ratelimit";
+import { speakRequest, SPEAK_LIMIT_PER_MIN } from "./speak";
+
+describe("speak guards (WAVE 7)", () => {
+  it("sliding window: limit per key, then Retry-After until the window frees", () => {
+    const check = createLimiter(3, 60_000);
+    expect([0, 1, 2].map((i) => check("1.1.1.1", 1000 + i).ok)).toEqual([true, true, true]);
+    const blocked = check("1.1.1.1", 2000);
+    expect(blocked.ok).toBe(false);
+    expect(blocked.retryAfter).toBeGreaterThan(0);
+    expect(check("2.2.2.2", 2000).ok).toBe(true);           // other IPs unaffected
+    expect(check("1.1.1.1", 61_001 + 2).ok).toBe(true);      // window passed
+  });
+
+  it("reads the client IP and strips control characters", () => {
+    expect(clientIp(new Headers({ "x-forwarded-for": "9.9.9.9, 10.0.0.1" }))).toBe("9.9.9.9");
+    expect(clientIp(new Headers())).toBe("unknown");
+    expect(stripControl("a\u0000b\u0007c\nd")).toBe("abc\nd");
+  });
+
+  const req = (body: string, headers: Record<string, string> = { "content-type": "application/json", "x-forwarded-for": "7.7.7.7" }) =>
+    new Request("http://x/api/speak", { method: "POST", headers, body });
+
+  it("429 with Retry-After after 20 requests/min from one IP", async () => {
+    const check = createLimiter(SPEAK_LIMIT_PER_MIN, 60_000);
+    let last: Response | null = null;
+    for (let i = 0; i <= SPEAK_LIMIT_PER_MIN; i++) last = await speakRequest(req(JSON.stringify({ text: "" })), fetch, check);
+    expect(last!.status).toBe(429);
+    expect(Number(last!.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("rejects non-JSON (415), oversized bodies (413) and broken JSON (400)", async () => {
+    const check = createLimiter(100, 60_000);
+    expect((await speakRequest(req("hi", { "content-type": "text/plain" }), fetch, check)).status).toBe(415);
+    expect((await speakRequest(req("x".repeat(33 * 1024)), fetch, check)).status).toBe(413);
+    expect((await speakRequest(req("{oops"), fetch, check)).status).toBe(400);
+  });
+});
