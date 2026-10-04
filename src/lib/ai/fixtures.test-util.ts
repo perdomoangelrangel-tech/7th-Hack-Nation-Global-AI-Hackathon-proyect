@@ -31,7 +31,7 @@ export function fixtureSnapshot(): AtlasSnapshot {
     edge("w1", "gene:HGNC:1", "pathway:R-HSA-1", "participates_in", "observed", {}, [ev("w1", "reactome", "R-HSA-1")]),
     edge("s1", "disease:ORPHA:1", "disease:ORPHA:2", "similar_to", "inferred", {}, [ev("s1", "nexmed_analysis", "similarity_v1")]),
     edge("o1", "organization:org-1", "disease:ORPHA:1", "supports", "observed", {}, [ev("o1", "patient_orgs")]),
-    edge("t1", "treatment:CHEMBL1", "disease:ORPHA:2", "treats", "observed", { approved: true }, [ev("t1", "opentargets")]),
+    edge("t1", "treatment:CHEMBL1", "disease:ORPHA:2", "treats", "observed", { approved: true, stage: "APPROVAL", phase: 4 }, [ev("t1", "opentargets")]),
     edge("x1", "gene:HGNC:1", "disease:ORPHA:2", "causes", "extracted", { needs_review: true }, [ev("x1", "pubmed", "PMID:111")]),
     edge("g1", "gene:HGNC:2", "disease:ORPHA:3", "causes", "observed"),
     edge("g2", "gene:HGNC:2", "disease:ORPHA:4", "causes", "observed"),

@@ -14,6 +14,10 @@ import { systemPrompt } from "../agents/prompts";
 import { structured, untrusted } from "../ai/client";
 import { DraftSchema, factsBlock, verifyDraft, type Fact as DraftFact, type FactStatus } from "../ai/draft";
 import { disclaimer } from "../verifier";
+import { approvedFor } from "../ai/edge-facts";
+
+/** Approved for that disease per the edge itself (stage APPROVAL, label audit not rejected). */
+const isApproved = (edgeId: string) => { const e = atlas().edgeById.get(edgeId); return !!e && approvedFor(e.props); };
 
 export type Fact = DraftFact & { kind: FactKind };
 export interface NarratedClaim { text: string; fact_ids: string[]; status: FactStatus; evidence_ids: string[]; evidence: Evidence[]; nodes: string[]; edges: string[] }
@@ -86,11 +90,11 @@ export function buildFacts(j: Journey, l: Locale): { facts: Fact[]; coverage: Ev
                : `${a.own ? "For" : "In the neighbor disease"} ${dn} there is ${kindName(a.kind)}: "${a.title}" (${a.status.toLowerCase().replace(/_/g, " ")}).${a.own ? "" : " Its eligibility would need review before including this disease."}` });
   }
 
-  for (const t of j.assets.treatments.filter((x) => x.approved).slice(0, 1)) push({ kind: "treatment", status: "observed", nodes: [t.id, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
+  for (const t of j.assets.treatments.filter((x) => isApproved(x.edge)).slice(0, 1)) push({ kind: "treatment", status: "observed", nodes: [t.id, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
     text: es ? `Open Targets registra ${t.name} como fármaco aprobado para ${j.disease.name}${t.mechanism ? ` (${t.mechanism})` : ""}.` : `Open Targets lists ${t.name} as an approved drug for ${j.disease.name}${t.mechanism ? ` (${t.mechanism})` : ""}.` });
-  if (!j.assets.treatments.some((x) => x.approved)) push({ kind: "gap", status: "gap", nodes: [d], edges: [], evidence_ids: [coverage.id],
+  if (!j.assets.treatments.some((x) => isApproved(x.edge))) push({ kind: "gap", status: "gap", nodes: [d], edges: [], evidence_ids: [coverage.id],
     text: es ? `En nuestras fuentes no hay un fármaco aprobado para ${j.disease.name}; hay ${j.assets.treatments.length} candidato(s) en estudio.` : `Our sources show no approved drug for ${j.disease.name}; there are ${j.assets.treatments.length} candidate(s) under study.` });
-  for (const t of j.assets.neighbor_approved.slice(0, 1)) push({ kind: "treatment", status: "inferred", nodes: [t.id, t.disease, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
+  for (const t of j.assets.neighbor_approved.filter((x) => isApproved(x.edge)).slice(0, 1)) push({ kind: "treatment", status: "inferred", nodes: [t.id, t.disease, d], edges: [t.edge], evidence_ids: evOf([t.edge]),
     text: es ? `${t.name} está aprobado para ${t.disease_name}, una enfermedad vecina. Si tiene sentido para esta enfermedad es una pregunta para un experto, no una recomendación.` : `${t.name} is approved for ${t.disease_name}, a neighbor disease. Whether it makes sense here is a question for an expert, not a recommendation.` });
 
   // Patient organizations for THIS diagnosis first (disease-specific before umbrella groups like NORD).
