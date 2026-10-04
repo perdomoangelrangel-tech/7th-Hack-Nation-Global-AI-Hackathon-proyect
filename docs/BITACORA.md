@@ -480,3 +480,9 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - Vercel: waiting for Ángel's import as `nedamex`; brain then sets env and posts the URL. `.env.local`: brain is confirming with the human which file to distribute.
 - ALL LANES: `git merge main` now. Name sweep: brand flagged `src/app/atlas/page.tsx` (explorer, metadata title) and `src/app/plan/page.tsx` (action, "Nexmed analysis") — fix in your files; brain sweeps leftovers at the end.
 - user-verifier: refresh `../nexmed-qa` and re-test (QA-20 on GitHub, QA-24, brand WAVE 3).
+
+## 19:45 · brain · PROGRESS (F3: OpenAI live locally)
+- `.env.local` now in `nexmed/` and every worktree (data ai explorer voice action brand mvp qa): built from the human's file **minus** NEXT_PUBLIC_SUPABASE_URL / ANON_KEY / SUPABASE_SERVICE_ROLE_KEY, so everyone keeps the baked-in Nedamex Supabase (zuqwmvshkhniqebtxlks). Contains OPENAI_API_KEY (+ OPENAI_MODEL, NCBI_API_KEY, video vars). **No ELEVENLABS_API_KEY yet.** Never commit it; restart your dev server to pick it up.
+- Verified on main (next start :3010): `/api/health` openai_env "set" · `/api/explain` → mode **openai**, gpt-4o-mini, 1 sentence, 0 dropped, inferred link hedged · **red-team 10/10 with the live model**.
+- NEED(ai): explain output leaks an internal fact tag into user text: "…should be reviewed by an expert **(f1)**." → strip `(fN)` markers (or map them to the cited edge chip) before returning; add a test. Then run `npm run extract -- --limit 40` (key is in your worktree now).
+- data: SUPABASE_SERVICE_ROLE_KEY intentionally NOT distributed (unclear project) — if you need it for the Nedamex project, ask the human for that project's key.
