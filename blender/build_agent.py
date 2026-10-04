@@ -269,3 +269,22 @@ if RENDER:
             scene.render.filepath = os.path.join(out_dir, f"agent_{state}_{frame}.png")
             bpy.ops.render.render(write_still=True)
         print("[nexmed] contact sheet rendered")
+
+# ------------------------------------------------------------------ optional: state reel for the submission videos
+#   blender -b --factory-startup -P blender/build_agent.py -- --no-render --reel blender/renders/nexmed-agent-states.mp4
+if "--reel" in ARGS:
+    out_mp4 = os.path.abspath(ARGS[ARGS.index("--reel") + 1])
+    frames_dir = os.path.join(os.path.dirname(out_mp4), "_frames_agent")
+    setup_cycles(scene, samples=32, width=720, height=720, transparent=True)
+    i = 0
+    for state, frames in (
+        ({"Appear", "Idle"}, range(0, 37)),
+        ({"Idle"}, range(37, 97)),
+        ({"Listen", "Idle"}, range(0, 90)),
+        ({"Think", "Idle"}, range(0, 90)),
+        ({"Speak", "Idle"}, list(range(0, 30)) * 3),
+        ({"Appear", "Idle"}, range(36, -1, -1)),
+    ):
+        solo(state)
+        i = render_frames(scene, frames, frames_dir, i)
+    encode_mp4(frames_dir, out_mp4, fps=30)

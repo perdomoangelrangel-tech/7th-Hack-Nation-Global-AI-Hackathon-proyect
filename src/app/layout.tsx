@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   creator: site.company,
   publisher: site.company,
   manifest: "/site.webmanifest",
-  openGraph: { title: `${site.name} by ${site.company}`, description: site.tagline, type: "website", siteName: site.name, locale: "en_US" },
-  twitter: { card: "summary_large_image", title: `${site.name} by ${site.company}`, description: site.tagline },
+  openGraph: { title: `${site.name} · AI atlas for rare diseases`, description: site.tagline, type: "website", siteName: site.name, locale: "en_US" },
+  twitter: { card: "summary_large_image", title: `${site.name} · AI atlas for rare diseases`, description: site.tagline },
 };
 
 export const viewport: Viewport = { themeColor: "#ffffff", colorScheme: "light" };

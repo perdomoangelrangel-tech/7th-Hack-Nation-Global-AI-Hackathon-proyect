@@ -219,3 +219,27 @@ if RENDER:
     scene.render.filepath = png
     bpy.ops.render.render(write_still=True)
     print(f"[nexmed] glyph sheet {png}")
+
+# ------------------------------------------------------------------ optional: one transparent icon per glyph (static UI use)
+#   blender -b --factory-startup -P blender/build_glyphs.py -- --no-render --icons
+if "--icons" in ARGS:
+    icon_dir = os.path.join(PUBLIC_MODELS, "glyphs")
+    os.makedirs(icon_dir, exist_ok=True)
+    if not scene.world:
+        world(scene, PALETTE["brand_mist"], 0.6)
+    if not any(o.type == "LIGHT" for o in scene.objects):
+        area_light("LGT-key", (-6, -8, 7), (0, 0, 0), 2500, 6, "#fffaf2", C_RIG)
+        area_light("LGT-rim", (4, 6, 5), (0, 0, 0), 1200, 5, "#cfe6ff", C_RIG)
+    cam = scene.camera or camera("CAM-glyphs", (0, -16, 0), (0, 0, 0), lens=40, coll=C_RIG)
+    setup_cycles(scene, samples=48, width=256, height=256, transparent=True)
+    for ob in glyphs:
+        for other in glyphs:
+            other.hide_render = other is not ob
+        ob.location = (0, 0, 0)
+        ob.rotation_euler = (math.radians(12), 0, math.radians(28))
+        cam.location = (0, -6.2, 1.2)
+        cam.rotation_euler = (Vector((0, 0, 0)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+        cam.data.lens = 72
+        scene.render.filepath = os.path.join(icon_dir, ob.name.replace("GLYPH_", "") + ".png")
+        bpy.ops.render.render(write_still=True)
+    print(f"[nexmed] glyph icons -> {icon_dir}")
