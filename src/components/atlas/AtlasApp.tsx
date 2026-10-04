@@ -24,7 +24,7 @@ import { NarrationBar } from "./NarrationBar";
 import { useNarration } from "./useNarration";
 import { LeftRail, MiniLegend, RailSection, defaultRailTab, type RailTab } from "./AtlasRail";
 import { linkEnd } from "./focus";
-import { constellationLayout, routeLayout, LAYERS, SECTORS, type Layer, type Sector } from "./radial";
+import { constellationLayout, filterView, routeLayout, routeLayersFor, SECTORS, TYPE_LAYERS, type Sector } from "./radial";
 import { strengthOf, type Strength } from "./evidence";
 import type { GraphCommand } from "./graphProps";
 import { PrefsPanel } from "./PrefsPanel";
@@ -32,6 +32,7 @@ import { useGraphMode } from "./useGraphMode";
 import { useEmbed } from "./useEmbed";
 import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
+import { TypeIcon } from "./icons";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
 import { ClusterTable } from "@/components/journey/ClusterTable";
@@ -72,7 +73,16 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [loadError, setLoadError] = useState(false);
   // WAVE 5B view: Route (radial, needs a focus) · Constellation · Table. Pharma starts on the table.
   const [viewMode, setViewMode] = useState<"route" | "constellation" | "table">(initialPersona === "priya" ? "table" : initialDisease ? "route" : "constellation");
-  const [layers, setLayers] = useState<Set<Layer>>(() => new Set(LAYERS));
+  // WAVE 6 layers: per node type (hidden set) + evidence-source filter (empty = every source).
+  const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(() => new Set());
+  const [sourceFilter, setSourceFilter] = useState<Set<string>>(() => new Set());
+  const [sourceList, setSourceList] = useState<{ id: string; name: string; edges: number }[]>([]);
+  useEffect(() => {
+    fetch(api("/api/atlas/sources")).then((r) => (r.ok ? r.json() : null)).then((j: { sources?: { id: string; name: string; edges: number }[] } | null) => {
+      if (j?.sources) setSourceList(j.sources.filter((x) => x.edges > 0).sort((a, b) => b.edges - a.edges));
+    }).catch(() => {});
+  }, []);
+  const layers = useMemo(() => routeLayersFor(hiddenLayers), [hiddenLayers]);
   const [expanded, setExpanded] = useState<Set<Sector>>(() => new Set());
   const [showLegend, setShowLegend] = useState(true);
   // Route panel (right): 480 px default, drag handle 360–720 px, "Expand" = 60 % of the window, collapsible (mode=free).
@@ -171,7 +181,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     });
     return constellationLayout(fullView);
   }, [fullView, viewMode, focus, strength, expanded, layers, t]);
-  const shownView = laid?.view ?? null;
+  const shownView = useMemo(() => (laid ? filterView(laid.view, focus, hiddenLayers, sourceFilter) : null), [laid, focus, hiddenLayers, sourceFilter]);
   const labelIds = laid?.labelIds ?? null;
   const hasBridges = useMemo(() => !!shownView?.links.some((l) => l.bridge), [shownView]);
   const shownKinds = useMemo(() => new Set((shownView?.links ?? []).map((l) => kindOf(l.kind))), [shownView]);
@@ -309,7 +319,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             <Segmented label={t.ctrl.center} value={viewMode} onChange={(v) => { setViewMode(v as typeof viewMode); setSpotlight([]); }}
               options={[{ v: "route", label: t.ctrl.route, icon: Focus, disabled: !focus, title: t.ctrl.route_hint }, { v: "constellation", label: t.ctrl.constellation, icon: Orbit, title: t.ctrl.constellation_hint }, { v: "table", label: t.ctrl.table, icon: Table2 }]} />
             {center === "map" && <>
-              {viewMode === "route" && <LayersMenu t={t} layers={layers} onToggle={(l) => setLayers((x) => { const y = new Set(x); if (y.has(l)) y.delete(l); else y.add(l); return y; })} />}
+              <LayersMenu t={t} hidden={hiddenLayers} onToggle={(l) => setHiddenLayers((x) => { const y = new Set(x); if (y.has(l)) y.delete(l); else y.add(l); return y; })}
+                sources={sourceList} selected={sourceFilter} onSource={(id) => setSourceFilter((x) => { const y = new Set(x); if (y.has(id)) y.delete(id); else y.add(id); return y; })} onClearSources={() => setSourceFilter(new Set())} />
               <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => graph.setMode(m as "2d" | "3d")}
                 options={[{ v: "2d", label: t.view_2d, icon: Square }, { v: "3d", label: t.view_3d, icon: Box, disabled: !graph.webgl }]} />
               <div className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
@@ -522,29 +533,55 @@ function RolePill({ t, personas, persona, locale, embed }: { t: Dict; personas: 
   );
 }
 
-/** Layers: toggle the Route rings / sectors (Mechanism · Symptoms · Studies · People · Treatments). */
-function LayersMenu({ t, layers, onToggle }: { t: Dict; layers: Set<Layer>; onToggle: (l: Layer) => void }) {
+/** Layers (WAVE 6): node types on/off + filter by evidence source (chips with edge counts from /api/atlas/sources). */
+function LayersMenu({ t, hidden, onToggle, sources, selected, onSource, onClearSources }: {
+  t: Dict; hidden: Set<string>; onToggle: (l: string) => void;
+  sources: { id: string; name: string; edges: number }[]; selected: Set<string>; onSource: (id: string) => void; onClearSources: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
-    window.addEventListener("mousedown", away); return () => window.removeEventListener("mousedown", away);
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("mousedown", away); window.addEventListener("keydown", esc);
+    return () => { window.removeEventListener("mousedown", away); window.removeEventListener("keydown", esc); };
   }, [open]);
+  const onCount = TYPE_LAYERS.length - hidden.size;
   return (
     <div ref={box} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="true"
         className="flex items-center gap-1 rounded-full border border-line bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-2 shadow-sm hover:bg-brand-soft">
-        <LayersIcon aria-hidden size={14} strokeWidth={1.75} />{t.ctrl.layers} <span className="text-ink-3">{layers.size}/{LAYERS.length}</span>
+        <LayersIcon aria-hidden size={14} strokeWidth={1.75} />{t.ctrl.layers} <span className="text-ink-3">{onCount}/{TYPE_LAYERS.length}{selected.size ? ` · ${selected.size} ${t.layers.sources_short}` : ""}</span>
       </button>
       {open && (
-        <div className="absolute left-0 z-30 mt-2 w-56 rounded-xl border border-line bg-paper p-2 shadow-xl shadow-ink/10">
-          {LAYERS.map((l) => (
-            <label key={l} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-2 hover:bg-brand-mist cursor-pointer">
-              <input type="checkbox" checked={layers.has(l)} onChange={() => onToggle(l)} className="accent-[var(--brand-deep)]" />
-              {l === "mechanism" ? t.sector.mechanism : t.sector[l]}
-            </label>
-          ))}
+        <div className="absolute left-0 z-30 mt-2 w-[min(320px,calc(100vw-2rem))] max-h-[70vh] overflow-auto rounded-xl border border-line bg-paper p-2 shadow-xl shadow-ink/10">
+          <p className="px-2 pt-1 pb-1 text-[11px] uppercase tracking-widest text-ink-3">{t.layers.types}</p>
+          <div className="grid grid-cols-2">
+            {TYPE_LAYERS.map((l) => (
+              <label key={l.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-2 hover:bg-brand-mist cursor-pointer">
+                <input type="checkbox" checked={!hidden.has(l.key)} onChange={() => onToggle(l.key)} className="accent-[var(--brand-deep)]" />
+                <TypeIcon type={l.key} size={14} />{t.layers.type[l.key]}
+              </label>
+            ))}
+          </div>
+          {sources.length > 0 && (
+            <>
+              <p className="flex items-center justify-between px-2 pt-3 pb-1 text-[11px] uppercase tracking-widest text-ink-3">
+                {t.layers.sources}
+                {selected.size > 0 && <button type="button" onClick={onClearSources} className="normal-case tracking-normal text-brand-deep hover:underline">{t.layers.all_sources}</button>}
+              </p>
+              <div className="flex flex-wrap gap-1.5 px-2 pb-1" role="group" aria-label={t.layers.sources}>
+                {sources.map((x) => (
+                  <button key={x.id} type="button" aria-pressed={selected.has(x.id)} onClick={() => onSource(x.id)}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] ${selected.has(x.id) ? "border-brand-deep bg-brand-soft text-ink" : "border-line text-ink-2 hover:bg-brand-mist"}`}>
+                    {x.name} <span className="tabular-nums text-ink-3">{x.edges.toLocaleString("en-US")}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="px-2 pb-1 text-[11px] text-ink-3">{t.layers.sources_hint}</p>
+            </>
+          )}
         </div>
       )}
     </div>

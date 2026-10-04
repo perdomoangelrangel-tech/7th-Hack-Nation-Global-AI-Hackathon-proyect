@@ -157,3 +157,40 @@ export function constellationLayout(view: GraphView): LaidOut {
   const links = view.links.filter((l) => l.relation === "similar_to" && keep.has(end(l.source)) && keep.has(end(l.target)));
   return { view: { ...view, nodes: out, links }, labelIds, sectors: [] };
 }
+
+/* ---------- WAVE 6 layers (by type) + source filter ---------- */
+export const TYPE_LAYERS = [
+  { key: "disease", types: ["disease"] }, { key: "gene", types: ["gene"] }, { key: "mechanism", types: ["mechanism", "pathway"] },
+  { key: "phenotype", types: ["phenotype"] }, { key: "treatment", types: ["treatment"] }, { key: "trial", types: ["trial"] },
+  { key: "study", types: ["study"] }, { key: "investigator", types: ["investigator"] }, { key: "organization", types: ["organization"] },
+  { key: "variant", types: ["variant"] },
+] as const;
+export type TypeLayer = (typeof TYPE_LAYERS)[number]["key"];
+
+/** Route sectors / ring-1 extras follow the type layers (a sector is on when any of its types is on). */
+export function routeLayersFor(hidden: Set<string>): Set<Layer> {
+  const on = (...k: string[]) => k.some((x) => !hidden.has(x));
+  const out = new Set<Layer>();
+  if (on("mechanism")) out.add("mechanism");
+  if (on("phenotype")) out.add("symptoms");
+  if (on("trial", "study")) out.add("studies");
+  if (on("investigator", "organization")) out.add("people");
+  if (on("treatment")) out.add("treatments");
+  return out;
+}
+
+/** Hide nodes of hidden type layers (never the focus or layout headers) and, when sources are selected, links whose
+ *  evidence comes from none of them (+ nodes left without links, except the focus and headers). */
+export function filterView(view: GraphView, focus: string | null, hiddenLayers: Set<string>, sources: Set<string>): GraphView {
+  if (!hiddenLayers.size && !sources.size) return view;
+  const hiddenTypes = new Set(TYPE_LAYERS.filter((l) => hiddenLayers.has(l.key)).flatMap((l) => l.types as readonly string[]));
+  let nodes = view.nodes.filter((n) => n.header || n.id === focus || !hiddenTypes.has(n.type));
+  const keep = new Set(nodes.map((n) => n.id));
+  let links = view.links.filter((l) => keep.has(end(l.source)) && keep.has(end(l.target)));
+  if (sources.size) {
+    links = links.filter((l) => (l.sources ?? []).some((s) => sources.has(s)));
+    const linked = new Set(links.flatMap((l) => [end(l.source), end(l.target)]));
+    nodes = nodes.filter((n) => n.header || n.id === focus || linked.has(n.id));
+  }
+  return { ...view, nodes, links };
+}

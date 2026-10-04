@@ -167,7 +167,7 @@ function subtitle(e: Entity, disease: string, l: Locale) {
 /* ------------------------------------------------------------------ */
 export interface GNode { id: string; type: EntityType; name: string; cluster: string | null; color: string | null; size: number; focus?: boolean; props?: Record<string, unknown>; /** links diseases of different mechanism clusters */ bridge?: boolean; /** community draft node (proposals layer) — never evidence */ draft?: boolean; /** layout label node (Route sector header or Constellation region), not an entity */ header?: string }
 /** `proposed` = community draft (never evidence); added client-side by the proposals layer. */
-export interface GLink { id: string; source: string; target: string; relation: string; kind: Edge["kind"] | "proposed"; confidence: number; label?: string; /** crosses two mechanism clusters */ bridge?: boolean }
+export interface GLink { id: string; source: string; target: string; relation: string; kind: Edge["kind"] | "proposed"; confidence: number; label?: string; /** crosses two mechanism clusters */ bridge?: boolean; /** evidence sources (source filter chips) */ sources?: string[] }
 export interface GraphView { focus: string; nodes: GNode[]; links: GLink[]; clusters: { id: string; label: string; color: string; diseases: string[] }[] }
 
 export function graphView(focus: string, l: Locale): GraphView | null {
@@ -185,7 +185,7 @@ export function graphView(focus: string, l: Locale): GraphView | null {
   };
   const addLink = (e: Edge, bridge = crossCluster(e)) => {
     if (!nodes.has(e.from) || !nodes.has(e.to)) return;
-    links.set(e.id, { id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence, ...(bridge ? { bridge } : {}) });
+    links.set(e.id, { id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence, sources: [...new Set(e.evidence.map((v) => v.source))], ...(bridge ? { bridge } : {}) });
   };
 
   // Todas las enfermedades del atlas (la constelación), con sus conexiones inferidas.
@@ -267,7 +267,7 @@ export function constellation(l: Locale): GraphView {
   return {
     focus: "",
     nodes: diseases().map((d) => ({ id: d.id, type: "disease" as const, name: nameOf(d, l), cluster: A?.disease_cluster[d.id] ?? null, color: A?.clusters.find((c) => c.id === A.disease_cluster[d.id])?.color ?? null, size: 8 + (A?.centrality[d.id] ?? 0) / 14 })),
-    links: snap.edges.filter((e) => e.relation === "similar_to").map((e) => ({ id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence, ...(crossCluster(e) ? { bridge: true } : {}) })),
+    links: snap.edges.filter((e) => e.relation === "similar_to").map((e) => ({ id: e.id, source: e.from, target: e.to, relation: e.relation, kind: e.kind, confidence: e.confidence, sources: [...new Set(e.evidence.map((v) => v.source))], ...(crossCluster(e) ? { bridge: true } : {}) })),
     clusters: (A?.clusters ?? []).map((c) => ({ id: c.id, label: c.label, color: c.color, diseases: c.diseases })),
   };
 }
