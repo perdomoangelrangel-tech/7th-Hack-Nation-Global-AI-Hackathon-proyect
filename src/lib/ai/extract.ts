@@ -12,7 +12,7 @@
 import { z } from "zod";
 import type { EntityType } from "../atlas/types";
 import { structured, untrusted } from "./client";
-import { entityKeys, norm, reconcile, type Match } from "./reconcile";
+import { coreTokens, entityKeys, norm, reconcile, type Match } from "./reconcile";
 import type { Paper } from "./pubmed";
 import type { AtlasIndex } from "./types";
 import type { ExtractedClaim, ExtractedEntity, ExtractResult, MatchKind } from "./contract";
@@ -43,7 +43,10 @@ const LlmExtraction = z.object({
 });
 
 
-const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+/** Comparable text: Unicode-normalized, typographic dashes/quotes → ASCII (PubMed writes "4‐PBA" with U+2010), single spaces. */
+const squash = (s: string) => s.normalize("NFKC")
+  .replace(/[‐-―−­]/g, "-").replace(/[‘’‚′]/g, "'").replace(/[“”„″]/g, "\"")
+  .replace(/\s+/g, " ").trim();
 const contains = (hay: string, needle: string) => squash(hay).toLowerCase().includes(squash(needle).toLowerCase());
 const MATCH: Record<Match["method"], MatchKind> = { canonical_id: "exact", exact: "exact", alias: "alias", normalized: "alias", fuzzy: "fuzzy", llm: "llm", none: "new" };
 const clamp = (x: number) => Math.round(Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0)) * 100) / 100;
@@ -148,9 +151,15 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
       dropped.push({ text: `${c.subject} ${c.relation} ${c.object}`, reason: known ? "wrong_entity_types" : "unknown_entity" });
       continue;
     }
-    // The quote must be about this claim: object named in it; subject in it or in the title (the paper's topic).
-    const named = (q: string, e: ExtractedEntity, m: string) => contains(q, m) || contains(q, e.mention) || (!!e.label && contains(q, e.label));
-    if (!named(c.quote, o, object) || !(named(c.quote, s, subject) || named(title, s, subject))) {
+    // The quote must be about this claim: one side named in it, the other in it or in the title (the paper's topic).
+    // "Named" = literal mention/label, or all distinctive tokens of the mention ("STXBP1 disorders" ~ "STXBP1-related disorders").
+    const named = (q: string, e: ExtractedEntity, m: string) => {
+      if (contains(q, m) || contains(q, e.mention) || (!!e.label && contains(q, e.label))) return true;
+      const core = coreTokens(m), have = new Set(norm(squash(q)).split(" "));
+      return core.length > 0 && core.every((t) => have.has(t));
+    };
+    const sQ = named(c.quote, s, subject), oQ = named(c.quote, o, object);
+    if (!(sQ || oQ) || !(sQ || named(title, s, subject)) || !(oQ || named(title, o, object))) {
       dropped.push({ text: `${subject} ${c.relation} ${object}: ${c.quote.slice(0, 120)}`, reason: "quote_not_about_claim" });
       continue;
     }

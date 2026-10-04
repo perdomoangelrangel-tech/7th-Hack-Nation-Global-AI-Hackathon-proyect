@@ -124,3 +124,15 @@ describe("extract · quote must be about the claim", () => {
     expect(r.dropped.map((d) => d.reason)).toContain("quote_not_about_claim");
   });
 });
+
+describe("extract · typographic characters from PubMed", () => {
+  it("accepts a quote written with ASCII hyphens when the abstract uses U+2010", async () => {
+    setLlmClient(fakeLlm({
+      entities: [{ mention: "GENE1", type: "gene" }, { mention: "Testing syndrome type A", type: "disease" }],
+      claims: [{ subject: "GENE1", relation: "causes", object: "Testing syndrome type A", polarity: "contradicts", quote: "Loss-of-function GENE1 did not cause Testing syndrome type A in mice.", confidence: 0.7 }],
+    }).client);
+    const r = await extract(idx, { paper: { ...paper, abstract: "Loss‐of‐function GENE1 did not cause Testing syndrome type A in mice." } });
+    expect(r.dropped).toEqual([]);
+    expect(r.claims[0]).toMatchObject({ polarity: "contradicts" });
+  });
+});

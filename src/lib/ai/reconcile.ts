@@ -40,6 +40,8 @@ const GENERIC = new Set([
 
 export const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const tokens = (s: string) => norm(s).split(" ").filter(Boolean);
+/** Distinctive tokens of a name (generic words and their plurals removed): "STXBP1 disorders" → ["stxbp1"]. */
+export const coreTokens = (s: string) => tokens(s).filter((t) => !GENERIC.has(t) && !GENERIC.has(t.replace(/s$/, "")));
 /** Generic words removed and spaces dropped: "STXBP1-related DEE" ≈ "stxbp1 dee". */
 const loose = (s: string) => tokens(s).filter((t) => !GENERIC.has(t)).join("");
 
