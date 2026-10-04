@@ -22,6 +22,8 @@ export interface VoiceSessionProps {
   /** Bumped by the dock to end the call. */
   endSignal: number;
   muted: boolean;
+  /** Filled with a live audio-level reader (0..1) for the AgentOrb. */
+  levelRef?: { current: () => number };
 }
 
 export default function VoiceSession(props: VoiceSessionProps) {
@@ -32,10 +34,10 @@ export default function VoiceSession(props: VoiceSessionProps) {
   );
 }
 
-function Session({ agentId, persona, locale, disease, diseaseName, copy, onState, onLine, endSignal, muted }: VoiceSessionProps) {
+function Session({ agentId, persona, locale, disease, diseaseName, copy, onState, onLine, endSignal, muted, levelRef }: VoiceSessionProps) {
   const lineId = useRef(0);
   const started = useRef(false);
-  const { status, isSpeaking, startSession, endSession, sendContextualUpdate, setMuted } = useConversation({
+  const { status, isSpeaking, startSession, endSession, sendContextualUpdate, setMuted, getInputVolume, getOutputVolume } = useConversation({
     onMessage: (m) => { if (m.message?.trim()) onLine({ who: m.role === "user" ? "user" : "agent", text: m.message, id: ++lineId.current }); },
     onError: () => onState("error", copy.error),
   });
@@ -44,6 +46,11 @@ function Session({ agentId, persona, locale, disease, diseaseName, copy, onState
   // mount effect runs exactly once (a changing dep here used to end the call right after it connected).
   const api = useRef({ startSession, endSession });
   useEffect(() => { api.current = { startSession, endSession }; });
+  useEffect(() => {
+    if (!levelRef) return;
+    levelRef.current = () => { try { return isSpeaking ? getOutputVolume() : getInputVolume(); } catch { return 0; } };
+    return () => { levelRef.current = () => 0; };
+  });
   const vars = useRef(agentVariables({ persona, locale, disease, diseaseName }));
 
   // Start once on mount (the dock mounts us from the user's click, after mic permission).
@@ -75,7 +82,7 @@ function Session({ agentId, persona, locale, disease, diseaseName, copy, onState
   const lastDisease = useRef(disease);
   useEffect(() => {
     if (status === "connected" && lastDisease.current !== disease && disease) {
-      sendContextualUpdate(`The user is now viewing ${diseaseName ?? disease} (id ${disease}) in the Nexmed atlas. Use it as the default disease.`);
+      sendContextualUpdate(`The user is now viewing ${diseaseName ?? disease} (id ${disease}) in the Nedamex atlas. Use it as the default disease.`);
     }
     lastDisease.current = disease;
   }, [disease, diseaseName, status, sendContextualUpdate]);

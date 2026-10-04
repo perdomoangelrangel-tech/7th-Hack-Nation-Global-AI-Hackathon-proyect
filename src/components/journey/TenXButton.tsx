@@ -7,7 +7,7 @@ import { tenX } from "@/lib/journey/tenx";
 import { journeyCopy } from "./copy";
 import { TenX } from "./TenX";
 
-export function TenXButton({ journey, locale }: { journey: JourneyV2; locale: Locale }) {
+export function TenXButton({ journey, locale, icon, full }: { journey: JourneyV2; locale: Locale; icon?: React.ReactNode; full?: boolean }) {
   const c = journeyCopy[locale];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -18,7 +18,7 @@ export function TenXButton({ journey, locale }: { journey: JourneyV2; locale: Lo
   }, [open]);
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-full bg-brand-deep px-3.5 py-1.5 text-sm font-medium text-white hover:bg-brand-ink">{c.tenx_cta} →</button>
+      <button onClick={() => setOpen(true)} className={full ? "inline-flex items-center justify-center gap-1.5 rounded-full border border-brand/50 bg-paper px-3 py-2 text-sm font-medium text-brand-deep hover:bg-brand-soft min-h-10" : "rounded-full bg-brand-deep px-3.5 py-1.5 text-sm font-medium text-white hover:bg-brand-ink"}>{icon}{c.tenx_cta}{full ? "" : " →"}</button>
       <dialog ref={ref} onClose={() => setOpen(false)} aria-label={c.tenx_cta}
         className="m-auto w-[min(760px,calc(100vw-24px))] max-h-[calc(100dvh-24px)] rounded-2xl border border-line bg-paper p-0 text-ink shadow-2xl backdrop:bg-brand-ink/30 backdrop:backdrop-blur-sm">
         {open && (

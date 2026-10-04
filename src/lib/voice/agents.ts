@@ -1,24 +1,24 @@
 /**
- * Public ElevenLabs conversational agent ids, one per Nexmed mode. OWNER: voice lane.
+ * Public ElevenLabs conversational agent ids, one per Nedamex mode. OWNER: voice lane.
  * Agents are public (no signed URL needed), so their ids are safe in the browser.
  * Env `NEXT_PUBLIC_ELEVENLABS_AGENT_*` overrides the defaults (configured via the ElevenLabs MCP on 2026-10-03,
- * all tagged `nedamex`): LLM gpt-4o-mini (OpenAI inside ElevenLabs), TTS eleven_flash_v2, server tools nexmed_*.
+ * all tagged `nedamex`): LLM gpt-4o-mini (OpenAI inside ElevenLabs), TTS eleven_flash_v2, server tools nedamex_* (10).
  * Each agent expects these dynamic variables at session start: disease_name, disease_id, persona, locale.
  */
 import type { PersonaId } from "../agents/profiles";
 
 export const DEFAULT_AGENTS: Record<PersonaId, string> = {
-  devon: "agent_9301m41nb4xre85a4scph5fpbe2q", // Nexmed · Patient Guide
-  maria: "agent_9801m420vwjcf5ctav4x33asvd2w", // Nexmed · Family & Patient-Group Navigator
-  osei: "agent_2301m41nbtczeshvbyxaaknksgga",  // Nexmed · Research Analyst
-  priya: "agent_6001m41nbk5redqsx3hj321mb4my", // Nexmed · Pharma Scout
+  devon: "agent_9301m41nb4xre85a4scph5fpbe2q", // Nedamex · Patient Guide
+  maria: "agent_9801m420vwjcf5ctav4x33asvd2w", // Nedamex · Family & Patient-Group Navigator
+  osei: "agent_2301m41nbtczeshvbyxaaknksgga",  // Nedamex · Research Analyst
+  priya: "agent_6001m41nbk5redqsx3hj321mb4my", // Nedamex · Pharma Scout
 };
 
 export const AGENT_NAMES: Record<PersonaId, string> = {
-  devon: "Nexmed · Patient Guide",
-  maria: "Nexmed · Family & Patient-Group Navigator",
-  osei: "Nexmed · Research Analyst",
-  priya: "Nexmed · Pharma Scout",
+  devon: "Nedamex · Patient Guide",
+  maria: "Nedamex · Family & Patient-Group Navigator",
+  osei: "Nedamex · Research Analyst",
+  priya: "Nedamex · Pharma Scout",
 };
 
 const valid = (v: string | undefined) => (v && /^agent_[a-z0-9]{20,}$/i.test(v.trim()) ? v.trim() : undefined);
@@ -38,7 +38,7 @@ export function agentIds(): Record<PersonaId, string | null> {
   return out;
 }
 
-/** Dynamic variables every Nexmed agent's prompt references (missing ones make the session fail). */
+/** Dynamic variables every Nedamex agent's prompt references (missing ones make the session fail). */
 export function agentVariables(o: { persona: PersonaId; locale: string; disease: string | null; diseaseName?: string }) {
   return {
     persona: o.persona,
