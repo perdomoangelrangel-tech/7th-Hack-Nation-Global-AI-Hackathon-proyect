@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rowsToSnapshot, type SnapshotRows } from "./snapshot";
+import { applyOverlays, rowsToSnapshot, type SnapshotRows } from "./snapshot";
+import type { AtlasSnapshot } from "../atlas/types";
 
 const T = "2026-10-03T00:00:00Z";
 function rows(over: Partial<SnapshotRows> = {}): SnapshotRows {
@@ -17,11 +18,13 @@ function rows(over: Partial<SnapshotRows> = {}): SnapshotRows {
       { id: "e1", from_id: "u-g", to_id: "u-d", relation: "causes", confidence: "0.90", confidence_basis: "orphanet", props: {} },
       { id: "e1b", from_id: "u-g2", to_id: "u-d", relation: "causes", confidence: 0.9, confidence_basis: "monarch", props: {} },
       { id: "e2", from_id: "u-t", to_id: "u-d", relation: "studies", confidence: 0.6, confidence_basis: "ctgov", props: {}, kind: "observed" },
-      { id: "e3", from_id: "u-d", to_id: "u-p", relation: "has_phenotype", confidence: 0.9, confidence_basis: "hpo", props: {} }, // no evidence
+      { id: "e3", from_id: "u-d", to_id: "u-p", relation: "has_phenotype", confidence: 0.9, confidence_basis: "hpo", props: {} },
+      { id: "e4", from_id: "u-g2", to_id: "u-orphan", relation: "causes", confidence: 0.9, confidence_basis: "x", props: {} }, // no evidence
     ],
     evidence: [
       { id: "v1", edge_id: "e1", source_id: "orphanet", external_id: "ORPHA:599373", url: "https://www.orpha.net/en/disease/detail/599373", quote: null, published_on: null, retrieved_at: T },
       { id: "v1b", edge_id: "e1b", source_id: "monarch", external_id: "MONDO:x", url: "https://monarchinitiative.org/x", quote: null, published_on: null, retrieved_at: T },
+      { id: "v3", edge_id: "e3", source_id: "orphanet", external_id: "ORPHA:599373/HP:0001250", url: "https://www.orpha.net/en/disease/detail/599373", quote: null, published_on: null, retrieved_at: T },
       { id: "v2", edge_id: "e2", source_id: "ctgov", external_id: "NCT00000001", url: "https://clinicaltrials.gov/study/NCT00000001", quote: null, published_on: null, retrieved_at: T },
     ],
     sources: [{ id: "orphanet", name: "Orphanet", license: "CC BY 4.0", base_url: "https://api.orphadata.com", last_synced_at: T }],
@@ -45,13 +48,13 @@ describe("rowsToSnapshot()", () => {
     const { snapshot, dropped } = rowsToSnapshot(rows());
     const ids = snapshot.edges.map((e) => e.id);
     expect(ids).toContain("edge:e1");
-    expect(ids).not.toContain("edge:e3");
+    expect(ids).not.toContain("edge:e4");
     expect(dropped).toBe(1);
     const e1 = snapshot.edges.find((e) => e.id === "edge:e1")!;
     expect(e1).toMatchObject({ from: "gene:HGNC:11444", to: "disease:ORPHA:599373", kind: "observed", confidence: 0.9 });
     expect(e1.evidence[0].id).toBe("ev:v1");
     expect(snapshot.entities.find((e) => e.id === "gene:HGNC:11444")!.aliases).toEqual([{ alias: "MUNC18-1", lang: "en" }]);
-    // entities without any edge (retracted leftovers) stay out; the phenotype only appears via the extracted edge
+    // entities without any evidenced edge (retracted leftovers) stay out
     expect(snapshot.entities.some((e) => e.id === "disease:ORPHA:1")).toBe(false);
   });
 
@@ -78,6 +81,29 @@ describe("rowsToSnapshot()", () => {
     expect(snapshot.edges.find((e) => e.id === "edge:e1b")!.props.primary).toBe(false);
     expect(snapshot.entities.find((e) => e.id === "trial:NCT00000001")!.props.asset_kind).toBe("natural_history");
     expect(snapshot.edges.find((e) => e.id === "edge:e2")!.props.asset_kind).toBe("natural_history");
+  });
+
+  it("overlays live extractions on the bundled file, mapping gene:HGNC ids to the file's gene:SYMBOL entities", () => {
+    const file: AtlasSnapshot = {
+      version: 1, generated_at: T, sources: {}, analytics: null,
+      entities: [
+        { id: "gene:SYMBOL:STXBP1", type: "gene", canonical_id: "SYMBOL:STXBP1", name: "STXBP1", props: { hgnc_id: "HGNC:11444" }, aliases: [] },
+        { id: "disease:ORPHA:599373", type: "disease", canonical_id: "ORPHA:599373", name: "STXBP1-DEE", props: {}, aliases: [] },
+      ],
+      edges: [],
+    };
+    const { snapshot, extracted } = applyOverlays(file, {
+      proposals: [],
+      extractions: [{ id: "x9", pmid: "1", model: "gpt-4o-mini", created_at: T, payload: { claims: [
+        { relation: "causes", entity_ids: ["gene:HGNC:11444", "disease:ORPHA:599373"], quote: "q", confidence: 0.8 },
+        { relation: "causes", entity_ids: ["gene:HGNC:999", "disease:ORPHA:599373"] }, // gene not in this snapshot
+      ] } }],
+    });
+    expect(extracted).toBe(1);
+    expect(snapshot.edges[0]).toMatchObject({ from: "gene:SYMBOL:STXBP1", to: "disease:ORPHA:599373", kind: "extracted" });
+    expect(snapshot.sources.openai_extraction).toBeDefined();
+    // idempotent: applying again replaces, never duplicates
+    expect(applyOverlays(snapshot, { proposals: [], extractions: [] }).snapshot.edges).toHaveLength(0);
   });
 
   it("works on the pre-0011 schema (no proposals / extractions tables)", () => {
