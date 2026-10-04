@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
@@ -9,7 +8,7 @@ import { NodeOrb, type OrbKind } from "@/components/three/NodeOrb";
 import { atlas, loadAtlas, stats } from "@/lib/atlas/store";
 import type { Edge } from "@/lib/atlas/types";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
-import { site, toEmbed } from "@/lib/site";
+import { programHref, site, toEmbed } from "@/lib/site";
 
 export const revalidate = 3600;
 
@@ -111,11 +110,12 @@ export default async function Home() {
     { n: s.clusters, t: "mechanism clusters" },
     { n: s.sources, t: "open sources" },
   ];
-  const videos = [
-    { title: "Demo", url: site.videos.demo },
-    { title: "Technical walkthrough", url: site.videos.tech },
-    { title: "Team", url: site.videos.team },
-  ].filter((v) => v.url);
+  // Real submission URLs from env; otherwise the storyboard drafts, labelled as drafts.
+  const videos = ([
+    ["Demo", "The product, end to end", site.videos.demo, site.draftVideos.demo],
+    ["Technical walkthrough", "Graph, verifier, agents, how it scales", site.videos.tech, site.draftVideos.tech],
+    ["Team", "Who we are and why this problem", site.videos.team, site.draftVideos.team],
+  ] as const).map(([title, purpose, url, draft]) => ({ title, purpose, url: url || draft.src, poster: url ? undefined : draft.poster, draft: !url }));
 
   return (
     <>
@@ -134,8 +134,8 @@ export default async function Home() {
                 One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/atlas" className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open the atlas</Link>
-                <Link href={`/atlas?p=maria&d=${MARIA_DISEASE}`} className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">See Maria&apos;s journey</Link>
+                <a href={site.programUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open Nexmed</a>
+                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">See Maria&apos;s journey</a>
               </div>
               <p className="mt-5 text-sm text-ink-3">Free and open. Information with sources — not medical advice.</p>
             </div>
@@ -216,7 +216,7 @@ export default async function Home() {
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "organization" || t === "investigator")}</span> groups &amp; researchers</li>
                 </ul>
                 <p className="mt-4 text-xs text-ink-3">Each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
-                <Link href={`/atlas?p=maria&d=${MARIA_DISEASE}`} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in the atlas →</Link>
+                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in Nexmed →</a>
               </div>
             </div>
           </section>
@@ -228,13 +228,13 @@ export default async function Home() {
           <h2 id="modes-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The same evidence, ordered for who is asking.</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {MODE_ORDER.map((id) => PERSONAS[id]).map((p, i) => (
-              <Link key={p.id} href={`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
+              <a key={p.id} href={programHref(`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`)} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
                 <NodeOrb size={30} tone={(["light", "brand", "deep", "ink"] as const)[i % 4]} />
                 <h3 className="mt-4 text-lg font-bold text-brand-ink">{p.mode.en}</h3>
                 <p className="text-xs text-ink-3">{p.role.en}</p>
                 <p className="mt-3 flex-1 text-sm text-ink-2">{MODE_COPY[p.id]}</p>
                 <span className="mt-4 text-sm font-semibold text-brand-deep group-hover:underline">Open in {p.mode.en} mode →</span>
-              </Link>
+              </a>
             ))}
           </div>
         </section>
@@ -299,23 +299,47 @@ export default async function Home() {
           </ul>
         </section>
 
-        {videos.length > 0 && (
-          <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6" aria-labelledby="videos-title">
-            <h2 id="videos-title" className="display text-3xl font-semibold text-brand-ink">Videos</h2>
-            <div className="mt-6 grid gap-5 md:grid-cols-3">
+        {/* Videos */}
+        <section id="videos" className="border-t border-line bg-brand-mist" aria-labelledby="videos-title">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <p className="eyebrow">See it</p>
+            <h2 id="videos-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Three minutes of Nexmed.</h2>
+            <div className="mt-8 grid gap-5 md:grid-cols-3">
               {videos.map((v) => (
-                <figure key={v.title} className="card overflow-hidden">
-                  <div className="aspect-video bg-brand-soft">
+                <figure key={v.title} className="overflow-hidden rounded-xl border border-line bg-paper shadow-[var(--shadow-soft)]">
+                  <div className="relative aspect-video bg-brand-soft">
                     {/\.mp4($|\?)/.test(v.url)
-                      ? <video src={v.url} controls preload="none" className="h-full w-full" />
+                      ? <video src={v.url} poster={v.poster} controls preload="none" playsInline className="h-full w-full object-cover" aria-label={`${v.title} video${v.draft ? " (draft)" : ""}`} />
                       : <iframe src={toEmbed(v.url)} title={v.title} className="h-full w-full" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />}
+                    {v.draft && <span className="pointer-events-none absolute left-2 top-2 rounded-full border border-line bg-paper/95 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink-3">Draft</span>}
                   </div>
-                  <figcaption className="p-3 text-sm font-semibold text-brand-ink">{v.title}</figcaption>
+                  <figcaption className="p-4">
+                    <p className="font-bold text-brand-ink">{v.title}</p>
+                    <p className="text-sm text-ink-3">{v.purpose}</p>
+                  </figcaption>
                 </figure>
               ))}
             </div>
-          </section>
-        )}
+            {videos.some((v) => v.draft) && <p className="mt-3 text-xs text-ink-3">Drafts: storyboards with placeholders. Final cuts replace them before submission.</p>}
+          </div>
+        </section>
+
+        {/* Team */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="team-title">
+          <p className="eyebrow">The team</p>
+          <h2 id="team-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">{site.company}</h2>
+          <ul className="mt-8 grid gap-4 sm:grid-cols-3">
+            {site.team.map((m, i) => (
+              <li key={i} className="card flex items-center gap-4 p-5">
+                <NodeOrb size={40} tone={(["brand", "deep", "light"] as const)[i % 3]} />
+                <div>
+                  <p className="font-bold text-brand-ink">{m.name}</p>
+                  <p className="text-sm text-ink-3">{m.role}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
 
       <footer className="border-t border-line bg-paper">
@@ -334,7 +358,7 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Project</p>
             <ul className="mt-3 space-y-1">
-              <li><Link href="/atlas" className="text-brand-deep hover:underline">Open the atlas</Link></li>
+              <li><a href={site.programUrl} className="text-brand-deep hover:underline">Open Nexmed</a></li>
               <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
               <li className="text-ink-3">{site.challenge}</li>
             </ul>

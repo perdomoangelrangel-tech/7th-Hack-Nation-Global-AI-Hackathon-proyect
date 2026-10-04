@@ -10,17 +10,17 @@
  * Props are a superset of the voice lane's CSS orb (`state`, `reduce`, `size`). `state="hidden"` plays the
  * appear clip backwards and then stops rendering. Reduced motion / low power / no WebGL → the static Cycles
  * poster with a calm ring that still shows the state. three.js is code-split and only loads in 3D mode.
+ * Portable: no Next-only imports (React.lazy + <img>), so the Lovable program can copy src/components/three as is.
  */
-import dynamic from "next/dynamic";
-import Image from "next/image";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { AgentState } from "./AgentModel";
 import { POSTERS } from "./palette";
 import { useCan3D } from "./useCan3D";
 
 export type { AgentState };
 
-const AgentCanvas = dynamic(() => import("./AgentCanvas"), { ssr: false });
+// Portable (no Next-only imports) so the Lovable program can reuse it: React.lazy, only rendered after mount.
+const AgentCanvas = lazy(() => import("./AgentCanvas"));
 
 export interface AgentOrbProps {
   state: AgentState | "connecting";
@@ -49,7 +49,8 @@ export function AgentOrb({ state, size = 96, reduce, getLevel, className = "", l
     return (
       <span {...a11y} className={`relative inline-grid place-items-center shrink-0 ${className}`} style={{ width: size, height: size }}>
         <span className={`absolute inset-[4%] rounded-full border-2 ${ring}`} />
-        <Image src={POSTERS.agent} alt="" width={size} height={size} className="select-none" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- portable component (also used outside Next) */}
+        <img src={POSTERS.agent} alt="" width={size} height={size} className="select-none" />
       </span>
     );
   }
@@ -60,8 +61,11 @@ export function AgentOrb({ state, size = 96, reduce, getLevel, className = "", l
       className={`relative inline-block shrink-0 transition-opacity duration-300 ${hidden && ready ? "pointer-events-none" : ""} ${className}`}
       style={{ width: size, height: size }}
     >
-      {!ready && !hidden && <Image src={POSTERS.agent} alt="" width={size} height={size} className="absolute inset-0 select-none" />}
-      <AgentCanvas state={s} getLevel={getLevel} onReady={() => setReady(true)} className="absolute inset-0" />
+      {/* eslint-disable-next-line @next/next/no-img-element -- portable component (also used outside Next) */}
+      {!ready && !hidden && <img src={POSTERS.agent} alt="" width={size} height={size} className="absolute inset-0 select-none" />}
+      <Suspense fallback={null}>
+        <AgentCanvas state={s} getLevel={getLevel} onReady={() => setReady(true)} className="absolute inset-0" />
+      </Suspense>
     </span>
   );
 }
