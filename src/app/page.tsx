@@ -1,13 +1,14 @@
-import Link from "next/link";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
+import { AtlasPreview } from "@/components/landing/AtlasPreview";
+import { neighborhood } from "@/components/landing/neighborhood";
 import { Logo } from "@/components/brand/Logo";
 import { Hero3D } from "@/components/three/Hero3D";
 import { NodeOrb, type OrbKind } from "@/components/three/NodeOrb";
 import { atlas, loadAtlas, stats } from "@/lib/atlas/store";
 import type { Edge } from "@/lib/atlas/types";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
-import { site, toEmbed } from "@/lib/site";
+import { programHref, site, toEmbed } from "@/lib/site";
 
 export const revalidate = 3600;
 
@@ -67,7 +68,7 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
         {from} <span className="font-normal text-ink-3">→ {edge.relation.replace(/_/g, " ")} →</span> {to}
       </p>
       <div className={`mt-3 w-16 ${inferred ? "kind-inferred" : "kind-observed"}`} aria-hidden />
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm [&_dd]:break-words">
         <dt className="text-ink-3">Kind</dt><dd className="text-ink-2">{edge.kind}</dd>
         <dt className="text-ink-3">Confidence</dt>
         <dd className="text-ink-2">
@@ -77,7 +78,7 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
         <dt className="text-ink-3">Source</dt>
         <dd className="text-ink-2">
           {ev?.url ? <a href={ev.url} target="_blank" rel="noreferrer" className="text-brand-deep underline decoration-brand-light underline-offset-2 hover:decoration-brand-deep">{sourceName}</a> : sourceName}
-          {ev?.external_id && <span className="mono ml-1.5 text-xs text-ink-3">{ev.external_id}</span>}
+          {ev?.external_id && <span className="mono ml-1.5 break-all text-xs text-ink-3">{ev.external_id}</span>}
         </dd>
         {ev?.retrieved_at && (<><dt className="text-ink-3">Read on</dt><dd className="text-ink-2">{ev.retrieved_at.slice(0, 10)}</dd></>)}
       </dl>
@@ -88,7 +89,10 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
 export default async function Home() {
   await loadAtlas();
   const s = stats();
-  const { snap, byId } = atlas();
+  const idx = atlas();
+  const { snap, byId } = idx;
+  const hood = neighborhood(idx, MARIA_DISEASE);
+  const hoodCount = (pred: (t: string) => boolean) => hood?.nodes.filter((n) => !n.center && pred(n.type)).length ?? 0;
   const name = (id: string) => byId.get(id)?.name ?? id.split(":").slice(1).join(":");
   const causes = snap.edges.find((e) => e.to === MARIA_DISEASE && e.relation === "causes" && e.kind === "observed");
   const similar = snap.edges.filter((e) => e.relation === "similar_to" && (e.from === MARIA_DISEASE || e.to === MARIA_DISEASE)).sort((a, b) => b.confidence - a.confidence)[0];
@@ -106,11 +110,12 @@ export default async function Home() {
     { n: s.clusters, t: "mechanism clusters" },
     { n: s.sources, t: "open sources" },
   ];
-  const videos = [
-    { title: "Demo", url: site.videos.demo },
-    { title: "Technical walkthrough", url: site.videos.tech },
-    { title: "Team", url: site.videos.team },
-  ].filter((v) => v.url);
+  // Real submission URLs from env; otherwise the storyboard drafts, labelled as drafts.
+  const videos = ([
+    ["Demo", "The product, end to end", site.videos.demo, site.draftVideos.demo],
+    ["Technical walkthrough", "Graph, verifier, agents, how it scales", site.videos.tech, site.draftVideos.tech],
+    ["Team", "Who we are and why this problem", site.videos.team, site.draftVideos.team],
+  ] as const).map(([title, purpose, url, draft]) => ({ title, purpose, url: url || draft.src, poster: url ? undefined : draft.poster, draft: !url }));
 
   return (
     <>
@@ -129,8 +134,8 @@ export default async function Home() {
                 One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/atlas" className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open the atlas</Link>
-                <Link href={`/atlas?p=maria&d=${MARIA_DISEASE}`} className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">See Maria&apos;s journey</Link>
+                <a href={site.programUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open Nexmed</a>
+                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">See Maria&apos;s journey</a>
               </div>
               <p className="mt-5 text-sm text-ink-3">Free and open. Information with sources — not medical advice.</p>
             </div>
@@ -193,26 +198,50 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Inside the atlas: a real neighbourhood in 3D (Blender glyphs) */}
+        {hood && (
+          <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="inside-title">
+            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.25fr_.75fr] [&>*]:min-w-0">
+              <AtlasPreview data={hood} />
+              <div>
+                <p className="eyebrow">Inside the atlas</p>
+                <h2 id="inside-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">One disease, in its neighbourhood.</h2>
+                <p className="mt-3 text-ink-2">
+                  A live slice around <span className="font-semibold text-brand-ink">{hood.centerName}</span>: the gene behind it, the pathways and variants that gene touches, the symptoms, trials, papers, patient groups and researchers — and the diseases Nexmed infers may share its mechanism.
+                </p>
+                <ul className="mt-5 grid grid-cols-2 gap-2 text-sm text-ink-2">
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "disease")}</span> inferred neighbours <span className="text-ink-3">(dashed)</span></li>
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "pathway")}</span> pathways</li>
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "trial" || t === "study")}</span> trials &amp; papers</li>
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "organization" || t === "investigator")}</span> groups &amp; researchers</li>
+                </ul>
+                <p className="mt-4 text-xs text-ink-3">Each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
+                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in Nexmed →</a>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Modes */}
         <section id="modes" className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="modes-title">
           <p className="eyebrow">Four modes, one graph</p>
           <h2 id="modes-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The same evidence, ordered for who is asking.</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {MODE_ORDER.map((id) => PERSONAS[id]).map((p, i) => (
-              <Link key={p.id} href={`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
+              <a key={p.id} href={programHref(`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`)} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
                 <NodeOrb size={30} tone={(["light", "brand", "deep", "ink"] as const)[i % 4]} />
                 <h3 className="mt-4 text-lg font-bold text-brand-ink">{p.mode.en}</h3>
                 <p className="text-xs text-ink-3">{p.role.en}</p>
                 <p className="mt-3 flex-1 text-sm text-ink-2">{MODE_COPY[p.id]}</p>
                 <span className="mt-4 text-sm font-semibold text-brand-deep group-hover:underline">Open in {p.mode.en} mode →</span>
-              </Link>
+              </a>
             ))}
           </div>
         </section>
 
         {/* Every edge shows its source */}
         <section id="evidence" className="border-y border-line bg-brand-mist" aria-labelledby="evidence-title">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1fr]">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 [&>*]:min-w-0">
             <div>
               <p className="eyebrow">Every edge shows its source</p>
               <h2 id="evidence-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Observed is never confused with inferred.</h2>
@@ -270,23 +299,47 @@ export default async function Home() {
           </ul>
         </section>
 
-        {videos.length > 0 && (
-          <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6" aria-labelledby="videos-title">
-            <h2 id="videos-title" className="display text-3xl font-semibold text-brand-ink">Videos</h2>
-            <div className="mt-6 grid gap-5 md:grid-cols-3">
+        {/* Videos */}
+        <section id="videos" className="border-t border-line bg-brand-mist" aria-labelledby="videos-title">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <p className="eyebrow">See it</p>
+            <h2 id="videos-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Three minutes of Nexmed.</h2>
+            <div className="mt-8 grid gap-5 md:grid-cols-3">
               {videos.map((v) => (
-                <figure key={v.title} className="card overflow-hidden">
-                  <div className="aspect-video bg-brand-soft">
+                <figure key={v.title} className="overflow-hidden rounded-xl border border-line bg-paper shadow-[var(--shadow-soft)]">
+                  <div className="relative aspect-video bg-brand-soft">
                     {/\.mp4($|\?)/.test(v.url)
-                      ? <video src={v.url} controls preload="none" className="h-full w-full" />
+                      ? <video src={v.url} poster={v.poster} controls preload="none" playsInline className="h-full w-full object-cover" aria-label={`${v.title} video${v.draft ? " (draft)" : ""}`} />
                       : <iframe src={toEmbed(v.url)} title={v.title} className="h-full w-full" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />}
+                    {v.draft && <span className="pointer-events-none absolute left-2 top-2 rounded-full border border-line bg-paper/95 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink-3">Draft</span>}
                   </div>
-                  <figcaption className="p-3 text-sm font-semibold text-brand-ink">{v.title}</figcaption>
+                  <figcaption className="p-4">
+                    <p className="font-bold text-brand-ink">{v.title}</p>
+                    <p className="text-sm text-ink-3">{v.purpose}</p>
+                  </figcaption>
                 </figure>
               ))}
             </div>
-          </section>
-        )}
+            {videos.some((v) => v.draft) && <p className="mt-3 text-xs text-ink-3">Drafts: storyboards with placeholders. Final cuts replace them before submission.</p>}
+          </div>
+        </section>
+
+        {/* Team */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="team-title">
+          <p className="eyebrow">The team</p>
+          <h2 id="team-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">{site.company}</h2>
+          <ul className="mt-8 grid gap-4 sm:grid-cols-3">
+            {site.team.map((m, i) => (
+              <li key={i} className="card flex items-center gap-4 p-5">
+                <NodeOrb size={40} tone={(["brand", "deep", "light"] as const)[i % 3]} />
+                <div>
+                  <p className="font-bold text-brand-ink">{m.name}</p>
+                  <p className="text-sm text-ink-3">{m.role}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
 
       <footer className="border-t border-line bg-paper">
@@ -305,7 +358,7 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Project</p>
             <ul className="mt-3 space-y-1">
-              <li><Link href="/atlas" className="text-brand-deep hover:underline">Open the atlas</Link></li>
+              <li><a href={site.programUrl} className="text-brand-deep hover:underline">Open Nexmed</a></li>
               <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
               <li className="text-ink-3">{site.challenge}</li>
             </ul>

@@ -4,29 +4,20 @@
  * extracted edges are worded as hypotheses. Without a key (or on any model failure) a deterministic
  * template restates each edge with its source.
  */
-import { structured } from "./client";
-import { untrusted } from "./client";
+import { structured, untrusted } from "./client";
 import { DraftSchema, factsBlock, templateDraft, verifyDraft, type FactStatus } from "./draft";
 import { edgeFacts, namesOf } from "./edge-facts";
 import { systemPrompt } from "../agents/prompts";
 import { PERSONAS, type PersonaId } from "../agents/profiles";
 import { disclaimer } from "../verifier";
 import type { AtlasIndex, Locale } from "./types";
+import type { ExplainResponse } from "./contract";
+
+export type { ExplainResponse };
 
 export const MAX_EDGES = 20;
 
 export interface ExplainRequest { edgeIds: string[]; persona: PersonaId; locale: Locale; simple?: boolean; question?: string }
-export interface ExplainResponse {
-  sentences: { text: string; edge_ids: string[]; evidence_ids: string[]; kind: FactStatus }[];
-  dropped: { text: string; reason: string }[];
-  mode: "openai" | "deterministic";
-  model?: string;
-  simple: boolean;
-  unknown_edge_ids: string[];
-  skipped_edge_ids: string[];
-  spoken: string;
-  disclaimer: string;
-}
 
 export async function explain(idx: AtlasIndex, req: ExplainRequest): Promise<ExplainResponse> {
   const { facts, unknown, skipped } = edgeFacts(idx, req.edgeIds.slice(0, MAX_EDGES), req.locale);

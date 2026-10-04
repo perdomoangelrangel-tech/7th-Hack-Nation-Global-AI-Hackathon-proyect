@@ -13,7 +13,8 @@
     "db:push": "supabase db push",
     "setup": "bash scripts/setup.sh",
     "analyze": "tsx scripts/analyze.ts",
-    "snapshot": "tsx scripts/snapshot.ts"
+    "snapshot": "tsx scripts/snapshot.ts",
+    "extract": "tsx --conditions=react-server src/lib/ai/cli/extract.ts"
   },
   "dependencies": {
     "@elevenlabs/react": "^1.16.0",

@@ -75,7 +75,13 @@ function nameIndex(idx: AtlasIndex): NameIndex {
   return ni;
 }
 
-const toCandidate = (e: Entity, score: number): Candidate => ({ entity_id: e.id, canonical_id: e.canonical_id, label: e.name, type: e.type, score: Math.round(score * 1000) / 1000 });
+/** Every (normalized key, raw name, entity) of the given types — for dictionary matching in free text. */
+export function entityKeys(idx: AtlasIndex, types: EntityType[]): { key: string; raw: string; entity: Entity }[] {
+  const ni = nameIndex(idx);
+  return [...ni.exact.values()].flat().filter((k) => types.includes(k.entity.type)).map((k) => ({ key: k.key, raw: k.raw, entity: k.entity }));
+}
+
+const toCandidate =(e: Entity, score: number): Candidate => ({ entity_id: e.id, canonical_id: e.canonical_id, label: e.name, type: e.type, score: Math.round(score * 1000) / 1000 });
 const byRank = (a: Entity, b: Entity) => (TYPE_RANK[a.type] ?? 9) - (TYPE_RANK[b.type] ?? 9);
 const none = (name: string, candidates: Candidate[] = []): Match => ({ name, entity_id: null, canonical_id: null, label: null, type: null, method: "none", confidence: 0, matched_synonym: null, candidates });
 
