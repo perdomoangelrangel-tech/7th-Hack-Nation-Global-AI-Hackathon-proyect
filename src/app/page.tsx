@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
@@ -13,6 +14,8 @@ import { programHref, site, toEmbed } from "@/lib/site";
 export const revalidate = 3600;
 
 const MODE_ORDER: PersonaId[] = ["devon", "maria", "osei", "priya"];
+// Blender glyph icon per mode (public/models/glyphs, built by blender/build_glyphs.py --icons).
+const MODE_GLYPH: Record<PersonaId, string> = { devon: "investigator", maria: "organization", osei: "study", priya: "treatment" };
 const MARIA_DISEASE = "disease:ORPHA:599373"; // STXBP1-related developmental and epileptic encephalopathy
 
 // Hack-Nation Challenge 05 brief (the only source for these figures).
@@ -25,10 +28,10 @@ const FACTS = [
 ];
 
 const STEPS = [
-  { title: "Open sources", body: "Orphanet, HPO, Monarch, ClinVar, Reactome, ClinicalTrials.gov, PubMed, Open Targets, NIH RePORTER. Every row keeps its URL and the date we read it.", tone: "light" as const },
-  { title: "Evidence graph", body: "Diseases, genes, variants, symptoms, pathways, trials, papers, treatments, patient groups and researchers. Each edge carries its source, relation, confidence and contradicting evidence.", tone: "brand" as const },
-  { title: "Mechanism clusters", body: "Louvain communities over shared symptoms (weighted by how informative they are), Reactome pathways and genes — diseases that may share biology even when their names differ.", tone: "deep" as const },
-  { title: "Action", body: "For each mode: the connection, a reusable asset and what differs, a collaborator, and a next step this week. When there is no route, Nexmed says so.", tone: "ink" as const },
+  { title: "Open sources", body: "Orphanet, HPO, Monarch, ClinVar, Reactome, ClinicalTrials.gov, PubMed, Open Targets, NIH RePORTER. Every row keeps its URL and the date we read it.", tone: "light" as const, glyph: "study" },
+  { title: "Evidence graph", body: "Diseases, genes, variants, symptoms, pathways, trials, papers, treatments, patient groups and researchers. Each edge carries its source, relation, confidence and contradicting evidence.", tone: "brand" as const, glyph: "gene" },
+  { title: "Mechanism clusters", body: "Louvain communities over shared symptoms (weighted by how informative they are), Reactome pathways and genes — diseases that may share biology even when their names differ.", tone: "deep" as const, glyph: "pathway" },
+  { title: "Action", body: "For each mode: the connection, a reusable asset and what differs, a collaborator, and a next step this week. When there is no route, Nexmed says so.", tone: "ink" as const, glyph: "organization" },
 ];
 
 const MODE_COPY: Record<string, string> = {
@@ -49,7 +52,7 @@ const BUILT = [
   { name: "OpenAI", what: "extraction from papers, grounded explanations" },
   { name: "ElevenLabs", what: "a voice for every agent" },
   { name: "Supabase", what: "the Postgres evidence graph" },
-  { name: "Blender", what: "every 3D element on this page" },
+  { name: "Blender", what: "the 3D hero, voice guide and graph glyphs" },
   { name: "Next.js · Vercel", what: "the app" },
 ];
 
@@ -185,7 +188,7 @@ export default async function Home() {
               {STEPS.map((st, i) => (
                 <li key={st.title} className="relative rounded-xl border border-line bg-paper p-5 shadow-[var(--shadow-soft)]">
                   <div className="flex items-center gap-3">
-                    <NodeOrb size={26} tone={st.tone} float />
+                    <Image src={`/models/glyphs/${st.glyph}.png`} alt="" width={64} height={64} className="float-y -my-3 -ml-3 select-none" />
                     <span className="mono text-xs text-ink-3">0{i + 1}</span>
                     <span className="ml-auto rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-deep">{stepStats[i]}</span>
                   </div>
@@ -229,9 +232,9 @@ export default async function Home() {
           <p className="eyebrow">Four modes, one graph</p>
           <h2 id="modes-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The same evidence, ordered for who is asking.</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {MODE_ORDER.map((id) => PERSONAS[id]).map((p, i) => (
+            {MODE_ORDER.map((id) => PERSONAS[id]).map((p) => (
               <a key={p.id} href={programHref(`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`)} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
-                <NodeOrb size={30} tone={(["light", "brand", "deep", "ink"] as const)[i % 4]} />
+                <Image src={`/models/glyphs/${MODE_GLYPH[p.id]}.png`} alt="" width={84} height={84} className="-m-4 select-none" />
                 <h3 className="mt-4 text-lg font-bold text-brand-ink">{p.mode.en}</h3>
                 <p className="text-xs text-ink-3">{p.role.en}</p>
                 <p className="mt-3 flex-1 text-sm text-ink-2">{MODE_COPY[p.id]}</p>
