@@ -58,9 +58,12 @@ const NEGATION = /\b(not|no evidence|did not|does not|lack(?:ed)? of|absence of|
 function dictionaryEntities(idx: AtlasIndex, text: string): { mention: string; type: ExtractType }[] {
   const hay = ` ${norm(text)} `;
   const seen = new Map<string, { mention: string; type: ExtractType }>();
-  for (const k of entityKeys(idx, ["gene", "disease", "phenotype", "pathway", "treatment"])) {
-    if (k.key.length < 4 || seen.has(k.entity.id)) continue;
-    if (hay.includes(` ${k.key} `)) seen.set(k.entity.id, { mention: k.raw, type: k.entity.type as ExtractType });
+  const usedKeys = new Set<string>(); // one mention text → one type ("STXBP1" is the gene, not the disease alias)
+  const order: ExtractType[] = ["gene", "disease", "phenotype", "pathway", "treatment"];
+  const keys = entityKeys(idx, order).sort((a, b) => order.indexOf(a.entity.type as ExtractType) - order.indexOf(b.entity.type as ExtractType));
+  for (const k of keys) {
+    if (k.key.length < 4 || seen.has(k.entity.id) || usedKeys.has(k.key)) continue;
+    if (hay.includes(` ${k.key} `)) { seen.set(k.entity.id, { mention: k.raw, type: k.entity.type as ExtractType }); usedKeys.add(k.key); }
   }
   const out = [...seen.values()];
   for (const v of new Set(text.match(VARIANT_RE) ?? [])) out.push({ mention: v, type: "variant" });
@@ -131,6 +134,7 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
   const rawClaims = llm.mode === "openai" ? llm.data.claims : dictionaryClaims(text, entities);
   const claims: ExtractedClaim[] = [];
   for (const c of rawClaims.slice(0, 80)) {
+    if (c.subject.trim().toLowerCase() === c.object.trim().toLowerCase()) { dropped.push({ text: `${c.subject} ${c.relation} ${c.object}`, reason: "wrong_entity_types" }); continue; }
     if (!contains(text, c.quote) || squash(c.quote).length < 10) { dropped.push({ text: c.quote.slice(0, 200), reason: "quote_not_in_text" }); continue; }
     const [subjT, objT] = SHAPE[c.relation];
     let s = findEnt(c.subject, subjT), o = findEnt(c.object, objT);
