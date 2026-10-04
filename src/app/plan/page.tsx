@@ -11,7 +11,7 @@ import { journeyCopy } from "@/components/journey/copy";
 import { tenX } from "@/lib/journey/tenx";
 import { PrintButton } from "./PrintButton";
 
-export const metadata: Metadata = { title: `Meeting plan · ${site.name}`, description: "A one-page, sourced plan for a patient-group meeting.", robots: { index: false } };
+export const metadata: Metadata = { title: `Meeting plan · ${site.company}`, description: "A one-page, sourced plan for a patient-group meeting.", robots: { index: false } };
 
 const L = {
   en: { title: "Meeting plan", for: "Prepared for a patient-group meeting", route: "Our route in four questions", week: "This week", later: "After that", owner: "Owner", gaps: "What is unknown", sources: "Sources", tenx: "Milestone", tenx_note: "Durations are assumptions, not measured outcomes.", print: "Print / save as PDF", back: "Back to the atlas", generated: "Generated", q: ["Who shares our disease characteristics?", "What useful work already exists?", "Who could help?", "What should we do together next?"] },
@@ -47,7 +47,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const refs = (edges: string[]) => edges.slice(0, 4).map((id) => {
     const ev = g.edgeById.get(id)?.evidence[0]; if (!ev) return null;
     let s = sources.find((x) => x.url === ev.url);
-    if (!s) { s = { n: sources.length + 1, url: ev.url, label: ev.source === "atlas_analysis" ? "Nexmed analysis — inferred, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 90)}` : ""}` }; sources.push(s); }
+    if (!s) { s = { n: sources.length + 1, url: ev.url, label: ev.source === "atlas_analysis" ? "Nedamex analysis — inferred, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 90)}` : ""}` }; sources.push(s); }
     return s.n;
   }).filter((n): n is number => n !== null);
   // A plain function, not a component: it must run while this render builds `sources`, before the list below.
@@ -63,7 +63,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           <h1 className="serif text-3xl text-brand-ink mt-1">{j.disease.full_name}</h1>
           <p className="text-sm text-ink-3 mt-1">{j.disease.canonical_id}{j.cluster ? ` · ${j.cluster.label}` : ""}</p>
         </div>
-        <p className="text-right text-xs text-ink-3 shrink-0">{site.name} by {site.company}<br />{t.generated} {today}</p>
+        <p className="text-right text-xs text-ink-3 shrink-0">{site.company}<br />{t.generated} {today}</p>
       </header>
 
       <section className="mt-5">

@@ -10,7 +10,7 @@ import { draftIntro, type IntroDraft } from "@/lib/journey/outreach";
 import { tr } from "@/lib/journey/graph";
 import { coCopy } from "./copy";
 
-export function Partners({ persona, locale, disease, journey, onPropose }: { persona: PersonaId; locale: Locale; disease: string; journey: JourneyV2; onPropose: (d: Partial<Draft>) => void }) {
+export function Partners({ persona, locale, disease, journey, onPropose, defaultOpen = false }: { persona: PersonaId; locale: Locale; disease: string; journey: JourneyV2; onPropose: (d: Partial<Draft>) => void; defaultOpen?: boolean }) {
   const c = coCopy[locale];
   const [res, setRes] = useState<{ key: string; r: MatchResult | null }>({ key: "", r: null });
   const [intro, setIntro] = useState<{ draft: IntroDraft; ai: boolean } | null>(null);
@@ -47,7 +47,7 @@ export function Partners({ persona, locale, disease, journey, onPropose }: { per
   };
 
   return (
-    <details className="mt-3 group">
+    <details className="mt-3 group" open={defaultOpen}>
       <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-ink-3" title={res.r?.method}>
         {c.partners} ({partners.length}) <span className="normal-case tracking-normal text-ink-2 group-open:hidden">· {partners[0].name}</span>
       </summary>
