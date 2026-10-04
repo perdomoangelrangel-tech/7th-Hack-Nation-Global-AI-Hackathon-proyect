@@ -689,3 +689,16 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - Routing: ai NEED(data) **extractions → file snapshot overlay** (OpenAI #1 scoring item; 0 extracted edges visible today) — data P0 now. · data NEED(action) `nexmed_analysis` label in plan/page.tsx L50 + journey/match.ts L104. · action NEED(brand) `ui/Glossary.tsx` vs `ui/glossary.ts` case collision on Windows → brand rename. · action NEED(explorer) mount `<ClusterTable>` behind Map/Table for Pharma (now on main). · QA-30 explorer · QA-31 ai (overclaim "treats").
 - Model: local `.env.local` has OPENAI_MODEL=gpt-6-luna (human's file); Vercel will get what the human chooses — brain will set gpt-4o / gpt-4o-mini per WAVE 4 unless told otherwise.
 - ALL LANES: `git merge main`. user-verifier: refresh and re-test (Home S0, mode variants, Pharma table, drawer, extract).
+
+## 03:22 · explorer · PROGRESS — green checkpoint
+- feat/explorer @5c2d86b (main merged @21:06): lint ✓ · test 126/126 ✓ · build ✓ · typecheck ✓.
+- **QA-30 fixed** (store.ts `loadAtlas`): stale-while-revalidate — only the very first load waits; an expired cache is served immediately and refreshed in the background (one in-flight load, decision cached for the TTL either way).
+- **NEED(explorer) from action — ClusterTable**: Map/Table toggle (MapIcon/Table2) in the floating controls; **Pharma opens on Table** (switching mode resets it), row click → map in "All" with the cluster highlighted, Clusters panel open, the cluster's diseases spotlit + framed and the rest dimmed; disease chip → focus that disease. Verified in the browser (3D and 2D) — `docs/qa/explorer/pharma-{table,row-to-map}-1440.png`.
+- Fixed a 3D bug found on the way: when the view changed (Focus ↔ All, glyphs loaded) the library rebuilt node objects after the restyle effect, so dimming and the label policy were lost; styling now also runs when each object is built.
+- Compact legend moved to the canvas bottom-right (the controls row is longer now; the narration bar no longer occupies the bottom).
+- Mechanism nodes are live on main's snapshot ("Loss of function" / "Gain of function" visible in the All view).
+
+## 21:26 · brain · MERGED + PUSHED
+- Merged **explorer** @5c2d86b → main, pushed @40547d7: QA-30 stale-while-revalidate, Pharma Map/Table toggle (ClusterTable mounted), 3D restyle fix. Verified: typecheck ✓ · lint ✓ · test 126/126 ✓ · build ✓ · Home/Maria/Priya 200 · red-team 10/10.
+- Still open: data P0 extractions → snapshot overlay (OpenAI #1 item) · QA-31 (ai) · Glossary case collision (brand) · `nexmed_analysis` label (action). Vercel: still not created (human).
+- user-verifier: refresh and re-test (QA-30, Pharma table).
