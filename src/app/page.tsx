@@ -1,6 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import Image from "next/image";
+import Link from "next/link";
+import { preload } from "react-dom";
+import { HERO_POSTER } from "@/components/three/heroPoster";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
@@ -55,8 +58,7 @@ const KINDS: { kind: OrbKind; title: string; body: string; line: string }[] = [
 ];
 
 const BUILT = [
-  { name: "Vercel", what: "this website and the API" },
-  { name: "Lovable", what: "the Nedamex app" },
+  { name: "Vercel", what: "this website, the Nedamex app (/atlas) and its API" },
   { name: "Supabase", what: "the evidence graph (Postgres)" },
   { name: "OpenAI", what: "extraction from papers, grounded explanations" },
   { name: "ElevenLabs", what: "a voice for every agent" },
@@ -97,6 +99,7 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
 }
 
 export default async function Home() {
+  preload(HERO_POSTER.src, { as: "image", fetchPriority: "high", imageSrcSet: HERO_POSTER.srcSet, imageSizes: HERO_POSTER.sizes });
   await loadAtlas();
   const s = stats();
   const idx = atlas();
@@ -145,7 +148,7 @@ export default async function Home() {
                 One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <a href={site.programUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</a>
+                <Link href={programHref()} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
                 <a href="#videos" className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">Watch the pitch</a>
               </div>
               <p className="mt-5 text-sm text-ink-3">Information with sources — not medical advice.</p>
@@ -229,7 +232,7 @@ export default async function Home() {
                   <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "organization" || t === "investigator")}</span> groups &amp; researchers</li>
                 </ul>
                 <p className="mt-4 text-xs text-ink-3">In the 3D view each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
-                <a href={programHref(`/atlas?p=maria&d=${MARIA_DISEASE}`)} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in {site.name} →</a>
+                <Link href={programHref({ p: "maria", d: MARIA_DISEASE })} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in {site.name} →</Link>
               </div>
             </div>
           </section>
@@ -241,13 +244,13 @@ export default async function Home() {
           <h2 id="modes-title" className="display mt-2 max-w-3xl text-3xl font-semibold text-brand-ink sm:text-4xl">The same evidence, ordered for who is asking.</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {MODE_ORDER.map((id) => PERSONAS[id]).map((p) => (
-              <a key={p.id} href={programHref(`/atlas?p=${p.id}${p.id === "maria" ? `&d=${MARIA_DISEASE}` : ""}`)} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
+              <Link key={p.id} href={programHref({ p: p.id, d: p.id === "maria" ? MARIA_DISEASE : undefined })} className="group card flex flex-col p-5 transition-colors hover:border-brand hover:bg-paper">
                 <Image src={`/models/glyphs/${MODE_GLYPH[p.id]}.png`} alt="" width={84} height={84} className="-m-4 select-none" />
                 <h3 className="mt-4 text-lg font-bold text-brand-ink">{p.mode.en}</h3>
                 <p className="text-xs text-ink-3">{p.role.en}</p>
                 <p className="mt-3 flex-1 text-sm text-ink-2">{MODE_COPY[p.id]}</p>
                 <span className="mt-4 text-sm font-semibold text-brand-deep group-hover:underline">Open in {p.mode.en} mode →</span>
-              </a>
+              </Link>
             ))}
           </div>
         </section>
@@ -371,7 +374,7 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Project</p>
             <ul className="mt-3 space-y-1">
-              <li><a href={site.programUrl} className="text-brand-deep hover:underline">Open {site.name}</a></li>
+              <li><Link href={programHref()} className="text-brand-deep hover:underline">Open {site.name}</Link></li>
               <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
               <li className="text-ink-3">{site.challenge}</li>
             </ul>
