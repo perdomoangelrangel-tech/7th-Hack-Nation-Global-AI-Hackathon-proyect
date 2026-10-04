@@ -187,3 +187,22 @@ describe("extract · the model's misses are filled from atlas names (QA-42)", ()
     expect(r.claims[0]).toMatchObject({ entity_ids: ["gene:HGNC:1", "disease:ORPHA:1"], graphable: true });
   });
 });
+
+describe("extract · treatment finding about the paper's disease", () => {
+  it("keeps 'some patients respond to X' as studied_for · reported_response when the disease is named elsewhere in the text", async () => {
+    setLlmClient(fakeLlm({
+      entities: [{ mention: "Testing syndrome type A", type: "disease" }, { mention: "Drugamab", type: "treatment" }],
+      claims: [{ subject: "Drugamab", relation: "studied_for", object: "Testing syndrome type A", polarity: "supports", quote: "some patients respond to Drugamab.", confidence: 0.8, qualifier: "reported_response" }],
+    }).client);
+    const r = await extract(idx, { text: "Variants in GENE1 cause Testing syndrome type A, and some patients respond to Drugamab." });
+    expect(r.claims).toEqual([expect.objectContaining({ relation: "studied_for", qualifier: "reported_response", graphable: false })]);
+  });
+  it("still drops a phenotype claim whose quote names neither side", async () => {
+    setLlmClient(fakeLlm({
+      entities: [{ mention: "Testing syndrome type A", type: "disease" }, { mention: "Seizure", type: "phenotype" }],
+      claims: [{ subject: "Testing syndrome type A", relation: "has_phenotype", object: "Seizure", polarity: "supports", quote: "We report 12 patients.", confidence: 0.8, qualifier: "none" }],
+    }).client);
+    const r = await extract(idx, { text: "We report 12 patients. Testing syndrome type A often shows Seizure." });
+    expect(r.claims).toHaveLength(0);
+  });
+});

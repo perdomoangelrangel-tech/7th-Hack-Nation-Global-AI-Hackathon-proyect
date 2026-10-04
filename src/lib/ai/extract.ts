@@ -195,15 +195,17 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
       dropped.push({ text: `${c.subject} ${c.relation} ${c.object}`, reason: known ? "wrong_entity_types" : "unknown_entity" });
       continue;
     }
-    // The quote must be about this claim: one side named in it, the other in it or in the title (the paper's topic).
+    // The quote must be about this claim: one side named in it, the other in it, in the title, or (a disease) in the text.
     // "Named" = literal mention/label, or all distinctive tokens of the mention ("STXBP1 disorders" ~ "STXBP1-related disorders").
     const named = (q: string, e: ExtractedEntity, m: string) => {
       if (contains(q, m) || contains(q, e.mention) || (!!e.label && contains(q, e.label))) return true;
       const core = coreTokens(m), have = new Set(norm(squash(q)).split(" "));
       return core.length > 0 && core.every((t) => have.has(t));
     };
+    // A disease is the paper's subject: it may be named anywhere in the text ("…some patients respond to X").
+    const topic = (e: ExtractedEntity, m: string) => named(title, e, m) || (e.type === "disease" && named(text, e, m));
     const sQ = named(c.quote, s, subject), oQ = named(c.quote, o, object);
-    if (!(sQ || oQ) || !(sQ || named(title, s, subject)) || !(oQ || named(title, o, object))) {
+    if (!(sQ || oQ) || !(sQ || topic(s, subject)) || !(oQ || topic(o, object))) {
       dropped.push({ text: `${subject} ${c.relation} ${object}: ${c.quote.slice(0, 120)}`, reason: "quote_not_about_claim" });
       continue;
     }
