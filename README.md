@@ -12,12 +12,21 @@ Nedamex is an evidence knowledge graph of rare diseases — diseases, genes and 
 
 | Deliverable | URL |
 | --- | --- |
-| Website (story, videos, how it works) | https://nedamex.vercel.app |
-| The Nedamex app (atlas, route, evidence, voice) | https://nedamex.vercel.app/atlas |
-| Nedamex on Lovable (home + embedded atlas + research page) | https://nedamex.lovable.app |
+| **Website** — the story, videos and how it works | https://nedamex.vercel.app |
+| **Nedamex platform** (Lovable) — pick your role, search, then the atlas | https://nedamex.lovable.app |
+| The atlas engine (also runs standalone) | https://nedamex.vercel.app/atlas |
 | Maria's demo route (STXBP1-DEE, family mode) | https://nedamex.vercel.app/atlas?p=maria&d=disease:ORPHA:599373 |
 
+The flow is **website → "Open Nedamex" → platform home (who are you?) → your route in the atlas**. The Lovable platform embeds the same atlas engine (`?embed=1`) and reads the same Supabase graph, so both deliverables show one atlas.
+
 Videos: pitch · demo · functionality — `[links added when recorded]`.
+
+## How to use it
+
+1. **Pick your role** — Patient or caregiver · Family & patient group · Researcher · Pharma & biotech. You can change it anytime.
+2. **Search your disease** — by name, synonym, gene, symptom or mechanism ("Munc18-1" → STXBP1, "lysosomal storage" → its cluster), or browse all diseases.
+3. **Follow your route** — four questions, one at a time, each lighting up the part of the map that explains it.
+4. **Tap any line for its evidence** — source and external id, relationship, kind, confidence and any contradicting evidence; *Explain in plain words* rewrites it with OpenAI, still cited.
 
 ## What it does
 
@@ -95,6 +104,12 @@ Checks: `npm run typecheck && npm run lint && npm test && npm run build`.
 5. **AI extraction (optional).** With `OPENAI_API_KEY`: `npm run extract -- --limit 40` extracts claims from the PubMed papers in the graph (idempotent by PMID) and saves them with `save_extraction`.
 
 Integrity checks: `.claude/qa/integrity.sql` (every `expect = 0` row must be 0).
+
+### Add a disease or a source
+
+- **A disease:** add its verified ORPHA code to `supabase/seed/diseases.json` (check it with `scripts/resolve-seed.ts` — never guess an id), regenerate the Edge Function seed with `npx tsx scripts/build-edge-seed.ts`, deploy the `ingest` function and trigger it for that disease, then `npm run snapshot` (or `npm run ingest -- --orpha=ORPHA:…` + `npm run analyze` for the bundled snapshot). Clusters, similarity and the route are recomputed automatically.
+- **A source:** add a module under `supabase/functions/ingest/sources/` (and `scripts/ingest/sources/` for the local pipeline) that writes entities, edges and evidence rows with `source`, `external_id`, `url` and `retrieved_at`; register the source id in a new migration.
+- **From the platform:** on https://nedamex.lovable.app anyone can *Request a disease* or *Suggest a data source*; requests are stored as community drafts and never count as evidence.
 
 ## Data and licenses
 
