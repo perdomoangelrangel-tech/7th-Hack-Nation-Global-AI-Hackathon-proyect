@@ -123,12 +123,21 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const shownKinds = useMemo(() => new Set((shownView?.links ?? []).map((l) => kindOf(l.kind))), [shownView]);
   const centrality = useMemo(() => Object.fromEntries((view?.nodes ?? []).filter((x) => x.type === "disease").map((x) => [x.id, Math.max(0, (x.size - 8) * 14)])), [view]);
 
-  // `?c=<cluster>` (Home sends it with cluster hits): highlight that cluster and open the Clusters panel. Client-only read.
+  // Client-only URL reads: `?c=<cluster>` (Home sends it with cluster hits) highlights that cluster and opens the Clusters
+  // panel; `?e=<edge>` opens the drawer even when the server page could not confirm the id (live UUID edges can exist in
+  // the API's graph cache before the page's) — the drawer fetches it and says so honestly if it is missing.
+  // Captured at first render: the URL-sync effect below rewrites the address (and StrictMode re-runs effects).
+  const firstSearch = useRef(typeof window !== "undefined" ? window.location.search : "");
   useEffect(() => {
-    const c = new URL(window.location.href).searchParams.get("c");
-    if (!c) return;
-    const id = requestAnimationFrame(() => { setClusterFilter(c); setRailTab("clusters"); });
+    const sp = new URLSearchParams(firstSearch.current);
+    const c = sp.get("c"), e = sp.get("e");
+    if (!c && !(e && !initialEdge)) return;
+    const id = requestAnimationFrame(() => {
+      if (c) { setClusterFilter(c); setRailTab("clusters"); }
+      if (e && !initialEdge) setInspect(e);
+    });
     return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Shareable URL state (?d=…&p=maria&l=en).
