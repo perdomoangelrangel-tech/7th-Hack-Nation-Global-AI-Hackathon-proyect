@@ -12,6 +12,6 @@ Only the `main` branch (deployed at https://nedamex.vercel.app and https://nedam
 - Contact details encrypted at rest with pgcrypto; key in Supabase Vault; decrypt function executable only by `service_role` (migration 0016).
 - Public write paths are SECURITY DEFINER RPCs with input validation and rate limits (`submit_proposal`, `submit_profile`, `save_extraction`).
 - HTTPS everywhere (HSTS), security headers (CSP frame-ancestors, nosniff, Referrer-Policy, Permissions-Policy).
-- Per-IP rate limits and input limits on the AI, voice and submission APIs (429 + `Retry-After`) and flood guards on the public write RPCs; citation verifier + red-team suite for unsafe medical output.
+- Input limits on the AI APIs and flood guards on the public write RPCs; citation verifier + red-team suite for unsafe medical output.
 - ElevenLabs agents: no audio recording, 30-day transcript retention.
 - Dependabot version updates (`.github/dependabot.yml`) and CodeQL analysis (`.github/workflows/codeql.yml`) configured on the repository.

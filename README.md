@@ -139,7 +139,7 @@ Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Cod
 ## Security & privacy
 
 - Secrets live only in server-side environment variables; `.env*` is git-ignored and the git history was scanned for key patterns (none found). `npm audit --omit=dev`: 0 vulnerabilities at release.
-- Row-Level Security on every Supabase table; public writes only through validated, rate-limited `SECURITY DEFINER` RPCs; per-IP rate limits and input-size limits on the AI, voice and submission APIs (429 with `Retry-After`); contact details encrypted at rest (pgcrypto + Vault, migration `0016`).
+- Row-Level Security on every Supabase table; public writes only through validated, rate-limited `SECURITY DEFINER` RPCs; input-size limits on the AI APIs; contact details encrypted at rest (pgcrypto + Vault, migration `0016`).
 - Security headers on every response (HSTS, nosniff, Referrer-Policy, Permissions-Policy, CSP `frame-ancestors` so only the Nedamex platform can embed the atlas; full CSP in report-only), CORS limited to exact origins.
 - Voice agents keep no audio recordings; transcripts are kept 30 days.
 - Report vulnerabilities privately: see [`SECURITY.md`](SECURITY.md).
