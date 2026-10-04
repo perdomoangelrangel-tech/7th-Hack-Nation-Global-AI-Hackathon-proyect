@@ -7,6 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { PencilLine } from "lucide-react";
+import { playSfx } from "@/lib/sfx";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
@@ -97,9 +98,11 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
   if (draft !== shown) { setShown(draft); if (draft) { setForm(draft); setContact(""); setConsent(false); setErr(null); } }
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    if (draft && !el.open) el.showModal();
+    if (draft && !el.open) { el.showModal(); playSfx("open"); }
     else if (!draft && el.open) el.close();
   }, [draft]);
+
+  const dismiss = () => { playSfx("close"); onClose(); };
 
   const edgeLabel = (id: string) => {
     if (!journey) return id;
@@ -124,24 +127,26 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
       });
       const b = await r.json();
       if (!r.ok || !b.ok) throw new Error(b.issues?.join("; ") ?? b.error ?? String(r.status));
+      playSfx("success");
       onSaved(b as ProposalSaved);
     } catch (x) {
+      playSfx("error");
       setErr(`${c.error}: ${(x as Error).message}`);
     } finally { setBusy(false); }
   };
 
   return (
-    <dialog ref={ref} onClose={onClose} aria-labelledby="cocreate-title"
+    <dialog ref={ref} onClose={onClose} onCancel={() => playSfx("close")} aria-labelledby="cocreate-title"
       className="m-auto w-[min(640px,calc(100vw-24px))] max-h-[calc(100dvh-24px)] rounded-2xl border border-line bg-paper p-0 text-ink shadow-2xl backdrop:bg-brand-ink/30 backdrop:backdrop-blur-sm">
       {form && (
-        <form onSubmit={submit} className="flex flex-col max-h-[calc(100dvh-24px)]">
+        <form onSubmit={submit} onInvalidCapture={() => playSfx("error")} className="flex flex-col max-h-[calc(100dvh-24px)]">
           <header className="px-5 pt-5 pb-3 border-b border-line">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-widest text-ink-3">{diseaseName}</p>
                 <h2 id="cocreate-title" className="serif text-xl text-brand-ink mt-1">{form.request ? c.request_title[form.request] : c.actions[form.kind]}</h2>
               </div>
-              <button type="button" onClick={onClose} className="rounded-full w-8 h-8 grid place-items-center text-ink-3 hover:bg-paper-2" aria-label={c.cancel}>✕</button>
+              <button type="button" onClick={dismiss} className="rounded-full w-8 h-8 grid place-items-center text-ink-3 hover:bg-paper-2" aria-label={c.cancel}>✕</button>
             </div>
             {!form.request && <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label={c.kind_label}>
               {(["hypothesis", "collaboration", "evidence"] as const).map((k) => (
@@ -194,7 +199,7 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
           <footer className="px-5 py-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
             <p className="text-[11px] text-ink-3 max-w-xs">{form.request ? c.request_disclaimer : c.disclaimer}</p>
             <div className="flex gap-2 shrink-0">
-              <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm text-ink-2 hover:bg-paper-2">{c.cancel}</button>
+              <button type="button" onClick={dismiss} className="rounded-full px-4 py-2 text-sm text-ink-2 hover:bg-paper-2">{c.cancel}</button>
               <button type="submit" disabled={busy} className="rounded-full bg-brand-deep px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink disabled:opacity-60">{busy ? c.saving : form.request ? c.send_request : c.submit}</button>
             </div>
           </footer>

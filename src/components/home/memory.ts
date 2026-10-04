@@ -18,9 +18,12 @@ export function writeMemory(patch: HomeMemory) {
 }
 
 /** The one place Home builds atlas links: the URL is the state (UX_WAVE4 §4.1). */
-export function atlasHref({ p, d, c, l }: { p: PersonaId; d?: string | null; c?: string; l: Locale }) {
+export type StartMode = "challenge" | "free";
+
+export function atlasHref({ p, d, c, mode, l }: { p: PersonaId; d?: string | null; c?: string; mode?: StartMode; l: Locale }) {
   const u = new URLSearchParams({ p });
   if (d) u.set("d", d);
+  if (mode) u.set("mode", mode); // WAVE 6: challenge = Maria's guided route · free = explore (explorer honours it)
   if (c) u.set("c", c); // mechanism cluster picked in search (explorer may highlight it)
   u.set("l", l);
   return `/atlas?${u.toString()}`;
