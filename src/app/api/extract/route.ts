@@ -6,6 +6,7 @@
  * `save_extraction` RPC (anon, security definer); the loader turns them into dotted "extracted" edges.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, readJson } from "@/lib/ai/guard";
 import { z } from "zod";
 import { atlas, loadAtlas } from "@/lib/atlas/store";
 import { publicClient } from "@/lib/supabase/server";
@@ -30,7 +31,9 @@ const supabaseSaver: Saver = async (pmid, model, payload) => {
 
 export async function POST(req: NextRequest) {
   await loadAtlas();
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const limited = rateLimit(req, "extract", 5); if (limited) return limited;
+  const raw = await readJson(req); if (!raw.ok) return raw.res;
+  const parsed = Body.safeParse(raw.body);
   if (!parsed.success) return NextResponse.json({ error: z.flattenError(parsed.error) }, { status: 400 });
   const b = parsed.data;
 

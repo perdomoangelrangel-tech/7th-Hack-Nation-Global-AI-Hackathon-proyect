@@ -4,6 +4,7 @@
  * Plain-language explanation of a graph path for one persona. Every sentence is verified against the edges' evidence.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, readJson } from "@/lib/ai/guard";
 import { z } from "zod";
 import { atlas, loadAtlas } from "@/lib/atlas/store";
 import { explain } from "@/lib/ai/explain";
@@ -20,7 +21,9 @@ const Body = z.object({
 
 export async function POST(req: NextRequest) {
   await loadAtlas();
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const limited = rateLimit(req, "explain", 30); if (limited) return limited;
+  const raw = await readJson(req); if (!raw.ok) return raw.res;
+  const parsed = Body.safeParse(raw.body);
   if (!parsed.success) return NextResponse.json({ error: z.flattenError(parsed.error) }, { status: 400 });
   return NextResponse.json(await explain(atlas(), parsed.data));
 }

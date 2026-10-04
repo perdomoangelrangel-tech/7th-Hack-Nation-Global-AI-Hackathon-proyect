@@ -9,6 +9,7 @@
  * Legacy fields accepted: `disease` (= focus), `audience` (family→devon, clinical→osei, research→priya).
  */
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, readJson } from "@/lib/ai/guard";
 import { z } from "zod";
 import { narrate } from "@/lib/atlas/narrate";
 import { atlas, loadAtlas } from "@/lib/atlas/store";
@@ -27,14 +28,14 @@ export const runtime = "nodejs";
 const LEGACY_AUDIENCE: Record<string, PersonaId> = { family: "devon", clinical: "osei", research: "priya" };
 
 const Body = z.object({
-  question: z.string().trim().min(2).max(2000),
+  question: z.string().trim().min(2).max(600),
   persona: z.enum(["maria", "devon", "priya", "osei"]).optional(),
   audience: z.string().optional(),
   locale: z.enum(["es", "en"]).default("en"),
   focus: z.string().max(200).optional(),
   disease: z.string().max(200).optional(),
   simple: z.boolean().optional(),
-  history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4000) })).max(50).optional(),
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4000).transform((t) => t.slice(0, 600)) })).max(50).transform((h) => h.slice(-10)).optional(),
 });
 
 /** Chat answers stay short: at most this many verified claims per turn. */
@@ -42,7 +43,9 @@ const MAX_CHAT_CLAIMS = 6;
 
 export async function POST(req: NextRequest) {
   await loadAtlas();
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const limited = rateLimit(req, "ask", 20); if (limited) return limited;
+  const raw = await readJson(req); if (!raw.ok) return raw.res;
+  const parsed = Body.safeParse(raw.body);
   if (!parsed.success) return NextResponse.json({ error: z.flattenError(parsed.error) }, { status: 400 });
   const { question, locale } = parsed.data;
   const persona: PersonaId = parsed.data.persona ?? LEGACY_AUDIENCE[parsed.data.audience ?? ""] ?? "maria";

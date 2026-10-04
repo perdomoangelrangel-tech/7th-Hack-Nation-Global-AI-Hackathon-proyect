@@ -33,6 +33,7 @@ function openAiClient(apiKey: string): LlmClient {
       const r = await sdk.responses.create({
         model,
         instructions: system,
+        store: false, // do not keep prompts/answers on OpenAI's side
         input,
         ...(supportsReasoning(model) ? { reasoning: { effort: "low" as const } } : { temperature: 0.2 }),
         text: { format: { type: "json_schema", name, schema: jsonSchema, strict: true } },

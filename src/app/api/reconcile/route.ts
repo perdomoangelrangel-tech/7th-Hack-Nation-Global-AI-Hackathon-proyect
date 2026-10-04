@@ -5,6 +5,7 @@
  * ambiguous ties among the candidates it is given and can never invent an id.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, readJson } from "@/lib/ai/guard";
 import { z } from "zod";
 import { atlas, loadAtlas } from "@/lib/atlas/store";
 import { reconcile } from "@/lib/ai/reconcile";
@@ -18,7 +19,9 @@ const Body = z.object({
 
 export async function POST(req: NextRequest) {
   await loadAtlas();
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const limited = rateLimit(req, "reconcile", 30); if (limited) return limited;
+  const raw = await readJson(req); if (!raw.ok) return raw.res;
+  const parsed = Body.safeParse(raw.body);
   if (!parsed.success) return NextResponse.json({ error: z.flattenError(parsed.error) }, { status: 400 });
   return NextResponse.json(await reconcile(atlas(), parsed.data.names, { type: parsed.data.type }));
 }

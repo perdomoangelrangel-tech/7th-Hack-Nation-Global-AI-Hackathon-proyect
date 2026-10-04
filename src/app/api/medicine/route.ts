@@ -6,6 +6,7 @@
  * CORS for the Lovable app comes from src/proxy.ts (all /api/*).
  */
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/ai/guard";
 import { atlas, loadAtlas } from "@/lib/atlas/store";
 import { isPersonaId } from "@/lib/agents/profiles";
 import { medicineSummary } from "@/lib/ai/medicine";
@@ -14,6 +15,7 @@ import { medicineExtras, resolveMedicine } from "@/lib/ai/medicine-extras";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  const limited = rateLimit(req, "medicine", 30); if (limited) return limited;
   const sp = req.nextUrl.searchParams;
   const id = sp.get("id")?.trim().slice(0, 200) ?? "";
   if (!id) return NextResponse.json({ error: "id required (e.g. treatment:CHEMBL2106217)" }, { status: 400 });
