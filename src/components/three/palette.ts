@@ -6,6 +6,7 @@ export const palette3d = {
   brand: "#3a86bf",
   brandDeep: "#1f5f94",
   brandInk: "#0e2c47",
+  ink2: "#33506b",
   brandSoft: "#e4f0f9",
   brandMist: "#f3f8fc",
   brandLight: "#8dbde3",
