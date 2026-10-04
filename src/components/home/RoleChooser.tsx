@@ -17,6 +17,7 @@ import { motionTokens } from "@/lib/motion";
 import { ROLE_ORDER, homeCopy } from "./copy";
 import { atlasHref, type StartMode } from "./memory";
 import { PendingHint } from "./Pending";
+import { playSfx } from "@/lib/sfx";
 
 const ROLE_ICON: Record<PersonaId, LucideIcon> = { devon: UserRound, maria: HeartHandshake, osei: Microscope, priya: Target };
 /** ≤ 250 ms (WAVE 5B). MotionConfig reducedMotion turns the layout morph into an instant swap. */
@@ -41,7 +42,7 @@ export function RoleChooser({ locale, role, onPick, onStart, maria, initialChoos
     return () => cancelAnimationFrame(id);
   }, [collapsed]);
 
-  const pick = (p: PersonaId) => { focusNext.current = "continue"; onPick(p); setChoosing(false); };
+  const pick = (p: PersonaId) => { focusNext.current = "continue"; onPick(p); setChoosing(false); playSfx("select"); };
   const change = () => { focusNext.current = role; setChoosing(true); };
 
   const onKey = (e: KeyboardEvent, i: number) => {
@@ -120,7 +121,7 @@ function Expanded({ locale, role, maria, onChange, onStart, continueRef }: { loc
         <ul className="mt-3 grid gap-3 sm:grid-cols-2">
           {starts.map((s, i) => (
             <li key={s.mode}>
-              <Link ref={i === 0 ? continueRef : undefined} href={s.href} onClick={() => onStart?.(s.mode)}
+              <Link ref={i === 0 ? continueRef : undefined} href={s.href} onClick={() => { playSfx("start"); onStart?.(s.mode); }}
                 className={`group flex h-full min-h-[76px] items-center gap-4 rounded-2xl border px-4 py-3 transition-colors ${s.primary ? "border-brand-deep bg-brand-deep text-paper hover:bg-brand-ink" : "border-line bg-paper text-ink hover:border-brand hover:bg-brand-mist"}`}>
                 <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${s.primary ? "bg-paper/15" : "bg-brand-soft text-brand-deep"}`}><s.Icon aria-hidden size={22} strokeWidth={1.75} /></span>
                 <span className="min-w-0 flex-1">

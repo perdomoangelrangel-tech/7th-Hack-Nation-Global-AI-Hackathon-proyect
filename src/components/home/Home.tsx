@@ -25,6 +25,8 @@ import { atlasHref, readMemory, writeMemory, type HomeMemory } from "./memory";
 import { PendingHint, PendingStatus } from "./Pending";
 import { RoleChooser } from "./RoleChooser";
 import { HelpButton, Tour } from "./Tour";
+import { SoundToggle } from "./SoundToggle";
+import { playSfx } from "@/lib/sfx";
 
 const STEP_ICON: LucideIcon[] = [Search, Footprints, BadgeCheck];
 
@@ -64,8 +66,8 @@ export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedPa
     try {
       const j = (await fetch(api(`/api/atlas/search?q=${encodeURIComponent(q)}&l=${locale}`)).then((r) => r.json())) as { hits: SearchHit[] };
       const h = j.hits.find((x) => x.disease);
-      if (h) onPick(h); else setExampleMiss(q);
-    } catch { setExampleMiss(q); }
+      if (h) onPick(h); else { setExampleMiss(q); playSfx("error"); }
+    } catch { setExampleMiss(q); playSfx("error"); }
   };
     // Welcome back only for a disease still in the atlas; its name comes from the server, never from storage.
   const resumeName = memory.disease ? diseaseNames[memory.disease] : undefined;
@@ -80,6 +82,7 @@ export function Home({ initialLocale, stats, maria, diseaseNames, embed: embedPa
         {!embed && <header className="relative z-10 mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Link href="/" className="rounded-lg" aria-label={`${homeLabel(locale)}`}><Logo size="sm" /></Link>
           <span className="flex-1" />
+          <SoundToggle locale={locale} />
           <HelpButton label={c.help} />
           <button type="button" onClick={() => setLocale(locale === "en" ? "es" : "en")} aria-label={c.lang_aria}
             className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-paper/80 px-3 text-sm font-medium text-ink-2 hover:bg-brand-soft">

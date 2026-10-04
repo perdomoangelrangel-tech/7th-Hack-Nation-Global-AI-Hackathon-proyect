@@ -12,6 +12,7 @@ import { BadgeCheck, ChevronLeft, ChevronRight, CircleHelp, Footprints, GitCompa
 import type { Locale } from "@/lib/i18n";
 import { motionTokens } from "@/lib/motion";
 import { isEmbedded } from "@/components/atlas/useEmbed";
+import { playSfx } from "@/lib/sfx";
 import { tourCopy } from "./copy";
 import { readMemory, writeMemory } from "./memory";
 
@@ -29,12 +30,13 @@ export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; 
   const c = tourCopy[locale];
   const last = c.stops.length - 1;
 
-  const show = useCallback(() => {
+  // `byUser` = Help / "?" / openTour(): those get the open sound; the automatic first open stays silent.
+  const show = useCallback((byUser: boolean) => {
     // The atlas keeps ?l= in the URL; follow the language the viewer is using right now.
     const l = new URLSearchParams(window.location.search).get("l");
     setLocale(l === "es" || l === "en" ? l : initialLocale);
     setStop(0);
-    if (!ref.current?.open) ref.current?.showModal();
+    if (!ref.current?.open) { ref.current?.showModal(); if (byUser) playSfx("open"); }
     // Focus "Next" ourselves; browsers block autofocus inside a cross-origin frame (the Lovable embed).
     if (window.self === window.top) nextRef.current?.focus();
   }, [initialLocale]);
@@ -43,17 +45,18 @@ export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.isContentEditable;
-      if (e.key === "?" && !typing && !e.metaKey && !e.ctrlKey) { e.preventDefault(); show(); }
+      if (e.key === "?" && !typing && !e.metaKey && !e.ctrlKey) { e.preventDefault(); show(true); }
     };
-    window.addEventListener(TOUR_EVENT, show);
+    const onOpen = () => show(true);
+    window.addEventListener(TOUR_EVENT, onOpen);
     window.addEventListener("keydown", onKey);
     // Never auto-open inside the platform shell (it has its own onboarding; Help / "?" still open it).
-    const timer = auto && !readMemory().tourSeen && !isEmbedded() ? window.setTimeout(show, AUTO_DELAY_MS) : undefined;
-    return () => { window.removeEventListener(TOUR_EVENT, show); window.removeEventListener("keydown", onKey); window.clearTimeout(timer); };
+    const timer = auto && !readMemory().tourSeen && !isEmbedded() ? window.setTimeout(() => show(false), AUTO_DELAY_MS) : undefined;
+    return () => { window.removeEventListener(TOUR_EVENT, onOpen); window.removeEventListener("keydown", onKey); window.clearTimeout(timer); };
   }, [auto, show]);
 
   return (
-    <dialog ref={ref} aria-labelledby="tour-title" aria-describedby="tour-body" onClose={() => writeMemory({ tourSeen: true })}
+    <dialog ref={ref} aria-labelledby="tour-title" aria-describedby="tour-body" onClose={() => { writeMemory({ tourSeen: true }); playSfx("close"); }}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
       className="m-auto w-[min(440px,calc(100vw-32px))] rounded-[var(--radius)] border border-line bg-paper p-0 text-ink shadow-xl shadow-ink/15 backdrop:bg-brand-ink/30">
       <div className="p-5 sm:p-6">
@@ -74,11 +77,11 @@ export function Tour({ locale: initialLocale, auto = false }: { locale: Locale; 
             {c.stops.map((_, i) => <span key={i} className={`h-2 rounded-full transition-all ${i === stop ? "w-6 bg-brand-deep" : "w-2 bg-line"}`} />)}
           </span>
           {stop > 0 ? (
-            <button type="button" onClick={() => setStop(stop - 1)} className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-brand-soft"><ChevronLeft aria-hidden size={16} />{c.back}</button>
+            <button type="button" onClick={() => { setStop(stop - 1); playSfx("step"); }} className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-brand-soft"><ChevronLeft aria-hidden size={16} />{c.back}</button>
           ) : (
             <button type="button" onClick={close} className="min-h-10 rounded-full px-3 text-sm font-medium text-ink-3 hover:bg-brand-soft">{c.skip}</button>
           )}
-          <button type="button" ref={nextRef} onClick={() => (stop < last ? setStop(stop + 1) : close())}
+          <button type="button" ref={nextRef} onClick={() => { if (stop < last) { setStop(stop + 1); playSfx("step"); } else close(); }}
             className="inline-flex min-h-10 items-center gap-1 rounded-full bg-brand-deep px-4 text-sm font-semibold text-paper hover:bg-brand-ink">
             {stop < last ? <>{c.next}<ChevronRight aria-hidden size={16} /></> : c.done}
           </button>
