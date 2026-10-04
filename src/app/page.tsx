@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
+import { AtlasPreview } from "@/components/landing/AtlasPreview";
+import { neighborhood } from "@/components/landing/neighborhood";
 import { Logo } from "@/components/brand/Logo";
 import { Hero3D } from "@/components/three/Hero3D";
 import { NodeOrb, type OrbKind } from "@/components/three/NodeOrb";
@@ -88,7 +90,10 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
 export default async function Home() {
   await loadAtlas();
   const s = stats();
-  const { snap, byId } = atlas();
+  const idx = atlas();
+  const { snap, byId } = idx;
+  const hood = neighborhood(idx, MARIA_DISEASE);
+  const hoodCount = (pred: (t: string) => boolean) => hood?.nodes.filter((n) => !n.center && pred(n.type)).length ?? 0;
   const name = (id: string) => byId.get(id)?.name ?? id.split(":").slice(1).join(":");
   const causes = snap.edges.find((e) => e.to === MARIA_DISEASE && e.relation === "causes" && e.kind === "observed");
   const similar = snap.edges.filter((e) => e.relation === "similar_to" && (e.from === MARIA_DISEASE || e.to === MARIA_DISEASE)).sort((a, b) => b.confidence - a.confidence)[0];
@@ -192,6 +197,30 @@ export default async function Home() {
             </p>
           </div>
         </section>
+
+        {/* Inside the atlas: a real neighbourhood in 3D (Blender glyphs) */}
+        {hood && (
+          <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="inside-title">
+            <div className="grid items-center gap-10 lg:grid-cols-[1.25fr_.75fr]">
+              <AtlasPreview data={hood} />
+              <div>
+                <p className="eyebrow">Inside the atlas</p>
+                <h2 id="inside-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">One disease, in its neighbourhood.</h2>
+                <p className="mt-3 text-ink-2">
+                  A live slice around <span className="font-semibold text-brand-ink">{hood.centerName}</span>: the gene behind it, the pathways and variants that gene touches, the symptoms, trials, papers, patient groups and researchers — and the diseases Nexmed infers may share its mechanism.
+                </p>
+                <ul className="mt-5 grid grid-cols-2 gap-2 text-sm text-ink-2">
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "disease")}</span> inferred neighbours <span className="text-ink-3">(dashed)</span></li>
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "pathway")}</span> pathways</li>
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "trial" || t === "study")}</span> trials &amp; papers</li>
+                  <li><span className="font-bold text-brand-ink">{hoodCount((t) => t === "organization" || t === "investigator")}</span> groups &amp; researchers</li>
+                </ul>
+                <p className="mt-4 text-xs text-ink-3">Each shape is a type — cell = disease, helix = gene, ring = pathway, drop = symptom, flask = trial, page = paper, people = patient group or researcher — modelled in Blender. A sample of the real edges, not the full graph.</p>
+                <Link href={`/atlas?p=maria&d=${MARIA_DISEASE}`} className="mt-5 inline-block rounded-full border border-brand-light bg-paper px-5 py-2.5 text-sm font-semibold text-brand-ink hover:border-brand-deep">Explore it in the atlas →</Link>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Modes */}
         <section id="modes" className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="modes-title">
