@@ -148,7 +148,7 @@ export default async function Home() {
                 One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href={programHref()} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
+                <Link href={site.appUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
                 <a href="#videos" className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">Watch the pitch</a>
               </div>
               <p className="mt-5 text-sm text-ink-3">Information with sources — not medical advice.</p>
@@ -374,7 +374,7 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Project</p>
             <ul className="mt-3 space-y-1">
-              <li><Link href={programHref()} className="text-brand-deep hover:underline">Open {site.name}</Link></li>
+              <li><Link href={site.appUrl} className="text-brand-deep hover:underline">Open {site.name}</Link></li>
               <li><a href={site.github} target="_blank" rel="noreferrer" className="text-brand-deep hover:underline">Source code on GitHub</a></li>
               <li className="text-ink-3">{site.challenge}</li>
             </ul>

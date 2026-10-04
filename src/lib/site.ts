@@ -14,6 +14,8 @@ export const site = {
   github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect",
   /** The Nedamex app (MVP). WAVE 4: same domain, /atlas on Vercel. Every website CTA lands here. */
   programUrl: (process.env.NEXT_PUBLIC_PROGRAM_URL ?? "/atlas").replace(/\/$/, ""),
+  /** WAVE 5B: "Open Nedamex" lands on the app home (pick your role). Falls back to the atlas. */
+  appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_PROGRAM_URL ?? "/atlas").replace(/\/$/, "") || "/",
   /** Submission videos: real URLs from env; until then the storyboard drafts in public/videos (shown with a "Draft" label). */
   videos: {
     pitch: process.env.NEXT_PUBLIC_VIDEO_PITCH ?? process.env.NEXT_PUBLIC_VIDEO_TEAM ?? "",
