@@ -6,7 +6,8 @@
 export const TYPE_COLOR: Record<string, string> = {
   disease: "#1f5f94",       // search / legend only (canvases color diseases by cluster)
   gene: "#3a86bf",          // logo blue
-  pathway: "#6d5bd0",       // mechanism
+  pathway: "#6d5bd0",       // Reactome pathway
+  mechanism: "#9b3fae",     // variant-effect mechanism (loss vs gain/altered function)
   phenotype: "#7f97ab",     // symptom (quiet: there are many)
   organization: "#14907d",  // patient group / community
   trial: "#c0508a",         // study / reusable asset

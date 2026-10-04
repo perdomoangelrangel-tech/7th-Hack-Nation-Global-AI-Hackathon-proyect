@@ -27,7 +27,7 @@ const GROUPS: { key: string; types: string[]; max: number }[] = [
   { key: "other", types: ["treatment", "investigator"], max: 3 },
 ];
 
-export function SearchBox({ t, locale, onPick, autoFocus }: { t: Dict; locale: Locale; onPick: (h: SearchHit) => void; autoFocus?: boolean }) {
+export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; locale: Locale; persona?: string; onPick: (h: SearchHit) => void; autoFocus?: boolean }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
   const [searched, setSearched] = useState("");
@@ -100,6 +100,9 @@ export function SearchBox({ t, locale, onPick, autoFocus }: { t: Dict; locale: L
             {empty ? (
               <div className="px-4 py-3 text-sm">
                 <p className="text-ink-2">{t.search_empty.replace("{q}", q.trim())}</p>
+                {/* S1 → S7: the honest no-route page (what we searched · what is missing · how to help). */}
+                <a href={`/atlas?q=${encodeURIComponent(q.trim())}&p=${persona ?? "maria"}&l=${locale}`} onMouseDown={(e) => e.preventDefault()}
+                  className="mt-1 inline-block text-xs font-medium text-brand-deep hover:underline">{t.search_no_route}</a>
               </div>
             ) : (
               <ul id={listId} role="listbox" aria-label={t.search_placeholder}>

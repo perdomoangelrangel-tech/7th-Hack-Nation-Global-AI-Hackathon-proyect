@@ -43,6 +43,7 @@ function assets() {
       trial: new THREE.ConeGeometry(1, 1.8, 18),
       organization: new THREE.TorusGeometry(0.9, 0.32, 12, 28),
       investigator: new THREE.IcosahedronGeometry(1.05, 0),
+      mechanism: new THREE.DodecahedronGeometry(1.15, 0),
       default: new THREE.SphereGeometry(0.9, 16, 12),
     },
     halo: radial((g) => {

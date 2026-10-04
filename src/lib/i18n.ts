@@ -46,6 +46,8 @@ const en = {
   kind_badge: { observed: "Observed · a source states it", inferred: "Inferred · needs expert review", extracted: "AI-extracted · needs expert review", proposed: "Community draft · not evidence" } as Record<string, string>,
   search_empty: "No match for “{q}”. Try a gene (STXBP1) or a symptom (hand wringing).",
   search_more: "Show {n} more",
+  search_no_route: "We don’t have it yet → what we’d need",
+  help: "Help",
   search_via_definition: "matched in its Orphanet definition",
   search_group: { synonym: "Synonym", diseases: "Diseases", mechanisms: "Mechanisms", genes: "Genes", symptoms: "Symptoms", groups: "Patient groups", studies: "Studies", other: "Treatments & people" } as Record<string, string>,
   legend_extracted: "AI-extracted — from a cited paper, needs expert review",
@@ -145,8 +147,8 @@ const en = {
   kinds: { natural_history: "Natural history", registry: "Registry", biomarker_study: "Biomarker / endpoint", observational_cohort: "Observational cohort", interventional_trial: "Trial" } as Record<string, string>,
   collab_kinds: { patient_org: "Patient group", research_org: "Research foundation", investigator: "Researcher", sponsor: "Sponsor / institution" } as Record<string, string>,
   status: { observed: "observed", inferred: "inferred", extracted: "AI-extracted", proposed: "community draft", gap: "gap" } as Record<string, string>,
-  relations: { causes: "causes", has_phenotype: "has symptom", has_variant: "has variant", studies: "studies", treats: "treats", supports: "supports", researches: "researches", participates_in: "participates in", is_a: "is a", similar_to: "is similar to" } as Record<string, string>,
-  types: { disease: "Disease", gene: "Gene", phenotype: "Symptom", pathway: "Pathway", organization: "Patient group", trial: "Study / asset", investigator: "Researcher", treatment: "Treatment", study: "Paper", variant: "Variant" } as Record<string, string>,
+  relations: { has_mechanism: "acts by", causes: "causes", has_phenotype: "has symptom", has_variant: "has variant", studies: "studies", treats: "treats", supports: "supports", researches: "researches", participates_in: "participates in", is_a: "is a", similar_to: "is similar to" } as Record<string, string>,
+  types: { mechanism: "Mechanism (variant effect)", disease: "Disease", gene: "Gene", phenotype: "Symptom", pathway: "Pathway", organization: "Patient group", trial: "Study / asset", investigator: "Researcher", treatment: "Treatment", study: "Paper", variant: "Variant" } as Record<string, string>,
 };
 
 const es: typeof en = {
@@ -194,6 +196,8 @@ const es: typeof en = {
   kind_badge: { observed: "Observada · una fuente lo afirma", inferred: "Inferida · requiere revisión experta", extracted: "Extraída por IA · requiere revisión experta", proposed: "Borrador comunitario · no es evidencia" },
   search_empty: "Nada coincide con “{q}”. Prueba un gen (STXBP1) o un síntoma (movimientos de manos).",
   search_more: "Mostrar {n} más",
+  search_no_route: "Aún no lo tenemos → qué necesitaríamos",
+  help: "Ayuda",
   search_via_definition: "coincide en su definición de Orphanet",
   search_group: { synonym: "Sinónimo", diseases: "Enfermedades", mechanisms: "Mecanismos", genes: "Genes", symptoms: "Síntomas", groups: "Grupos de pacientes", studies: "Estudios", other: "Tratamientos y personas" },
   legend_extracted: "Extraída por IA — de un artículo citado, requiere revisión experta",
@@ -293,8 +297,8 @@ const es: typeof en = {
   kinds: { natural_history: "Historia natural", registry: "Registro", biomarker_study: "Biomarcador / endpoint", observational_cohort: "Cohorte observacional", interventional_trial: "Ensayo" },
   collab_kinds: { patient_org: "Grupo de pacientes", research_org: "Fundación de investigación", investigator: "Investigador/a", sponsor: "Patrocinador / institución" },
   status: { observed: "observado", inferred: "inferido", extracted: "extraído por IA", proposed: "borrador comunitario", gap: "hueco" },
-  relations: { causes: "causa", has_phenotype: "tiene el síntoma", has_variant: "tiene la variante", studies: "estudia", treats: "trata", supports: "apoya", researches: "investiga", participates_in: "participa en", is_a: "es un", similar_to: "se parece a" },
-  types: { disease: "Enfermedad", gene: "Gen", phenotype: "Síntoma", pathway: "Vía", organization: "Grupo de pacientes", trial: "Estudio / activo", investigator: "Investigador/a", treatment: "Tratamiento", study: "Artículo", variant: "Variante" },
+  relations: { has_mechanism: "actúa por", causes: "causa", has_phenotype: "tiene el síntoma", has_variant: "tiene la variante", studies: "estudia", treats: "trata", supports: "apoya", researches: "investiga", participates_in: "participa en", is_a: "es un", similar_to: "se parece a" },
+  types: { mechanism: "Mecanismo (efecto de variante)", disease: "Enfermedad", gene: "Gen", phenotype: "Síntoma", pathway: "Vía", organization: "Grupo de pacientes", trial: "Estudio / activo", investigator: "Investigador/a", treatment: "Tratamiento", study: "Artículo", variant: "Variante" },
 };
 
 export const dict = { en, es };

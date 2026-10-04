@@ -113,12 +113,13 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 1.2 / scale;
     if (node.draft) ctx.setLineDash([3 / scale, 3 / scale]);
     ctx.beginPath();
-    switch (node.type) {
+    switch (node.type as string) {
       case "gene": roundRect(ctx, x - r, y - r, 2 * r, 2 * r, r * 0.35); shape(); break;
       case "pathway": ctx.moveTo(x, y - r * 1.2); ctx.lineTo(x + r * 1.2, y); ctx.lineTo(x, y + r * 1.2); ctx.lineTo(x - r * 1.2, y); ctx.closePath(); shape(); break;
       case "organization": ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.lineWidth = 2 / scale; ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, r * 0.45, 0, 2 * Math.PI); ctx.fill(); break;
       case "trial": ctx.moveTo(x, y - r * 1.15); ctx.lineTo(x + r, y + r * 0.8); ctx.lineTo(x - r, y + r * 0.8); ctx.closePath(); shape(); break;
       case "investigator": ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.lineWidth = 1.8 / scale; ctx.stroke(); break;
+      case "mechanism": for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + (k * Math.PI) / 3; const px = x + r * 1.15 * Math.cos(a), py = y + r * 1.15 * Math.sin(a); if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py); } ctx.closePath(); shape(); break;
       default: ctx.arc(x, y, r, 0, 2 * Math.PI); shape();
     }
     ctx.setLineDash([]);
