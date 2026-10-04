@@ -163,7 +163,7 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
     ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${persona.maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
     : `TASK: ${opts.question ? `answer the user's question about ${j.disease.name} using only the FACTS` : `narrate the journey for ${j.disease.name}`} for ${persona.name} in at most ${persona.maxClaims} claims, in the order most useful to them. End with the concrete next step if there is one.`;
   const llm = await structured({
-    name: "nexmed_narration",
+    name: "nedamex_narration",
     system: systemPrompt({ persona: personaId, locale: l, task, simple }),
     input: [factsBlock(ordered, l), opts.question ? untrusted("question", opts.question, 1000) : ""].filter(Boolean).join("\n\n"),
     schema: DraftSchema,

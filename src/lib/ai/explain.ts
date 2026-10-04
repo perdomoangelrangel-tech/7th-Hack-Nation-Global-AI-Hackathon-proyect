@@ -33,7 +33,7 @@ export async function explain(idx: AtlasIndex, req: ExplainRequest): Promise<Exp
     ? `TAREA: explica estas conexiones del grafo a ${p.name} en un máximo de ${Math.min(p.maxClaims, facts.length + 1)} frases, en el orden más útil para esa persona. Cada frase cita los fact_ids que usa. Si varios hechos forman un camino, explica el camino.`
     : `TASK: explain these graph connections to ${p.name} in at most ${Math.min(p.maxClaims, facts.length + 1)} sentences, in the order most useful to that person. Each sentence cites the fact_ids it uses. If several facts form a path, explain the path.`;
   const llm = await structured({
-    name: "nexmed_explain",
+    name: "nedamex_explain",
     system: systemPrompt({ persona: req.persona, locale: req.locale, task, simple }),
     input: [factsBlock(facts, req.locale), req.question ? untrusted("question", req.question, 500) : ""].filter(Boolean).join("\n\n"),
     schema: DraftSchema,

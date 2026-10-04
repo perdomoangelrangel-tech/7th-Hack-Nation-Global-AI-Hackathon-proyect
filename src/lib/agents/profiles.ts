@@ -1,5 +1,5 @@
 /**
- * The four Nexmed modes = the four personas of the challenge. Behavior and voice only:
+ * The four Nedamex modes = the four personas of the challenge. Behavior and voice only:
  * zero medical knowledge in any prompt — everything an agent says comes from graph facts.
  * Safe to import from client components (no secrets, no server-only code).
  */

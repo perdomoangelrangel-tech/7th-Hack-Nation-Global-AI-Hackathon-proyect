@@ -97,7 +97,7 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
   const dropped: ExtractResult["dropped"] = [];
 
   const llm = await structured({
-    name: "nexmed_extract",
+    name: "nedamex_extract",
     system: [
       "You extract structured facts from one biomedical paper for a rare-disease knowledge graph.",
       `Entities: every gene (HGNC symbol as written), variant (HGVS as written), phenotype/sign, disease, biological pathway/mechanism, investigator (person named as an author or researcher) and treatment mentioned. "mention" must be copied exactly as it appears in the text.`,

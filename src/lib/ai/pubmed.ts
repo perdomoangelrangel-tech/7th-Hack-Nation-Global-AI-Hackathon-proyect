@@ -31,7 +31,7 @@ export type FetchLike = (url: string, init?: { signal?: AbortSignal; headers?: R
 export async function fetchPaper(pmidRaw: string, fetcher: FetchLike = fetch): Promise<Paper | null> {
   const pmid = normalizePmid(pmidRaw);
   if (!pmid) return null;
-  const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmid}&retmode=xml&tool=nexmed`;
+  const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmid}&retmode=xml&tool=nedamex`;
   const r = await fetcher(url, { signal: AbortSignal.timeout(10_000) });
   if (!r.ok) throw new Error(`pubmed ${r.status}`);
   return parsePubmedXml(await r.text(), pmid);

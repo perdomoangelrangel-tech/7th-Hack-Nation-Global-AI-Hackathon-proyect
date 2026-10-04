@@ -1,5 +1,5 @@
 /**
- * Nexmed's single door to OpenAI (server only).
+ * Nedamex's single door to OpenAI (server only).
  *
  * - Models: OPENAI_MODEL (default gpt-4o) for drafting/extraction, OPENAI_MODEL_FAST (default gpt-4o-mini)
  *   for tie-breaks and short explanations.
@@ -18,7 +18,7 @@ export type AiMode = "openai" | "deterministic";
 export const MODEL = () => process.env.OPENAI_MODEL || "gpt-4o";
 export const MODEL_FAST = () => process.env.OPENAI_MODEL_FAST || "gpt-4o-mini";
 
-/** Minimal surface Nexmed needs from a model: JSON text that should match `jsonSchema`. */
+/** Minimal surface Nedamex needs from a model: JSON text that should match `jsonSchema`. */
 export interface LlmClient {
   completeJson(req: { model: string; system: string; input: string; name: string; jsonSchema: Record<string, unknown>; signal: AbortSignal }): Promise<string>;
 }

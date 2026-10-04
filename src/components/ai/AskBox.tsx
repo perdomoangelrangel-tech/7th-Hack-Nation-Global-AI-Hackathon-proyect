@@ -1,7 +1,7 @@
 "use client";
 /**
  * <AskBox persona locale focus? simple? onHighlight? onFocusDisease? apiBase? />
- * "Ask Nexmed": a question box that calls POST /api/ask and shows verified answer cards. Each card cites
+ * "Ask Nedamex": a question box that calls POST /api/ask and shows verified answer cards. Each card cites
  * its sources (links open the source), shows observed / inferred / gap, and lights its edges on hover/focus.
  * Portable (no Next-only imports). `simple` defaults to the user's simple-language preference.
  */
@@ -23,8 +23,8 @@ type Props = {
 };
 
 const T = {
-  en: { label: "Ask Nexmed", placeholder: "e.g. Who else works on my mechanism?", ask: "Ask", asking: "Checking the sources…", error: "Could not answer right now.", sources: "Sources", about: "About", via: "matched", open: "Open in the atlas", observed: "From a source", inferred: "Atlas inference · needs expert review", extracted: "AI-extracted · needs review", gap: "Gap in the evidence", ai: "Written by OpenAI, checked against the sources", tpl: "Assembled from the sources (no AI)", left: "left out: no evidence" },
-  es: { label: "Pregunta a Nexmed", placeholder: "p. ej. ¿Quién más trabaja en mi mecanismo?", ask: "Preguntar", asking: "Revisando las fuentes…", error: "No se pudo responder ahora.", sources: "Fuentes", about: "Sobre", via: "coincidió", open: "Abrir en el atlas", observed: "De una fuente", inferred: "Inferencia del atlas · revisar con un experto", extracted: "Extraído por IA · revisar", gap: "Hueco en la evidencia", ai: "Redactado por OpenAI, verificado contra las fuentes", tpl: "Armado desde las fuentes (sin IA)", left: "omitidas: sin evidencia" },
+  en: { label: "Ask Nedamex", placeholder: "e.g. Who else works on my mechanism?", ask: "Ask", asking: "Checking the sources…", error: "Could not answer right now.", sources: "Sources", about: "About", via: "matched", open: "Open in the atlas", observed: "From a source", inferred: "Atlas inference · needs expert review", extracted: "AI-extracted · needs review", gap: "Gap in the evidence", ai: "Written by OpenAI, checked against the sources", tpl: "Assembled from the sources (no AI)", left: "left out: no evidence" },
+  es: { label: "Pregunta a Nedamex", placeholder: "p. ej. ¿Quién más trabaja en mi mecanismo?", ask: "Preguntar", asking: "Revisando las fuentes…", error: "No se pudo responder ahora.", sources: "Fuentes", about: "Sobre", via: "coincidió", open: "Abrir en el atlas", observed: "De una fuente", inferred: "Inferencia del atlas · revisar con un experto", extracted: "Extraído por IA · revisar", gap: "Hueco en la evidencia", ai: "Redactado por OpenAI, verificado contra las fuentes", tpl: "Armado desde las fuentes (sin IA)", left: "omitidas: sin evidencia" },
 };
 const BORDER: Record<string, string> = { observed: "border-brand-deep", inferred: "border-brand border-dashed", extracted: "border-brand border-dotted", gap: "border-amber" };
 

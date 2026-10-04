@@ -117,7 +117,7 @@ export async function neighborsFor(q: string, limit = 6): Promise<ToolResult<unk
         shared_phenotypes: n.explanation?.shared_phenotypes.slice(0, 5).map((p) => p.name) ?? [], shared_pathways: n.explanation?.shared_pathways.map((p) => p.name) ?? [],
         variant_effect_match: n.explanation?.variant_effect_match ?? null, evidence_ids: edgeById.get(n.edge)?.evidence.map((x) => x.id) ?? [],
       })),
-      wording: "Inferred by Nexmed analysis: say 'the atlas suggests' and that it needs expert review.",
+      wording: "Inferred by Nedamex analysis: say 'the atlas suggests' and that it needs expert review.",
     },
     evidence: ns.flatMap((n) => edgeById.get(n.edge)?.evidence ?? []), retrieved_at: now(),
     note: ns.length ? undefined : "The atlas found no close neighbor for this disease; no shared mechanism is claimed.",
@@ -142,7 +142,7 @@ export async function clusterFor(q: string): Promise<ToolResult<unknown> | null>
       cluster: { id: c.id, label: c.label, label_basis: c.label_basis, diseases: c.diseases.map((x) => ({ id: x, name: byId.get(x)?.name })), shared_pathways: c.shared_pathways.slice(0, 5), shared_phenotypes: c.shared_phenotypes.slice(0, 5).map((p) => p.name) },
       links: inside.map((e) => ({ edge_id: e.id, a: byId.get(e.from)?.name, b: byId.get(e.to)?.name, score: e.confidence, kind: e.kind, evidence_ids: ids(e) })),
       counterexamples, unmet_need: gaps,
-      wording: "Clusters are computed by Nexmed (inferred): present them as hypotheses that need expert review.",
+      wording: "Clusters are computed by Nedamex (inferred): present them as hypotheses that need expert review.",
     },
     evidence: ev(inside), retrieved_at: now(),
   };
