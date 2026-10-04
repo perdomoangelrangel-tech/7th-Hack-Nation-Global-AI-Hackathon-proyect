@@ -274,7 +274,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
                 onFocusDisease={(d) => { setCenter("map"); goTo(d); }} />
             </div>
           )}
-          <div className="absolute right-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>
+          {center === "map" && <div className="absolute right-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>}
 
           {/* Breadcrumb: what the map is highlighting, in words. */}
           {focus && center === "map" && (
