@@ -136,9 +136,23 @@ Integrity checks: `.claude/qa/integrity.sql` (every `expect = 0` row must be 0).
 
 Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Code license: `[to be chosen by the team]`.
 
+## Security & privacy
+
+- Secrets live only in server-side environment variables; `.env*` is git-ignored and the git history was scanned for key patterns (none found). `npm audit --omit=dev`: 0 vulnerabilities at release.
+- Row-Level Security on every Supabase table; public writes only through validated, rate-limited `SECURITY DEFINER` RPCs; contact details encrypted at rest (pgcrypto + Vault, migration `0016`).
+- Security headers on every response (HSTS, nosniff, Referrer-Policy, Permissions-Policy, CSP `frame-ancestors` so only the Nedamex platform can embed the atlas; full CSP in report-only), CORS limited to exact origins.
+- Voice agents keep no audio recordings; transcripts are kept 30 days.
+- Report vulnerabilities privately: see [`SECURITY.md`](SECURITY.md).
+
+## Terms of use
+
+Nedamex is a research and information prototype, **not medical advice**: it never shows doses, inferred and AI-extracted links need expert review, and community drafts are never evidence. Full terms: [`docs/TERMS.md`](docs/TERMS.md).
+
 ## Team
 
-`[Name] · [Role]` — Nedamex. Team names are added by the team; we do not invent people.
+- **Ángel Perdomo Rangel** — CEO & Founder
+- **Yves Du Solier López** — Executive Creative Director & Co-founder
+- **Jhoel Francisco Velasco Bazan** — Chief Marketing Officer
 
 ---
 
