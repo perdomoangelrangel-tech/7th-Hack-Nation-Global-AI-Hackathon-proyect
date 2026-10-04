@@ -41,6 +41,7 @@ export async function fetchSpeech(text: string, o: FetchSpeechOpts): Promise<str
 export function playUrl(url: string, onElement?: (a: HTMLAudioElement) => void): Promise<void> {
   return new Promise((resolve) => {
     const a = new Audio(url);
+    attachAnalyser(a);
     onElement?.(a);
     a.onended = () => resolve(); a.onerror = () => resolve(); a.onpause = () => { if (a.dataset.stopped) resolve(); };
     a.play().catch(() => resolve());
@@ -86,4 +87,52 @@ export async function speakVerified(text: string, o: FetchSpeechOpts): Promise<V
   }
   await speakBrowser(text, o.locale, o.rate ?? 1);
   return "browser";
+}
+
+// ───────────── Audio level of what the guide is saying (drives the mascot) ─────────────
+// One AudioContext + AnalyserNode for TTS <audio> elements. An element is routed through the analyser only
+// while the context is already "running" (primed on a user click), so narration can never go silent.
+let levelCtx: AudioContext | null = null;
+let analyser: AnalyserNode | null = null;
+let currentEl: HTMLMediaElement | null = null;
+const routed = new WeakSet<HTMLMediaElement>();
+let levelBuf: Uint8Array<ArrayBuffer> | null = null;
+
+/** Call inside a click handler (Guide open, Play) so the analyser context is allowed to run. */
+export function primeAudio() {
+  try {
+    if (typeof window === "undefined") return;
+    levelCtx ??= new AudioContext();
+    if (levelCtx.state === "suspended") void levelCtx.resume();
+  } catch { /* no Web Audio: mascot just won't react */ }
+}
+
+export function attachAnalyser(a: HTMLMediaElement) {
+  currentEl = a;
+  try {
+    if (!levelCtx || levelCtx.state !== "running" || routed.has(a)) return;
+    if (!analyser) {
+      analyser = levelCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.6;
+      analyser.connect(levelCtx.destination);
+      levelBuf = new Uint8Array(new ArrayBuffer(analyser.fftSize));
+    }
+    levelCtx.createMediaElementSource(a).connect(analyser);
+    routed.add(a);
+  } catch { /* already routed elsewhere or blocked: fine */ }
+}
+
+/** 0..1 loudness of the TTS currently playing (0 when nothing plays or no analyser). */
+export function speechLevel(): number {
+  if (!analyser || !levelBuf || !currentEl || currentEl.paused || !routed.has(currentEl)) return 0;
+  analyser.getByteTimeDomainData(levelBuf);
+  let sum = 0;
+  for (let i = 0; i < levelBuf.length; i++) { const v = (levelBuf[i] - 128) / 128; sum += v * v; }
+  return Math.min(1, Math.sqrt(sum / levelBuf.length) * 4);
+}
+
+/** True while narration/read-aloud audio is playing (used to keep UI sounds quiet). */
+export function speechPlaying(): boolean {
+  return !!currentEl && !currentEl.paused && !currentEl.ended;
 }

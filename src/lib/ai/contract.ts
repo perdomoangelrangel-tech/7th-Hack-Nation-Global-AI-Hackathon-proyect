@@ -31,6 +31,10 @@ export interface AskAnswer {
   persona: PersonaKey;
   disease: string | null;
   disease_name: string | null;
+  /** Set when the turn is about a medicine (focus treatment:… or a medicine named in the question). */
+  medicine?: { id: string; name: string } | null;
+  /** Fixed closing line for medicine answers ("Whether it fits a person is a decision for their clinician."); not a claim. */
+  closing?: string | null;
   resolved_via: { mention: string; entity_id: string; type: string; method: string; matched_synonym: string | null } | null;
   claims: AskClaim[];
   dropped: { text: string; reason: string }[];

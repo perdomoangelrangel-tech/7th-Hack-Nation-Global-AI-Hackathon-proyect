@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.200 --> 00:00:05.321
+Nedamex is an evidence graph for rare diseases: over thirty diseases and thousands of sourced links.
+
+2
+00:00:05.471 --> 00:00:13.511
+Nine AI coding agents built it in parallel — each on its own branch, coordinated through one shared log, plus a tester agent that behaves like a real user.
+
+3
+00:00:13.661 --> 00:00:25.741
+The data comes from public sources — Orphanet, HPO, ClinVar, PubMed, ClinicalTrials.gov, Open Targets, NIH RePORTER, openFDA and EMA — stored in Supabase.
+
+4
+00:00:25.891 --> 00:00:35.033
+OpenAI's gpt-4o-mini extracts and explains, but a verifier deletes any sentence without a citation. ElevenLabs gives every guide its own voice.
+
+5
+00:00:35.183 --> 00:00:40.923
+Next.js on Vercel runs the engine, Lovable hosts the platform, and Blender and Remotion made the 3D and this video.
+
+6
+00:00:41.073 --> 00:00:47.715
+What worked: one shared log, strict ownership of files, and a tester that caught wrong 'approved' labels before anyone else did.
+
+7
+00:00:47.865 --> 00:00:53.873
+What didn't: our cloud sandbox couldn't reach the APIs, the first graph shook, and a rename mid-build touched every screen.
+
+8
+00:00:54.023 --> 00:00:55.778
+Rare disease, connected. Nedamex.
