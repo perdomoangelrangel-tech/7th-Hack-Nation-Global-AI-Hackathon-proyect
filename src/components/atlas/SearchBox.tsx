@@ -2,7 +2,7 @@
 /**
  * One global search: disease, gene, symptom, mechanism, patient group or researcher all open the same graph,
  * with synonym resolution visible ("SMEI" → Dravet syndrome). Keyboard: "/" or Ctrl/⌘+K to focus, arrows, Enter, Esc.
- * When local search finds nothing, /api/reconcile (ai lane) suggests the closest atlas entity — labeled as such.
+ * When local search finds nothing, the server asks /api/reconcile (ai lane) for the closest atlas entity — labeled as such.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -12,7 +12,6 @@ import { motionTokens, springs } from "@/lib/motion";
 import { Shape } from "./AtlasRail";
 
 type Hit = SearchHit & { reconciled?: boolean };
-interface ReconcileMatch { name: string; entity_id: string | null; label?: string; method?: string; confidence?: number }
 
 export function SearchBox({ t, locale, onPick, autoFocus }: { t: Dict; locale: Locale; onPick: (h: SearchHit) => void; autoFocus?: boolean }) {
   const [q, setQ] = useState("");
@@ -29,10 +28,8 @@ export function SearchBox({ t, locale, onPick, autoFocus }: { t: Dict; locale: L
     const c = new AbortController();
     const tm = setTimeout(async () => {
       try {
-        const j = await fetch(`/api/atlas/search?q=${encodeURIComponent(q)}&l=${locale}`, { signal: c.signal }).then((r) => r.json()) as { hits: SearchHit[] };
-        let found: Hit[] = j.hits;
-        if (!found.length && q.trim().length >= 3) found = await reconcile(q, locale, c.signal);
-        setHits(found); setSearched(q); setActive(0); setOpen(true);
+        const j = await fetch(`/api/atlas/search?q=${encodeURIComponent(q)}&l=${locale}`, { signal: c.signal }).then((r) => r.json()) as { hits: Hit[] };
+        setHits(j.hits as Hit[]); setSearched(q); setActive(0); setOpen(true);
       } catch { /* aborted or offline */ }
     }, 140);
     return () => { clearTimeout(tm); c.abort(); };
@@ -112,19 +109,4 @@ export function SearchBox({ t, locale, onPick, autoFocus }: { t: Dict; locale: L
       </AnimatePresence>
     </div>
   );
-}
-
-/** Fallback to the ai lane's /api/reconcile (absent → no suggestions). Each match is re-resolved through local search. */
-async function reconcile(q: string, locale: Locale, signal: AbortSignal): Promise<Hit[]> {
-  const r = await fetch("/api/reconcile", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ names: [q.trim()] }), signal }).catch(() => null);
-  if (!r?.ok) return [];
-  const j = (await r.json().catch(() => null)) as { matches?: ReconcileMatch[] } | null;
-  const out: Hit[] = [];
-  for (const m of j?.matches ?? []) {
-    if (!m.entity_id || !m.label) continue;
-    const s = await fetch(`/api/atlas/search?q=${encodeURIComponent(m.label)}&l=${locale}`, { signal }).then((x) => x.json()).catch(() => ({ hits: [] })) as { hits: SearchHit[] };
-    const hit = s.hits.find((h) => h.id === m.entity_id);
-    if (hit) out.push({ ...hit, matched: q.trim(), via_synonym: true, reconciled: true });
-  }
-  return out;
 }
