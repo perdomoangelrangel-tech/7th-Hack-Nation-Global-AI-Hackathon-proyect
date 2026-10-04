@@ -132,6 +132,7 @@ Integrity checks: `.claude/qa/integrity.sql` (every `expect = 0` row must be 0).
 | Open Targets | CC0 |
 | ClinVar, PubMed metadata, ClinicalTrials.gov, NIH RePORTER, FDA | Public domain |
 | Patient organizations | Public information from each organization's official site |
+| UI sound effects (Kenney "Interface Sounds" + "RPG Audio", `public/sfx/`) | CC0 1.0 |
 
 Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Code license: `[to be chosen by the team]`.
 
