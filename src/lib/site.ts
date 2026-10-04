@@ -27,7 +27,7 @@ export const site = {
     pitch: { src: "/videos/nedamex-pitch.mp4", poster: "/videos/nedamex-pitch.jpg" },
     demo: { src: "/videos/nedamex-demo.mp4", poster: "/videos/nedamex-demo.jpg" },
     tech: { src: "/videos/nedamex-tech-final.mp4", poster: "/videos/nedamex-tech-final.jpg" },
-    techStoryboard: { src: "/videos/Tech60-draft.mp4", poster: "/videos/Tech60-draft.jpg" },
+    techStoryboard: { src: "/videos/nedamex-tech-final.mp4", poster: "/videos/nedamex-tech-final.jpg" },
   },
   /** Team cards (names and roles given by the team, 4 Oct 2026). */
   team: [
