@@ -9,7 +9,7 @@ import type { LucideIcon } from "lucide-react";
 import type { JourneyV2 } from "@/lib/journey/build";
 import type { Locale } from "@/lib/i18n";
 import { journeyCopy } from "./copy";
-import { Glossed } from "./Glossed";
+import { Glossed } from "@/components/ui/GlossaryTerm";
 
 const C = {
   en: { what: "What is it?", people: "People like you", research: "Research happening now", week: "What you can do this week", visit: "Visit website", no_group: "We did not find a patient group for this exact diagnosis in our sources yet.", no_research: "No study is recruiting for this exact diagnosis in ClinicalTrials.gov right now.", recruiting: "looking for participants", soon: "opening soon", invite: "by invitation", evidence: "See evidence", plan: "Save my plan", study: "Study page" },
