@@ -14,7 +14,7 @@ import Graph from "graphology";
 import louvain from "graphology-communities-louvain";
 import type { Analytics, AtlasSnapshot, Bridge, Cluster, Counterexample, Edge, Entity, Evidence, Gap, SimilarityExplanation } from "./types";
 
-export const ANALYSIS_VERSION = "nexmed_similarity_v2";
+export const ANALYSIS_VERSION = "nedamex_similarity_v2";
 const W = { phenotype: 0.55, pathway: 0.35, gene: 0.1 } as const;
 const MIN_EDGE = 0.06;      // below this the connection is not drawn (simGIC scores are low in absolute value)
 const TOP_K = 3;            // max inferred neighbors per disease
@@ -234,7 +234,7 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
       confidence: p.s.score, confidence_basis: ANALYSIS_VERSION,
       props: { phenotype_score: p.s.phenotype_score, pathway_score: p.s.pathway_score, variant_effect_match: p.s.variant_effect_match },
       evidence: [
-        { id: `ev:${shortHash(`${id}|analysis`)}`, source: "nexmed_analysis", external_id: ANALYSIS_VERSION, url: ANALYSIS_URL, quote: `Inferred by Nexmed (score ${p.s.score}): ${why}`, published_on: null, retrieved_at: now },
+        { id: `ev:${shortHash(`${id}|analysis`)}`, source: "nexmed_analysis", external_id: ANALYSIS_VERSION, url: ANALYSIS_URL, quote: `Inferred by Nedamex (score ${p.s.score}): ${why}`, published_on: null, retrieved_at: now },
         ...dedupe(supportEv),
       ],
     });

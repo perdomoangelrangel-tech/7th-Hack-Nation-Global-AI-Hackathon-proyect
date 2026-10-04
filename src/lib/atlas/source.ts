@@ -1,9 +1,9 @@
 /**
  * Live graph source. OWNER: data lane.
  * Returns the full graph in AtlasSnapshot format (entities, edges with >= 1 evidence each, analytics) read from
- * Supabase project zuqwmvshkhniqebtxlks, or null when Supabase is unreachable / disabled (NEXMED_DATA_SOURCE=file)
+ * Supabase project zuqwmvshkhniqebtxlks, or null when Supabase is unreachable / disabled (NEDAMEX_DATA_SOURCE=file)
  * or when the live graph covers fewer diseases than the bundled data/atlas.json (so a partial ingest never
- * hides a disease the demo relies on). NEXMED_DATA_SOURCE=supabase skips that coverage guard.
+ * hides a disease the demo relies on). NEDAMEX_DATA_SOURCE=supabase skips that coverage guard.
  * Analytics (clusters, similarity, bridges, gaps, counterexamples) are computed in-process with ./analyze.ts.
  * Saved extractions arrive as kind "extracted" edges; proposals as `snapshot.proposals` (overlay, never evidence).
  * Caching lives in ./store.ts (5-minute TTL).
@@ -27,7 +27,7 @@ function diseasesInBundledSnapshot(): string[] {
 }
 
 export async function loadFromSupabase(): Promise<AtlasSnapshot | null> {
-  const mode = process.env.NEXMED_DATA_SOURCE;
+  const mode = process.env.NEDAMEX_DATA_SOURCE ?? process.env.NEXMED_DATA_SOURCE; // old name still accepted
   if (mode === "file") return null;
   const t0 = Date.now();
   const { snapshot, stats } = await fetchSnapshot(publicClient());
@@ -41,7 +41,7 @@ export async function loadFromSupabase(): Promise<AtlasSnapshot | null> {
     }
   }
   const snap = withAnalytics(snapshot);
-  if (process.env.NODE_ENV !== "production" || process.env.NEXMED_DEBUG) {
+  if (process.env.NODE_ENV !== "production" || process.env.NEDAMEX_DEBUG) {
     console.info(`[atlas] supabase: ${snap.entities.length} entities, ${snap.edges.length} edges, ${snap.analytics?.clusters.length ?? 0} clusters · fetch ${stats.ms} ms (${stats.requests} requests) · total ${Date.now() - t0} ms`);
   }
   return snap;

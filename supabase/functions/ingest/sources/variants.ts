@@ -6,7 +6,7 @@ import type { Ctx, SeedDisease } from "../types.ts";
 import { getJSON, sleep } from "../http.ts";
 
 const BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
-const TOOL = "&tool=nexmed_atlas";
+const TOOL = "&tool=nedamex_atlas";
 const key = () => (Deno.env.get("NCBI_API_KEY") ? `&api_key=${Deno.env.get("NCBI_API_KEY")}` : "");
 const PLP = "(clinsig_pathogenic[prop] OR clinsig_likely_pathogenic[prop])";
 const MISSENSE_Q = `"missense variant"[molecular consequence]`;

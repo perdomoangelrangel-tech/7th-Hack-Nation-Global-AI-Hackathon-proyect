@@ -26,7 +26,7 @@ export type SourceId =
   | "nexmed_analysis" | "openai_extraction" | "community";
 
 /**
- * observed: a source states it (solid line). inferred: Nexmed analysis computed it from observed edges (dashed).
+ * observed: a source states it (solid line). inferred: Nedamex analysis computed it from observed edges (dashed).
  * extracted: OpenAI pulled it from a cited paper, needs expert review (dotted). proposed: community draft, never evidence (ghost).
  */
 export type EdgeKind = "observed" | "inferred" | "extracted" | "proposed";

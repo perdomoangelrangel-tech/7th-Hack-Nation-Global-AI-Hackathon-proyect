@@ -1,4 +1,4 @@
-// Reactome pathways (via Open Targets) for each seed gene: the MECHANISM layer that lets Nexmed group diseases
+// Reactome pathways (via Open Targets) for each seed gene: the MECHANISM layer that lets Nedamex group diseases
 // by biology instead of by name. gene -[participates_in]-> pathway, evidence = the Reactome pathway page.
 // Requires migration 0011 (entity type `pathway`, relation `participates_in`, source `reactome`).
 import type { Ctx, SeedDisease } from "../types.ts";
