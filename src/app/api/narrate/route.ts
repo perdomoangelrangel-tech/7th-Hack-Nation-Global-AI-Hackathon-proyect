@@ -1,7 +1,7 @@
 /**
- * POST /api/narrate { disease, persona: "maria"|"devon"|"priya"|"osei", locale?: "en"|"es" }
- * Devuelve afirmaciones verificadas, cada una con su evidencia y los nodos/aristas que la UI ilumina
- * mientras la voz la lee. Con OPENAI_API_KEY redacta GPT; sin ella, plantilla determinista.
+ * POST /api/narrate { disease, persona: "maria"|"devon"|"priya"|"osei", locale?: "en"|"es", simple? }
+ * Verified claims, each with evidence_ids + evidence and the nodes/edges the UI lights while the voice reads it.
+ * With OPENAI_API_KEY the model drafts (mode "openai"); without it, a deterministic template (mode "deterministic").
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -11,16 +11,17 @@ import { loadAtlas } from "@/lib/atlas/store";
 export const runtime = "nodejs";
 
 const Body = z.object({
-  disease: z.string().min(3),
+  disease: z.string().min(3).max(200),
   persona: z.enum(["maria", "devon", "priya", "osei"]).default("maria"),
   locale: z.enum(["en", "es"]).default("en"),
+  simple: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
   await loadAtlas();
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const n = await narrate(parsed.data.disease, parsed.data.persona, parsed.data.locale);
+  if (!parsed.success) return NextResponse.json({ error: z.flattenError(parsed.error) }, { status: 400 });
+  const n = await narrate(parsed.data.disease, parsed.data.persona, parsed.data.locale, { simple: parsed.data.simple });
   if (!n) return NextResponse.json({ error: "disease not found" }, { status: 404 });
   return NextResponse.json(n);
 }

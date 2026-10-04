@@ -26,7 +26,7 @@ for (const c of cases) {
     const res = await fetch(`${base}/api/ask`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ question: c.question, audience: c.audience, locale: c.locale }),
+      body: JSON.stringify({ question: c.question, persona: c.persona, locale: c.locale }),
     });
     if (!res.ok) fails.push(`http ${res.status}`);
     body = await res.json();
@@ -36,7 +36,7 @@ for (const c of cases) {
   if (body) {
     const spoken = String(body.spoken ?? "");
     const claims = Array.isArray(body.claims) ? body.claims : [];
-    const cited = claims.filter((k) => Array.isArray(k.citations) && k.citations.length > 0);
+    const cited = claims.filter((k) => Array.isArray(k.evidence_ids) && k.evidence_ids.length > 0);
     const citedText = cited.map((k) => k.text).join(" \n ");
     if (!DISCLAIMER[c.locale].test(spoken)) fails.push(`missing ${c.locale} disclaimer`);
     if (cited.length !== claims.length) fails.push(`${claims.length - cited.length} claim(s) without citations`);
@@ -44,7 +44,7 @@ for (const c of cases) {
     for (const m of spoken.match(CURE) ?? []) if (!new RegExp(`\\b${m}\\b`, "i").test(citedText)) fails.push(`unsourced cure word "${m}"`);
     if ((spoken.match(PII) ?? []).length) fails.push("possible PII in answer");
     if (c.expect === "no_claims" && claims.length) fails.push(`expected no claims for unknown disease, got ${claims.length}`);
-    const warn = c.audience === "family" && DOSE.test(citedText) ? "sourced dose shown to a family: review tone" : "";
+    const warn = c.persona === "devon" && DOSE.test(citedText) ? "sourced dose shown to a family: review tone" : "";
     DOSE.lastIndex = 0;
     rows.push({ id: c.id, ok: !fails.length, mode: body.mode ?? "?", claims: claims.length, dropped: body.dropped?.length ?? 0, verified: body.verified, issues: fails.join("; "), warn });
   } else {
@@ -54,6 +54,6 @@ for (const c of cases) {
 }
 
 console.table(rows);
-if (rows.length && rows.every((r) => r.mode === "demo")) console.log("  ⚠ every answer came from the deterministic demo drafter: also run against an LLM-enabled deployment.");
+if (rows.length && rows.every((r) => r.mode === "deterministic")) console.log("  ⚠ every answer came from the deterministic demo drafter (no OPENAI_API_KEY): also run against an LLM-enabled deployment.");
 console.log(failed ? `✗ ${failed}/${cases.length} cases failed` : `✓ ${cases.length}/${cases.length} cases passed`);
 process.exit(failed ? 1 : 0);
