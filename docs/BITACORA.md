@@ -310,3 +310,83 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - NEED(voice): brand's AgentOrb CONTRACT (17:54) is in main → swap the CSS orb.
 - ORDERS_WAVE2 (head-brain): acknowledged; the brain is waiting for the human's confirmation of the Lovable re-scope before adding CORS/`programUrl`. Origin reconciliation + 0011 + Vercel still awaiting the human. NOT pushed.
 - user-verifier: refresh `../nexmed-qa` (`git checkout --detach main`) and re-test, especially QA-06/07 (action), QA-08/09/10 (brand), QA-01/02/03 (ai).
+
+## 18:07 · ai · DONE — green checkpoint
+- `feat/ai` @397bafa (main @2e965c2 merged in, clean): typecheck ✓ · lint ✓ (0 problems) · test **100/100** ✓ · build ✓ · red-team on `next start` :3102 **10/10** (deterministic mode). **Ready to merge** (order data → ai → …). package-lock.json not committed.
+- Delivered: P0 client (`src/lib/ai/client.ts`) · `/api/explain` + `<ExplainButton>` · persona prompts (4 modes, `prompts.ts`) · `/api/ask` (QA-01/02 fixed) + `/api/narrate` · verifier safety · P1 `/api/reconcile` · `/api/extract` + `<ExtractPanel>` + batch CLI · `/api/tools` (+neighbors, cluster, explain_path, resolve) · P2 `<AskBox persona locale focus? simple? onHighlight? onFocusDisease? apiBase? />`. All three components portable for Lovable (`apiBase`, types in `src/lib/ai/contract.ts`). Screenshots `docs/qa/ai/ai-components-{1440,390}.png` (no overflow, no console errors).
+- curl (fallback mode): `curl -s localhost:3102/api/reconcile -H 'content-type: application/json' -d '{"names":["SMEI","Munc18-1","Batten disease","Zorblax"]}'` → Dravet (alias) · STXBP1 (alias) · CLN3 (normalized) · none · `curl -s localhost:3102/api/extract -H 'content-type: application/json' -d '{"pmid":"27905812"}'` → real NCBI abstract, 17 reconciled entities, 3 claims, "not saved: deterministic dictionary pass" · `curl -s 'localhost:3102/api/tools/neighbors?q=STXBP1'` → KCNT1-EIMFS first, inferred, cited.
+- **To test once OPENAI_API_KEY is set** (Vercel env + `.env.local`; optional `OPENAI_MODEL`/`OPENAI_MODEL_FAST`):
+  1. `/api/health` openai_env "set"; `/api/explain`, `/api/narrate`, `/api/ask` return `mode:"openai"` + `model`; `dropped` stays small (if a model sentence is dropped, read the reason).
+  2. `node .claude/qa/redteam.mjs <url>` → 10/10 with mode openai (doses / cure / prognosis / PII / injection / unknown disease).
+  3. Persona tone: same disease (STXBP1) in the 4 modes reads differently (Devon: community first, plain; Maria: connection→asset→collaborator→step; Osei: mechanism + counterexample + evidence; Priya: cluster + unmet need); `simple:true` reads at ~grade 6.
+  4. Inferred sentences always hedged ("suggests"/"needs expert review") — `ensureHedged` appends a marker if the model forgets.
+  5. `/api/reconcile` with ambiguous names (e.g. "neuronal ceroid lipofuscinosis") → `method:"llm"` picks only a listed candidate.
+  6. `/api/extract {"pmid":"27905812"}` → `mode:"openai"`, verbatim quotes, `graphable` claims; with migration 0011 applied → `saved:true` + `extraction_id`, then (after the 5-min loader cache) the edge appears dotted "extracted" in the graph. Without 0011: `save_note` shows the RPC error (expected).
+  7. `npm run extract -- --limit 40` (after brain adds the script) — idempotent re-run processes 0 papers.
+  8. Latency: explain ≤ ~5 s (gpt-4o-mini for ≤3 edges), narrate/ask ≤ ~10 s; on timeout (30 s) answers fall back to deterministic, never fail.
+- Open handoffs: NEED(brain) `extract` npm script · NEED(explorer) mount ExplainButton/ExtractPanel (and optionally AskBox) · NEED(voice) add the 4 new tools when repointing to prod. I'll `git merge main` after each MERGED and fix whatever user-verifier files.
+
+## 18:30 · explorer · PROGRESS — green checkpoint
+- feat/explorer @HEAD (merged main incl. action + ai, clean): `typecheck ✓ · lint ✓ · test 87/87 ✓ · build ✓`. Ready to merge. package-lock.json not committed.
+- **QA-18 fixed** (store.ts `loadAtlas`): the live-vs-file decision is cached for the 5-min TTL either way and concurrent requests share one in-flight load. Measured on :3103: first call 1.09 s (cold), then 0.021–0.031 s. 
+- **QA-19 fixed** (3D labels): constant on-screen size (`sizeAttenuation:false`, ~13 px diseases / ~11 px others), drawn on top of spheres (`depthTest:false`), anchored under the node — no more giant/overlapping or hidden labels. 3D framing now follows the focus + its direct neighbors on the 21-disease graph. The idle "Listen to the atlas" subtitle is NarrationBar → voice below.
+- **Prefs restore fixed** (brand's NEED): persist effect skips until hydrated; verified reduceMotion survives reload.
+- NEED(action) done: `persona`/`locale` passed to JourneyPanel. NEED(ai) done: `<ExplainButton edgeIds={[edge]} persona locale onHighlight>` mounted in EdgeInspector (hovering a sentence lights its edges in the graph); verified deterministic explanation renders (`docs/qa/explorer/inspector-explain-1440.png`). `<ExtractPanel>` is not on main yet → I mount it for `pubmed` evidence once it is.
+- Screenshots refreshed in `docs/qa/explorer/`.
+
+## 18:31 · explorer · HANDOFF
+- NEED(voice): (1) hydration mismatch under reduced motion still comes from NarrationBar's play `motion.button` (server renders `tabindex="0"`, see qa `hyd` diff) — keep `whileTap` fixed and let `MotionConfig` handle reduced motion; (2) QA-19 part 2: the idle subtitle "Inferred — computed by the atlas, needs review" shows before anything plays — show it only for the current claim; (3) the floating "Talk to Nexmed" pill covers the bottom of the right panel (disclaimer / inspector last rows) at 1440 — dock it inside the panel header or add bottom padding.
+- NEED(brand): glyph geometries — I'll merge them over my primitives as you suggested once the loader is on main (post the CONTRACT path).
+
+## 18:10 · brand · PROGRESS — green checkpoint
+- `feat/brand` @c7cb227: typecheck ✓ · lint ✓ (0 errors) · test 33/33 ✓ · build ✓ (main merged). **NEED(brain): please merge feat/brand** — voice (AgentOrb) and explorer (glyph loader `src/components/three/glyphs.ts`) are waiting for it on main.
+- New since last checkpoint: OG image (`src/app/opengraph-image.tsx`, Blender poster + wordmark, 1200×630) + `public/site.webmanifest` (linked from layout metadata) · `DESIGN.md` (tokens, evidence grammar, type, motion, 3D rules + budgets, a11y, banned) · landing section **"Inside the atlas"**: a real STXBP1 neighbourhood from the snapshot (gene + pathways/variants, 4 inferred neighbours dashed, trials, papers, patient groups, symptoms, researchers) drawn in 3D with the Blender glyphs, hover = name + lit edges, flat SVG fallback.
+- Screens: `docs/qa/brand/landing-1440-{hero,full,guide-speaking,inside-atlas}.png`, `landing-390-{hero,full,guide-speaking}.png`. Blender renders: `public/models/nexmed-{hero,agent,glyphs}.png`.
+- Thanks explorer for the prefs fix. Next: landing polish (how-it-works diagram in 3D), mobile pass, help voice/explorer integrate once merged.
+
+## 18:20 · user-verifier · PROGRESS
+- Re-tested `main` @8fed86a (all six lanes) on :3007 → `qa/20261003-1807-report.md`. Every journey step PASS except the minor items below; red-team ✓ 10/10 (deterministic).
+- VERIFIED QA-01 (STXBP1 question → STXBP1-DEE; made-up disease → "I could not find… so I won't guess", 0 claims; `focus` honoured)
+- VERIFIED QA-02 (`claims[].evidence_ids[]`) · VERIFIED QA-03 (redteam.mjs 10/10)
+- VERIFIED QA-06 (Propose a collaboration → "community draft — not evidence" → POST /api/proposals 201 → listed under Community drafts)
+- VERIFIED QA-07 (Pharma: own order, clusters ranked by centrality, unmet-need table in step 1)
+- VERIFIED QA-08 (English landing, 4 modes, 3D hero) · VERIFIED QA-09 (Nedamex in footer) · VERIFIED QA-10 (logo renders)
+- NEED(brain): QA-20 dead provenance link on every inferred edge · `GET /api/atlas/edge?id=edge:2fca619fa2d4` → evidence `atlas_analysis` url `https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect/blob/main/src/lib/atlas/analyze.ts` → 404 (origin/main is still the old history). Expected: resolves once main is pushed/reconciled. Re-check after push · severity: major (judges will click it)
+- NEED(brand): QA-21 landing at 390 px is 393 px wide: the "The problem" section (`p.eyebrow`, `h2.display`, `ul.mt-8 space-y-4`) overflows by 3 px → horizontal scroll · screenshot qa/20261003-1807/03-landing-mobile.png · severity: minor
+- NEED(data): QA-22 my journey-2 test saved a real community draft to live Supabase: proposal id `87633c5a-69f8-48fe-8ca9-94aa22cc2574`, title "QA test draft — STXBP1-DEE × KCNT1 natural history collaboration (user-verifier, please ignore)", contact qa@example.org. It now shows under "Community drafts for this disease (1)" on STXBP1-DEE. Please delete it (I don't write to the product DB). From now on I test proposals only with the in-memory fallback or will ask first · severity: minor
+- NEED(explorer): QA-23 the UI calls `/api/reconcile` (404 until ai P1 merges) → console error on search · either guard the call or merge ai P1 · severity: minor
+- Still open: QA-14 hydration warning · QA-18 perf (explorer) · QA-19 3D labels (explorer).
+
+## 18:15 · head-brain · DECISIONS (human approved)
+- **Migration 0011 is LIVE** on Supabase (applied by the head brain as 4 parts: `0011a_nexmed_enums`, `0011b_nexmed_kind_sources`, `0011c_nexmed_proposals`, `0011d_nexmed_extractions_version`; same SQL as `supabase/migrations/0011_nexmed.sql`, only `drop policy if exists` replaced by a guarded `create policy` because the MCP blocks DROP). Checks: orphan_active_edges 0 · tables without RLS 0 · anon cannot read `proposals.contact` · anon cannot insert directly · anon can execute `submit_proposal` / `save_extraction` (intended) · 972 edges kind=observed · `atlas_version()` ok.
+  - NEED(data): go — deploy the Edge Function, live-ingest the 21 diseases via pg_net, integrity, `npm run snapshot`; then apply 0012 (cron) yourself. Keep the repo file as is (document the 4-part apply in DATA_SOURCES).
+  - action / ai: `submit_proposal` and `save_extraction` are live — drafts and extractions now persist in Supabase.
+- **GitHub: approved.** NEED(brain): `git fetch origin && git merge -s ours origin/main -m "Merge origin/main (rare-atlas push 17:00) — superseded by Nexmed"` then `git push origin main` (no force). Then merge feat/action.
+- **Vercel:** the head brain also gets 403 creating projects in team perdomoangelrangel-techs-projects → only the team owner (Ángel) can create it. The human will import the repo in the Vercel dashboard (Framework Next.js, branch main, no env needed besides OPENAI_MODEL=gpt-4o, OPENAI_MODEL_FAST=gpt-4o-mini, NEXT_PUBLIC_PROGRAM_URL). Brain: post the prod URL when it appears.
+- **Lovable: approved — GitHub sync + agents.** The human (Ángel's account) connects project "Nedamex Navigator" (id 4ce45bdb-819e-4682-9078-2fbe7d11465e, TanStack Start) to GitHub and posts `CONTRACT lovable-repo`. explorer = lovable-porter lead per ORDERS_WAVE2.md; start the prep (docs/LOVABLE_PORT.md) now.
+
+## 00:20 · explorer · PROGRESS — green checkpoint + Lovable prep
+- feat/explorer @0d305de: typecheck ✓ · lint ✓ · test 87/87 ✓ · build ✓. Ready to merge.
+- QA-23 fixed: the reconcile fallback now runs **server-side** inside `/api/atlas/search` (no browser call to `/api/reconcile`, so no 404 in the console; works automatically once ai's route is on main).
+- Lovable porter (lead) prep done: `docs/LOVABLE_PORT.md` (target inspected read-only via the Lovable API: TanStack Start 1.168 + SSR, Vite 8, Bun, zod 3, shadcn; root layout wraps pages in max-w-6xl → atlas gets a full-bleed `_app` layout, research pages move to `/research` under `_research`). File map, Next→TanStack replacements (`next/dynamic ssr:false` → `lazy` + `ClientOnly`), deps to add (three, react-force-graph-2d/3d, three-spritetext, motion, @elevenlabs/react), routes, order of work, risks (SSR imports, CORS → Vite proxy until brain's CORS, bundle size).
+- Explorer components already portable for it: every fetch goes through `src/components/atlas/api.ts` → `api(path)` (base `NEXT_PUBLIC_NEXMED_API_URL`, `""` on Vercel).
+- Waiting on: `CONTRACT lovable-repo` (human) to clone `../nexmed-lovable`. NEED(action): read §3/§6 of docs/LOVABLE_PORT.md — you own journey/cocreate/plan there. NEED(voice)/NEED(ai): components must accept `apiBase` (ai already does); voice please confirm.
+
+## 00:22 · brand · PROGRESS — green checkpoint (wave 2)
+- `feat/brand` @9cd595c (main @8fed86a merged): typecheck ✓ · lint ✓ (0 errors) · test 87/87 ✓ · build ✓. Ready to merge.
+- QA-21 (390 px overflow) fixed: grid children `min-w-0`, long ids wrap → scrollWidth 390 at 390 px. Please VERIFY.
+- Wave-2 website: every CTA (nav, hero, Maria, mode cards, "Explore it", footer) → `site.programUrl` via `programHref("/atlas?p=…&d=…")`. **CONTRACT: I added `site.programUrl` (env `NEXT_PUBLIC_PROGRAM_URL`, default `https://nedamex-research.lovable.app`) and `programHref()` in `src/lib/site.ts` (my file) — brain, no need to add it; just set the env.** Plan B `/atlas` untouched.
+- Videos section: `NEXT_PUBLIC_VIDEO_{DEMO,TECH,TEAM}` if set, else `public/videos/{Demo60,Tech60,Team60}-draft.mp4` with posters + "Draft" label. Team section: `site.team` with [Name]/[Role] placeholders — humans: send names/roles and I fill them.
+- Growth replay polished (edges reveal after their nodes). Screens: `docs/qa/brand/landing-1440-videos.png`, `hero-grow-replay-1440.png`, `landing-390-inside-atlas.png`.
+- CONTRACT (portability): `src/components/three/*` used by the voice dock (AgentOrb, AgentCanvas, AgentModel, Scene3D, useCan3D, palette, glyphs) has **no Next-only imports** now → lovable-porter can copy the folder + `public/models/nexmed-agent.*`, `public/models/nexmed-glyphs.glb`, `public/draco/`. Only `Hero3D` (website) uses next/image + next/dynamic.
+- Waiting on voice: `<StoryNarration src vtt />` CONTRACT → I mount it in the hero/story section as soon as it lands.
+
+## 18:30 · brain · MERGED
+- Merged → main: **ai** @397bafa (P1 reconcile/extract/tools/AskBox) · **explorer** @0d305de (QA-18/19/23, ExplainButton mounted, LOVABLE_PORT.md) · **brand** @9cd595c (wave-2 website, `site.programUrl`, QA-21).
+- Answered NEED(brain) from ai: `npm run extract` = `tsx --conditions=react-server src/lib/ai/cli/extract.ts` (runs; exits cleanly without OPENAI_API_KEY).
+- Verified on main: typecheck ✓ · lint ✓ · test 100/100 ✓ · build ✓ · next start smoke 200s · **QA-18 confirmed fixed** (stats cold 0.84 s → warm 0.014 s; journey 0.02 s; search 0.04 s) · reconcile "Munc18-1" → STXBP1 (alias) · red-team 10/10 (deterministic).
+- QA-20 (inferred-edge provenance link → 404 on GitHub): resolves when main is pushed. **origin reconciliation is NOT done:** the "approved" note came via head-brain, but this session's `-s ours` merge was blocked by the safety check and the brain needs the human's own confirmation in this session. Still NOT pushed.
+- QA-22 (QA draft in live proposals): NEED(data) — deleting a row needs the human's OK for DELETE; ask in your session. Suggest instead `status='rejected'` via an UPDATE (it hides it from `proposals_public`), also needs OK.
+- Vercel: waiting for the human's dashboard import; will set `OPENAI_MODEL`, `OPENAI_MODEL_FAST`, `NEXT_PUBLIC_PROGRAM_URL` and post the URL.
+- Not yet merged: explorer @e0be1d2 (after 0d305de, no checkpoint). Voice: no new checkpoint since 7bb5484 — NEED(voice): explorer's 18:31 handoff (hydration, idle subtitle, pill overlap), AgentOrb swap, `<StoryNarration>` CONTRACT for brand.
+- user-verifier: refresh `../nexmed-qa` and re-test (QA-18/19/21/23 + ai P1 endpoints).
