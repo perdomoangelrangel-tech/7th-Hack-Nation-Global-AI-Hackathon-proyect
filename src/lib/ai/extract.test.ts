@@ -206,3 +206,14 @@ describe("extract · treatment finding about the paper's disease", () => {
     expect(r.claims).toHaveLength(0);
   });
 });
+
+describe("extract · superseding an old row", () => {
+  it("saves an empty extraction only when asked (saveEmpty)", async () => {
+    const saver = vi.fn(async () => "uuid-empty");
+    setLlmClient(fakeLlm({ entities: [], claims: [] }).client);
+    expect((await extract(idx, { paper }, saver)).saved).toBe(false);
+    const r = await extract(idx, { paper, saveEmpty: true }, saver);
+    expect(r).toMatchObject({ saved: true, claims: [] });
+    expect(saver).toHaveBeenCalledTimes(1);
+  });
+});
