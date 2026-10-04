@@ -10,7 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Box, ChevronDown, ChevronRight, CircleHelp, Focus, Layers as LayersIcon, BookOpen, Orbit, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Square, Target, UserRound, type LucideIcon } from "lucide-react";
+import { Box, ChevronRight, CircleHelp, Focus, Minus, Plus, RotateCcw, Expand, Shrink, PanelRightClose, PanelRightOpen, Layers as LayersIcon, BookOpen, Orbit, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Square, Target, UserRound, type LucideIcon } from "lucide-react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { dict, type Locale } from "@/lib/i18n";
@@ -24,7 +24,7 @@ import { NarrationBar } from "./NarrationBar";
 import { useNarration } from "./useNarration";
 import { LeftRail, MiniLegend, RailSection, defaultRailTab, type RailTab } from "./AtlasRail";
 import { linkEnd } from "./focus";
-import { constellationLayout, routeLayout, LAYERS, SECTORS, type Layer, type Sector } from "./radial";
+import { constellationLayout, filterView, routeLayout, routeLayersFor, SECTORS, TYPE_LAYERS, type Sector } from "./radial";
 import { strengthOf, type Strength } from "./evidence";
 import type { GraphCommand } from "./graphProps";
 import { PrefsPanel } from "./PrefsPanel";
@@ -32,6 +32,7 @@ import { useGraphMode } from "./useGraphMode";
 import { useEmbed } from "./useEmbed";
 import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
+import { TypeIcon } from "./icons";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
 import { ClusterTable } from "@/components/journey/ClusterTable";
@@ -59,7 +60,8 @@ const EMPTY = new Set<string>();
 
 export function AtlasApp({ initialDisease, initialPersona, initialLocale, initialEdge = null, personas, stats, maria }: Props) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
-  const [persona, setPersona] = useState<PersonaId>(initialPersona);
+  // The role is chosen on the home (or the Lovable app) — the atlas only shows it (WAVE 6).
+  const [persona] = useState<PersonaId>(initialPersona);
   const [focus, setFocus] = useState<string | null>(initialDisease);
   const [view, setView] = useState<GraphView | null>(null);
   const [journey, setJourney] = useState<Journey | null>(null);
@@ -71,15 +73,48 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [loadError, setLoadError] = useState(false);
   // WAVE 5B view: Route (radial, needs a focus) · Constellation · Table. Pharma starts on the table.
   const [viewMode, setViewMode] = useState<"route" | "constellation" | "table">(initialPersona === "priya" ? "table" : initialDisease ? "route" : "constellation");
-  const [layers, setLayers] = useState<Set<Layer>>(() => new Set(LAYERS));
+  // WAVE 6 layers: per node type (hidden set) + evidence-source filter (empty = every source).
+  const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(() => new Set());
+  const [sourceFilter, setSourceFilter] = useState<Set<string>>(() => new Set());
+  const [sourceList, setSourceList] = useState<{ id: string; name: string; edges: number }[]>([]);
+  useEffect(() => {
+    fetch(api("/api/atlas/sources")).then((r) => (r.ok ? r.json() : null)).then((j: { sources?: { id: string; name: string; edges: number }[] } | null) => {
+      if (j?.sources) setSourceList(j.sources.filter((x) => x.edges > 0).sort((a, b) => b.edges - a.edges));
+    }).catch(() => {});
+  }, []);
+  const layers = useMemo(() => routeLayersFor(hiddenLayers), [hiddenLayers]);
   const [expanded, setExpanded] = useState<Set<Sector>>(() => new Set());
   const [showLegend, setShowLegend] = useState(true);
+  // Route panel (right): 480 px default, drag handle 360–720 px, "Expand" = 60 % of the window, collapsible (mode=free).
+  const [panelW, setPanelW] = useState(480);
+  const [panelMode, setPanelMode] = useState<"normal" | "expanded" | "closed">("normal");
+  // < 1024 px: the route panel is a bottom sheet with 3 snap points (peek 120 px · 50 % · 90 %).
+  const [sheet, setSheet] = useState<0 | 1 | 2>(1);
+  const [sheetDrag, setSheetDrag] = useState<number | null>(null);
+  // Phones: frame the graph above the bottom sheet (peek or half); desktop: no inset.
+  const [vp, setVp] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    const id = requestAnimationFrame(on); window.addEventListener("resize", on);
+    return () => { cancelAnimationFrame(id); window.removeEventListener("resize", on); };
+  }, []);
+  const mobileInset = vp && vp.w < 1024 ? (sheet === 0 ? 120 : Math.round(vp.h * 0.5)) : 0;
   const [railTab, setRailTab] = useState<RailTab | null>(defaultRailTab(initialPersona));
   const [command, setCommand] = useState<GraphCommand | null>(null);
   // Spotlight: nodes to keep lit + framed (a cluster picked in the table). Unlike hover, the pointer does not clear it.
   const [spotlight, setSpotlight] = useState<string[]>([]);
   const center: "map" | "table" = viewMode === "table" ? "table" : "map";
   const cmd = (kind: GraphCommand["kind"]) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 }));
+  // Keyboard zoom: + / − / 0 (fit) when not typing.
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey || el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el?.isContentEditable) return;
+      const kind = e.key === "+" || e.key === "=" ? "zoomIn" : e.key === "-" || e.key === "_" ? "zoomOut" : e.key === "0" ? "fit" : null;
+      if (kind) { e.preventDefault(); setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 })); }
+    };
+    window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
+  }, []);
   const pendingNarration = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   const firstInspect = useRef(true);
@@ -90,7 +125,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   // Inside the Lovable app (iframe) or ?embed=1: the host supplies the header → compact bar, no logo, no autofocus.
   const embed = useEmbed();
   // Real height of the narration bar: the graph frames what is said above it.
-  const [barH, setBarH] = useState(0);
+  const [, setBarH] = useState(0); // narration bar height (kept for the voice lane's bar; framing now uses the sheet inset)
   const barObserver = useRef<ResizeObserver | null>(null);
   const barRef = useCallback((el: HTMLDivElement | null) => {
     barObserver.current?.disconnect();
@@ -146,7 +181,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     });
     return constellationLayout(fullView);
   }, [fullView, viewMode, focus, strength, expanded, layers, t]);
-  const shownView = laid?.view ?? null;
+  const shownView = useMemo(() => (laid ? filterView(laid.view, focus, hiddenLayers, sourceFilter) : null), [laid, focus, hiddenLayers, sourceFilter]);
   const labelIds = laid?.labelIds ?? null;
   const hasBridges = useMemo(() => !!shownView?.links.some((l) => l.bridge), [shownView]);
   const shownKinds = useMemo(() => new Set((shownView?.links ?? []).map((l) => kindOf(l.kind))), [shownView]);
@@ -159,7 +194,13 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const firstSearch = useRef(typeof window !== "undefined" ? window.location.search : "");
   useEffect(() => {
     const sp = new URLSearchParams(firstSearch.current);
-    const c = sp.get("c"), e = sp.get("e");
+    const c = sp.get("c"), e = sp.get("e"), mode = sp.get("mode");
+    // mode=challenge → Maria's route (step 1, stepper); mode=free → route panel closed, Constellation 2D, search focused.
+    if (mode === "challenge" && !focus) requestAnimationFrame(() => { setFocus(maria); setViewMode("route"); });
+    if (mode === "free") requestAnimationFrame(() => {
+      setPanelMode("closed"); setViewMode("constellation"); graph.setMode("2d");
+      (document.querySelector('input[role="combobox"]') as HTMLInputElement | null)?.focus();
+    });
     if (!c && !(e && !initialEdge)) return;
     const id = requestAnimationFrame(() => {
       if (c) { setClusterFilter(c); setRailTab("clusters"); }
@@ -181,7 +222,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   // Small screens: the panel sits under the graph, so bring an opened edge into view (not on first load).
   useEffect(() => {
     if (firstInspect.current) { firstInspect.current = false; return; }
-    if (inspect && window.innerWidth < 1024) panelRef.current?.scrollIntoView({ behavior: prefs.reduceMotion ? "auto" : "smooth", block: "start" });
+    if (inspect && window.innerWidth < 1024) { const id = requestAnimationFrame(() => setSheet(2)); return () => cancelAnimationFrame(id); } // drawer opens the sheet at full height
   }, [inspect, prefs.reduceMotion]);
 
   const { stop: stopNarration } = n;
@@ -208,7 +249,6 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (l) setInspect(l.id);
   };
   const onLink = (l: GLink) => setInspect(l.kind === "proposed" ? String(l.source) : l.id);
-  const switchPersona = (p: PersonaId) => { setPersona(p); setRailTab(defaultRailTab(p)); setViewMode(p === "priya" ? "table" : focus ? "route" : "constellation"); if (focus && (n.state === "playing" || n.state === "paused")) void n.start(focus, p, locale); };
   const switchLocale = (l: Locale) => { n.stop(); setLocale(l); };
   const toggleKind = (k: LinkKind) => setHiddenKinds((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
   const onRailHover = useCallback((nodes: string[], edges: string[]) => setHover({ nodes, edges }), []);
@@ -248,7 +288,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             <span className="font-semibold tracking-tight text-brand-ink hidden sm:inline">{site.name}</span>
           </Link>}
           <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} persona={persona} onPick={onPick} autoFocus={!initialDisease && !embed} /></div>
-          <RolePill t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} />
+          {/* Embedded: the host (Lovable) already shows the role. */}
+          {!embed && <RolePill t={t} personas={personas[locale]} persona={persona} locale={locale} embed={embed} />}
           {/* Help → the 3-step tour (mvp-builder's Tour listens to `nedamex:tour`). */}
           <button type="button" onClick={() => window.dispatchEvent(new Event("nedamex:tour"))} aria-label={t.help} title={t.help}
             className="grid place-items-center w-9 h-9 shrink-0 rounded-full border border-line text-ink-2 hover:bg-brand-soft hover:text-ink">
@@ -260,28 +301,29 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         {/* Modes below xl (always visible on mobile) */}
       </header>
 
-      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[auto_1fr_420px]">
+      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[auto_1fr_var(--panel-w)]"
+        style={{ ["--panel-w" as string]: panelMode === "closed" ? "0px" : panelMode === "expanded" ? "60vw" : `${panelW}px` }}>
         {/* Left icon rail: Clusters · How to read · Community */}
         <LeftRail {...railProps} tab={railTab} onTab={setRailTab} />
 
         {/* Center: the graph */}
-        <main id="atlas-main" className="relative h-[62vh] min-h-[380px] lg:h-auto lg:min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_30%_20%,var(--paper)_0%,var(--brand-mist)_55%,var(--brand-soft)_100%)]">
+        <main id="atlas-main" className="relative h-[calc(100dvh-120px)] min-h-[380px] lg:h-auto lg:min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_30%_20%,var(--paper)_0%,var(--brand-mist)_55%,var(--brand-soft)_100%)]">
           {/* Data still on its way (first load or a new focus): keep the helix up until the view matches. */}
           {(!graph.ready || !shownView || (focus && shownView.focus !== focus)) && !loadError && <Loading />}
-          {graph.ready && <Canvas view={shownView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={focus ? barH : 0} hiddenKinds={hiddenKinds} still={reduce}
+          {graph.ready && <Canvas view={shownView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={mobileInset} hiddenKinds={hiddenKinds} still={reduce}
             labelIds={labelIds} command={command} onNode={onNode} onLink={onLink}
             onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); }} />}
 
           {/* Floating controls: 2D/3D · Focus/All · zoom · fit · rotate (3D) */}
-          <div className="absolute left-3 right-3 top-3 z-20 flex flex-wrap items-center gap-2">
+          <div className="absolute left-3 right-3 lg:right-24 top-3 z-20 flex flex-wrap items-center gap-2">
             <Segmented label={t.ctrl.center} value={viewMode} onChange={(v) => { setViewMode(v as typeof viewMode); setSpotlight([]); }}
               options={[{ v: "route", label: t.ctrl.route, icon: Focus, disabled: !focus, title: t.ctrl.route_hint }, { v: "constellation", label: t.ctrl.constellation, icon: Orbit, title: t.ctrl.constellation_hint }, { v: "table", label: t.ctrl.table, icon: Table2 }]} />
             {center === "map" && <>
-              {viewMode === "route" && <LayersMenu t={t} layers={layers} onToggle={(l) => setLayers((x) => { const y = new Set(x); if (y.has(l)) y.delete(l); else y.add(l); return y; })} />}
+              <LayersMenu t={t} hidden={hiddenLayers} onToggle={(l) => setHiddenLayers((x) => { const y = new Set(x); if (y.has(l)) y.delete(l); else y.add(l); return y; })}
+                sources={sourceList} selected={sourceFilter} onSource={(id) => setSourceFilter((x) => { const y = new Set(x); if (y.has(id)) y.delete(id); else y.add(id); return y; })} onClearSources={() => setSourceFilter(new Set())} />
               <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => graph.setMode(m as "2d" | "3d")}
                 options={[{ v: "2d", label: t.view_2d, icon: Square }, { v: "3d", label: t.view_3d, icon: Box, disabled: !graph.webgl }]} />
               <div className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
-                <IconBtn icon={Maximize2} label={t.ctrl.fit} onClick={() => cmd("fit")} />
                 <IconBtn icon={BookOpen} label={t.ctrl.legend} pressed={showLegend} onClick={() => setShowLegend((x) => !x)} />
               </div>
               {graph.mode === "2d" && graph.reason && <span className="hidden sm:inline rounded-full bg-paper/90 px-2 py-0.5 text-[11px] text-ink-3">{t.fallback_reason[graph.reason]}</span>}
@@ -300,7 +342,28 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
                 onFocusDisease={(d) => { setViewMode("route"); goTo(d); }} />
             </div>
           )}
-          {center === "map" && showLegend && <div className="absolute right-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>}
+          {center === "map" && showLegend && <div className="absolute left-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>}
+          {/* Route panel size: Expand (60 %) / Hide — on the canvas edge so it never covers the panel's own header. */}
+          {panelMode !== "closed" && (
+            <div className="hidden lg:flex absolute right-3 top-3 z-20 rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
+              <IconBtn icon={panelMode === "expanded" ? Shrink : Expand} label={panelMode === "expanded" ? t.panel.shrink : t.panel.expand} onClick={() => setPanelMode((m) => (m === "expanded" ? "normal" : "expanded"))} />
+              <IconBtn icon={PanelRightClose} label={t.panel.close} onClick={() => setPanelMode("closed")} />
+            </div>
+          )}
+          {panelMode === "closed" && (
+            <button type="button" onClick={() => setPanelMode("normal")} className="hidden lg:flex absolute right-3 top-3 z-20 items-center gap-1.5 rounded-full border border-line bg-paper/95 px-3 py-1.5 text-xs font-medium text-ink-2 shadow-sm hover:bg-brand-soft">
+              <PanelRightOpen aria-hidden size={14} strokeWidth={1.75} />{t.panel.open}
+            </button>
+          )}
+          {/* Zoom control (WAVE 6): + / − / Fit / Reset, 44 px targets; keys + − 0. */}
+          {center === "map" && (
+            <div role="group" aria-label={t.ctrl.zoom} className="absolute right-3 bottom-3 max-lg:top-28 max-lg:bottom-auto z-20 flex flex-col overflow-hidden rounded-2xl border border-line bg-paper/95 shadow-md">
+              <ZoomBtn icon={Plus} label={`${t.ctrl.zoom_in} (+)`} onClick={() => cmd("zoomIn")} />
+              <ZoomBtn icon={Minus} label={`${t.ctrl.zoom_out} (−)`} onClick={() => cmd("zoomOut")} />
+              <ZoomBtn icon={Maximize2} label={`${t.ctrl.fit} (0)`} onClick={() => cmd("fit")} />
+              <ZoomBtn icon={RotateCcw} label={t.ctrl.reset} onClick={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); setClusterFilter(null); setExpanded(new Set()); cmd("reset"); }} />
+            </div>
+          )}
 
           {/* Breadcrumb: what the map is highlighting, in words. */}
           {focus && center === "map" && (
@@ -317,6 +380,20 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           {fullView && fullView.links.length > 0 && (
             <nav aria-label={t.explore_more} className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:right-3 focus-within:top-24 focus-within:z-20 focus-within:max-h-[60%] focus-within:w-72 focus-within:overflow-auto focus-within:rounded-xl focus-within:border focus-within:border-line focus-within:bg-paper focus-within:p-2 focus-within:shadow-lg">
               <p className="px-2 py-1 text-xs uppercase tracking-widest text-ink-3">{t.explore_more}</p>
+              {/* Route sectors as real buttons (the canvas "+N more" pills are not reachable by keyboard / screen readers). */}
+              {laid?.sectors.length ? (
+                <ul aria-label={t.sector.list} className="mb-1 border-b border-line pb-1">
+                  {laid.sectors.map((x) => (
+                    <li key={x.sector}>
+                      <button type="button" aria-expanded={x.expanded} disabled={x.total <= x.shown && !x.expanded}
+                        onClick={() => setExpanded((e) => { const y = new Set(e); if (y.has(x.sector)) y.delete(x.sector); else y.add(x.sector); return y; })}
+                        className="w-full rounded-lg px-2 py-1 text-left text-xs text-ink-2 hover:bg-brand-soft focus:bg-brand-soft disabled:opacity-60">
+                        {t.sector[x.sector]}: {t.sector.shown.replace("{a}", String(x.shown)).replace("{b}", String(x.total))}{x.total > x.shown ? ` — ${t.sector.show_all}` : x.expanded ? ` — ${t.sector.fewer}` : ""}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <ul>
                 {fullView.links.slice(0, 60).map((l) => {
                   const name = (v: unknown) => { const id = typeof v === "object" && v ? (v as GNode).id : String(v); return fullView.nodes.find((x) => x.id === id)?.name ?? id; };
@@ -357,13 +434,41 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         </main>
 
         {/* Mobile: rail content under the graph */}
-        <details className="lg:hidden border-t border-line bg-paper px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-ink-2">{t.rail.legend.title} · {t.rail.clusters.title} · {t.rail.community.title}</summary>
-          <div className="mt-4 flex flex-col gap-6">{(["community", "clusters", "legend"] as const).map((k) => <RailSection key={k} tab={k} {...railProps} />)}</div>
-        </details>
 
         {/* Right panel: the journey */}
-        <aside ref={panelRef} className="relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh] pb-20 lg:overflow-hidden" aria-label={shownJourney?.disease.name ?? t.q1}>
+        <aside ref={panelRef}
+          style={{ ["--sheet-h" as string]: sheetDrag !== null ? `${sheetDrag}px` : sheet === 0 ? "120px" : sheet === 1 ? "50dvh" : "90dvh" }}
+          className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-40 max-lg:h-[var(--sheet-h)] max-lg:rounded-t-2xl max-lg:shadow-[0_-8px_24px_rgb(14_44_71/0.12)] max-lg:overflow-y-auto ${sheetDrag === null ? "max-lg:transition-[height] max-lg:duration-200" : ""} relative border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper pb-20 lg:overflow-hidden text-base ${panelMode === "closed" ? "lg:hidden" : ""}`} aria-label={shownJourney?.disease.name ?? t.q1}>
+          {/* Bottom-sheet handle (< 1024 px): drag or tap to cycle peek → half → full. */}
+          <button type="button" aria-label={t.panel.sheet.replace("{n}", String(sheet + 1))}
+            onClick={() => setSheet((x) => ((x + 1) % 3) as 0 | 1 | 2)}
+            onPointerDown={(e) => {
+              const startY = e.clientY, startH = (panelRef.current?.getBoundingClientRect().height ?? 300);
+              let moved = false;
+              const move = (ev: PointerEvent) => { const dy = startY - ev.clientY; if (Math.abs(dy) > 6) moved = true; if (moved) setSheetDrag(Math.min(window.innerHeight * 0.9, Math.max(120, startH + dy))); };
+              const up = (ev: PointerEvent) => {
+                window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
+                if (!moved) { setSheetDrag(null); return; }
+                const h = Math.min(window.innerHeight * 0.9, Math.max(120, startH + (startY - ev.clientY))), vh = window.innerHeight;
+                const snaps = [120, vh * 0.5, vh * 0.9]; const k = snaps.reduce((b, v, i) => (Math.abs(v - h) < Math.abs(snaps[b] - h) ? i : b), 0);
+                setSheet(k as 0 | 1 | 2); setSheetDrag(null);
+                ev.preventDefault();
+              };
+              window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+            }}
+            className="lg:hidden sticky top-0 z-50 flex w-full justify-center bg-paper pt-2 pb-1 touch-none">
+            <span className="h-1.5 w-12 rounded-full bg-line" aria-hidden />
+          </button>
+          {/* Resize: drag the left edge (360–720 px), keyboard ← → on the handle; Expand = 60 %; close. */}
+          <div role="separator" aria-orientation="vertical" aria-label={t.panel.resize} aria-valuemin={360} aria-valuemax={720} aria-valuenow={panelW} tabIndex={0}
+            onPointerDown={(e) => {
+              const startX = e.clientX, startW = panelW; setPanelMode("normal"); (e.target as HTMLElement).setPointerCapture(e.pointerId);
+              const move = (ev: PointerEvent) => setPanelW(Math.min(720, Math.max(360, startW + (startX - ev.clientX))));
+              const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+              window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+            }}
+            onKeyDown={(e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setPanelMode("normal"); setPanelW((w) => Math.min(720, Math.max(360, w + (e.key === "ArrowLeft" ? 24 : -24)))); } }}
+            className="hidden lg:block absolute left-0 top-0 bottom-0 z-40 w-1.5 -translate-x-1/2 cursor-col-resize hover:bg-brand/40 focus-visible:bg-brand/60" />
           {/* Cross-lane mount points (voice lane, action lane). Keep them. */}
           <VoiceDock persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
           <CoCreate persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} edgeIds={inspect && !isDraftId(inspect) ? [inspect] : undefined} />
@@ -381,6 +486,10 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
               </motion.div>
             )}
           </AnimatePresence>
+          <details className="lg:hidden border-t border-line bg-paper px-4 py-3 mt-4">
+          <summary className="cursor-pointer text-sm font-medium text-ink-2">{t.rail.legend.title} · {t.rail.clusters.title} · {t.rail.community.title}</summary>
+          <div className="mt-4 flex flex-col gap-6">{(["community", "clusters", "legend"] as const).map((k) => <RailSection key={k} tab={k} {...railProps} />)}</div>
+          </details>
           <AnimatePresence>
             {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => setInspect(null)} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} persona={persona} onHighlight={(edges) => setHover({ nodes: [], edges: edges ?? [] })} />}
             {draft && <DraftInspector key={inspect!} draft={draft} t={t} onClose={() => setInspect(null)} />}
@@ -403,8 +512,32 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   );
 }
 
-/** Header role pill (WAVE 5B): only the current role, opening a small chooser. */
-function RolePill({ t, personas, persona, onPick }: { t: Dict; personas: PersonaOption[]; persona: PersonaId; onPick: (p: PersonaId) => void }) {
+/** WAVE 6: no persona switcher inside the atlas — a static "You're here as: <role>" pill + "Change role".
+ *  Embedded (Lovable) → the host app's role chooser; standalone → the home (role selection). */
+const ROLE_LABEL: Partial<Record<PersonaId, { en: string; es: string }>> = { osei: { en: "Researcher & clinician", es: "Investigador y clínico" } };
+function RolePill({ t, personas, persona, locale, embed }: { t: Dict; personas: PersonaOption[]; persona: PersonaId; locale: Locale; embed: boolean }) {
+  const cur = personas.find((p) => p.id === persona)!;
+  const label = ROLE_LABEL[persona]?.[locale] ?? cur.mode;
+  const change = (e: React.MouseEvent) => {
+    if (!embed) return; // plain link to "/"
+    e.preventDefault();
+    try { window.top!.location.href = `${site.appUrl}/?role=change`; } catch { window.open(`${site.appUrl}/?role=change`, "_top"); }
+  };
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <span className="flex items-center gap-1.5 rounded-full border border-line bg-brand-soft h-9 px-3 text-xs text-brand-ink" title={`${cur.name} · ${cur.role}`}>
+        <ModeIcon id={persona} /><span className="hidden lg:inline text-ink-3">{t.here_as}</span><span className="hidden md:inline font-semibold">{label}</span>
+      </span>
+      <a href={embed ? `${site.appUrl}/?role=change` : "/"} onClick={change} className="hidden sm:inline text-xs font-medium text-brand-deep underline-offset-2 hover:underline">{t.change_role}</a>
+    </div>
+  );
+}
+
+/** Layers (WAVE 6): node types on/off + filter by evidence source (chips with edge counts from /api/atlas/sources). */
+function LayersMenu({ t, hidden, onToggle, sources, selected, onSource, onClearSources }: {
+  t: Dict; hidden: Set<string>; onToggle: (l: string) => void;
+  sources: { id: string; name: string; edges: number }[]; selected: Set<string>; onSource: (id: string) => void; onClearSources: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -414,53 +547,41 @@ function RolePill({ t, personas, persona, onPick }: { t: Dict; personas: Persona
     window.addEventListener("mousedown", away); window.addEventListener("keydown", esc);
     return () => { window.removeEventListener("mousedown", away); window.removeEventListener("keydown", esc); };
   }, [open]);
-  const cur = personas.find((p) => p.id === persona)!;
-  return (
-    <div ref={box} className="relative shrink-0">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={`${t.mode}: ${cur.mode}`}
-        className="flex items-center gap-1.5 rounded-full border border-line bg-brand-soft h-9 px-3 text-xs font-semibold text-brand-ink hover:bg-brand-mist">
-        <ModeIcon id={persona} /><span className="hidden sm:inline">{cur.mode}</span><ChevronDown aria-hidden size={14} strokeWidth={1.75} />
-      </button>
-      {open && (
-        <ul role="menu" aria-label={t.mode} className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-line bg-paper p-1.5 shadow-xl shadow-ink/10">
-          {personas.map((p) => (
-            <li key={p.id} role="none">
-              <button type="button" role="menuitemradio" aria-checked={p.id === persona} onClick={() => { onPick(p.id); setOpen(false); }}
-                className={`flex w-full items-start gap-2.5 rounded-xl px-3 py-2 text-left ${p.id === persona ? "bg-brand-soft" : "hover:bg-brand-mist"}`}>
-                <span className="mt-0.5 text-brand-deep"><ModeIcon id={p.id} /></span>
-                <span><span className="block text-sm font-medium text-ink">{p.mode}</span><span className="block text-xs text-ink-3">{p.name} · {p.role}</span></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/** Layers: toggle the Route rings / sectors (Mechanism · Symptoms · Studies · People · Treatments). */
-function LayersMenu({ t, layers, onToggle }: { t: Dict; layers: Set<Layer>; onToggle: (l: Layer) => void }) {
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
-    window.addEventListener("mousedown", away); return () => window.removeEventListener("mousedown", away);
-  }, [open]);
+  const onCount = TYPE_LAYERS.length - hidden.size;
   return (
     <div ref={box} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="true"
         className="flex items-center gap-1 rounded-full border border-line bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-2 shadow-sm hover:bg-brand-soft">
-        <LayersIcon aria-hidden size={14} strokeWidth={1.75} />{t.ctrl.layers} <span className="text-ink-3">{layers.size}/{LAYERS.length}</span>
+        <LayersIcon aria-hidden size={14} strokeWidth={1.75} />{t.ctrl.layers} <span className="text-ink-3">{onCount}/{TYPE_LAYERS.length}{selected.size ? ` · ${selected.size} ${t.layers.sources_short}` : ""}</span>
       </button>
       {open && (
-        <div className="absolute left-0 z-30 mt-2 w-56 rounded-xl border border-line bg-paper p-2 shadow-xl shadow-ink/10">
-          {LAYERS.map((l) => (
-            <label key={l} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-2 hover:bg-brand-mist cursor-pointer">
-              <input type="checkbox" checked={layers.has(l)} onChange={() => onToggle(l)} className="accent-[var(--brand-deep)]" />
-              {l === "mechanism" ? t.sector.mechanism : t.sector[l]}
-            </label>
-          ))}
+        <div className="absolute left-0 z-30 mt-2 w-[min(320px,calc(100vw-2rem))] max-h-[70vh] overflow-auto rounded-xl border border-line bg-paper p-2 shadow-xl shadow-ink/10">
+          <p className="px-2 pt-1 pb-1 text-[11px] uppercase tracking-widest text-ink-3">{t.layers.types}</p>
+          <div className="grid grid-cols-2">
+            {TYPE_LAYERS.map((l) => (
+              <label key={l.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-2 hover:bg-brand-mist cursor-pointer">
+                <input type="checkbox" checked={!hidden.has(l.key)} onChange={() => onToggle(l.key)} className="accent-[var(--brand-deep)]" />
+                <TypeIcon type={l.key} size={14} />{t.layers.type[l.key]}
+              </label>
+            ))}
+          </div>
+          {sources.length > 0 && (
+            <>
+              <p className="flex items-center justify-between px-2 pt-3 pb-1 text-[11px] uppercase tracking-widest text-ink-3">
+                {t.layers.sources}
+                {selected.size > 0 && <button type="button" onClick={onClearSources} className="normal-case tracking-normal text-brand-deep hover:underline">{t.layers.all_sources}</button>}
+              </p>
+              <div className="flex flex-wrap gap-1.5 px-2 pb-1" role="group" aria-label={t.layers.sources}>
+                {sources.map((x) => (
+                  <button key={x.id} type="button" aria-pressed={selected.has(x.id)} onClick={() => onSource(x.id)}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] ${selected.has(x.id) ? "border-brand-deep bg-brand-soft text-ink" : "border-line text-ink-2 hover:bg-brand-mist"}`}>
+                    {x.name} <span className="tabular-nums text-ink-3">{x.edges.toLocaleString("en-US")}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="px-2 pb-1 text-[11px] text-ink-3">{t.layers.sources_hint}</p>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -480,6 +601,15 @@ function Segmented({ label, value, onChange, options }: { label: string; value: 
         </button>
       ))}
     </div>
+  );
+}
+
+function ZoomBtn({ icon: I, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label}
+      className="grid place-items-center w-11 h-11 border-b border-line last:border-b-0 text-ink-2 hover:bg-brand-soft hover:text-ink focus-visible:bg-brand-soft">
+      <I aria-hidden size={18} strokeWidth={1.75} />
+    </button>
   );
 }
 
