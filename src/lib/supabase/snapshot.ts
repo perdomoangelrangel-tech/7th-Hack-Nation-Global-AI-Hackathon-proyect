@@ -118,26 +118,6 @@ export function rowsToSnapshot(rows: SnapshotRows): { snapshot: AtlasSnapshot; d
     edges.push({ id: `edge:${r.id}`, from, to, relation: r.relation, kind, confidence: Number(r.confidence), confidence_basis: r.confidence_basis, props: r.props ?? {}, evidence });
   }
 
-  /* Saved OpenAI extractions -> kind "extracted" (latest extraction per PMID; needs expert review) */
-  const latest = new Map<string, ExtractionRow>();
-  for (const x of extractionRows ?? []) if (!latest.has(x.pmid) || latest.get(x.pmid)!.created_at < x.created_at) latest.set(x.pmid, x);
-  let extracted = 0;
-  for (const x of [...latest.values()].sort((a, b) => a.pmid.localeCompare(b.pmid))) {
-    (x.payload?.claims ?? []).forEach((c, i) => {
-      const [s, o] = (c.entity_ids ?? []).filter((v): v is string => typeof v === "string");
-      const relation = c.relation as Relation;
-      if (!s || !o || s === o || !ents.has(s) || !ents.has(o) || !RELATIONS.has(relation) || relation === "similar_to") return;
-      const id = `edge:x-${x.id}-${i}`;
-      edges.push({
-        id, from: s, to: o, relation, kind: "extracted",
-        confidence: Math.max(0, Math.min(1, Number(c.confidence ?? 0.5))), confidence_basis: `openai_extraction:${x.model}`,
-        props: { needs_review: true, extraction_id: x.id, model: x.model, polarity: c.polarity === "contradicts" ? "contradicts" : "supports", subject: c.subject, object: c.object, claim_index: i },
-        evidence: [{ id: `ev:x-${x.id}-${i}`, source: "pubmed", external_id: `PMID:${x.pmid}`, url: `https://pubmed.ncbi.nlm.nih.gov/${x.pmid}/`, quote: c.quote ? String(c.quote).slice(0, 500) : null, published_on: null, retrieved_at: x.created_at }],
-      });
-      extracted++;
-    });
-  }
-
   /* Only entities that take part in at least one edge (retracted leftovers stay out) */
   const used = new Set(edges.flatMap((e) => [e.from, e.to]));
   const entities = [...ents.values()].filter((e) => used.has(e.id));
@@ -147,12 +127,64 @@ export function rowsToSnapshot(rows: SnapshotRows): { snapshot: AtlasSnapshot; d
   for (const s of sourceRows ?? []) sources[s.id] = { id: s.id, name: s.name, license: s.license, url: s.base_url, last_synced_at: s.last_synced_at } satisfies SourceInfo;
   const generated_at = evidenceRows.map((v) => v.retrieved_at).sort().at(-1) ?? new Date(0).toISOString();
 
-  const proposals: Proposal[] = (proposalRows ?? []).map((p) => ({
+  const base: AtlasSnapshot = { version: 1, generated_at, sources, entities, edges, analytics: null, origin: "supabase" };
+  // Extracted edges may only connect entities that already take part in observed edges (no orphan nodes from an LLM).
+  const { snapshot, extracted } = applyOverlays(base, { proposals: proposalRows, extractions: extractionRows });
+  return { snapshot, dropped, extracted };
+}
+
+export interface Overlays { proposals: (Proposal & Row)[] | null; extractions: ExtractionRow[] | null }
+
+/** Reads only the community overlays (proposals_public + extractions): cheap, used on top of the bundled file. */
+export async function fetchOverlays(db: SupabaseClient): Promise<Overlays> {
+  const st = { requests: 0 };
+  const [proposals, extractions] = await Promise.all([
+    readAll<Proposal & Row>(db, "proposals_public", "id,kind,title,body,persona,disease,entities,edges,status,created_at", ["created_at", "id"], st),
+    readAll<ExtractionRow>(db, "extractions", "id,pmid,model,payload,created_at", ["created_at", "id"], st),
+  ]);
+  return { proposals, extractions };
+}
+
+/**
+ * Adds the overlays to ANY snapshot (live or the bundled file) without touching observed data:
+ *   - saved OpenAI extractions → `kind:"extracted"` edges (latest extraction per PMID, needs expert review), only when
+ *     subject AND object resolve to entities of this snapshot. Ids in payloads come from the live graph; on the bundled
+ *     file genes are `gene:SYMBOL:*`, so `gene:HGNC:*` resolves through the file gene's `props.hgnc_id`.
+ *   - community proposals → `snapshot.proposals` (never edges, never evidence).
+ * Pure; returns a new snapshot.
+ */
+export function applyOverlays(snap: AtlasSnapshot, o: Overlays): { snapshot: AtlasSnapshot; extracted: number } {
+  const ids = new Set(snap.entities.map((e) => e.id));
+  const byHgnc = new Map<string, string>();
+  for (const e of snap.entities) if (e.type === "gene" && typeof e.props.hgnc_id === "string") byHgnc.set(`gene:${e.props.hgnc_id}`, e.id);
+  const resolve = (id: string | null | undefined) => (!id ? null : ids.has(id) ? id : byHgnc.get(id) ?? null);
+
+  const edges = snap.edges.filter((e) => e.kind !== "extracted");
+  const latest = new Map<string, ExtractionRow>();
+  for (const x of o.extractions ?? []) if (!latest.has(x.pmid) || latest.get(x.pmid)!.created_at < x.created_at) latest.set(x.pmid, x);
+  let extracted = 0;
+  for (const x of [...latest.values()].sort((a, b) => a.pmid.localeCompare(b.pmid))) {
+    (x.payload?.claims ?? []).forEach((c, i) => {
+      const s = resolve(c.entity_ids?.[0]), t = resolve(c.entity_ids?.[1]);
+      const relation = c.relation as Relation;
+      if (!s || !t || s === t || !RELATIONS.has(relation) || relation === "similar_to" || relation === "has_mechanism") return;
+      edges.push({
+        id: `edge:x-${x.id}-${i}`, from: s, to: t, relation, kind: "extracted",
+        confidence: Math.max(0, Math.min(1, Number(c.confidence ?? 0.5))), confidence_basis: `openai_extraction:${x.model}`,
+        props: { needs_review: true, extraction_id: x.id, model: x.model, pmid: x.pmid, polarity: c.polarity === "contradicts" ? "contradicts" : "supports", subject: c.subject, object: c.object, claim_index: i },
+        evidence: [{ id: `ev:x-${x.id}-${i}`, source: "pubmed", external_id: `PMID:${x.pmid}`, url: `https://pubmed.ncbi.nlm.nih.gov/${x.pmid}/`, quote: c.quote ? String(c.quote).slice(0, 500) : null, published_on: null, retrieved_at: x.created_at }],
+      });
+      extracted++;
+    });
+  }
+  const proposals: Proposal[] = (o.proposals ?? []).map((p) => ({
     id: String(p.id), kind: p.kind, title: p.title, body: p.body, persona: p.persona ?? null, disease: p.disease ?? null,
     entities: p.entities ?? [], edges: p.edges ?? [], status: p.status, created_at: p.created_at,
   }));
-
-  return { snapshot: { version: 1, generated_at, sources, entities, edges, analytics: null, proposals }, dropped, extracted };
+  const sources = extracted && !snap.sources.openai_extraction
+    ? { ...snap.sources, openai_extraction: { id: "openai_extraction" as const, name: "OpenAI extraction from a cited paper (needs expert review)", license: "Derived; cites the PubMed paper", url: "https://pubmed.ncbi.nlm.nih.gov", last_synced_at: [...latest.values()].map((x) => x.created_at).sort().at(-1) ?? null } }
+    : snap.sources;
+  return { snapshot: { ...snap, edges, proposals, sources }, extracted };
 }
 
 /** Fills props the explorer relies on that the Edge Function does not always write (parity with data/atlas.json). */

@@ -11,24 +11,27 @@ import type { Locale } from "@/lib/i18n";
 import { site } from "@/lib/site";
 import { Logo } from "@/components/brand/Logo";
 import { noRouteCopy } from "./copy";
+import { EmbedHidden } from "./EmbedHidden";
 import { atlasHref } from "./memory";
 
 export interface Lead { word: string; hit: string; disease: string; diseaseName: string }
-interface Props { query: string; locale: Locale; persona: PersonaId; sources: { id: string; name: string; last_synced_at?: string | null }[]; leads: Lead[] }
+interface Props { query: string; locale: Locale; persona: PersonaId; sources: { id: string; name: string; last_synced_at?: string | null }[]; leads: Lead[]; embed?: boolean }
 
 function issueUrl({ title, body }: { title: string; body: string }) {
   return `${site.github.replace(/\/$/, "")}/issues/new?${new URLSearchParams({ title, body }).toString()}`;
 }
 
-export function NoRoute({ query, locale, persona, sources, leads }: Props) {
+export function NoRoute({ query, locale, persona, sources, leads, embed = false }: Props) {
   const c = noRouteCopy[locale];
   const day = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(locale === "es" ? "es-MX" : "en-US", { day: "numeric", month: "short", year: "numeric" }) : null);
-  const homeHref = `/atlas${locale === "es" ? "?l=es" : ""}`;
+  const homeHref = `/atlas?${new URLSearchParams({ ...(locale === "es" ? { l: "es" } : {}), ...(embed ? { embed: "1" } : {}) }).toString()}`.replace(/\?$/, "");
   return (
     <div className="min-h-dvh bg-[radial-gradient(ellipse_at_20%_0%,var(--paper)_0%,var(--brand-mist)_60%,var(--brand-soft)_100%)] text-ink">
-      <header className="mx-auto flex h-16 max-w-3xl items-center px-4 sm:px-6">
-        <Link href={homeHref} className="rounded-lg" aria-label={locale === "es" ? "Inicio de Nedamex" : "Nedamex home"}><Logo size="sm" /></Link>
-      </header>
+      <EmbedHidden embed={embed}>
+        <header className="mx-auto flex h-16 max-w-3xl items-center px-4 sm:px-6">
+          <Link href={homeHref} className="rounded-lg" aria-label={locale === "es" ? "Inicio de Nedamex" : "Nedamex home"}><Logo size="sm" /></Link>
+        </header>
+      </EmbedHidden>
       <main className="mx-auto max-w-3xl px-4 pb-12 sm:px-6">
         <section className="rounded-[var(--radius)] border border-dashed border-amber/50 bg-paper p-5 shadow-[var(--shadow-soft)] sm:p-7" aria-labelledby="noroute-title">
           <div className="flex items-start gap-3">

@@ -11,7 +11,7 @@ Nedamex is an evidence graph for rare diseases. OpenAI does the three jobs the c
 Code: `src/lib/ai/` (client, explain, reconcile, extract, draft/verify), `src/lib/agents/` (persona prompts), `src/lib/verifier.ts`, UI in `src/components/ai/`.
 
 ## The client
-`src/lib/ai/client.ts` — Responses API with **Structured Outputs** (`json_schema`, `strict: true`). Schemas are written in zod, converted to JSON Schema, and the reply is validated again with zod. 30 s timeout (45 s for extraction), one retry, temperature 0.2 on non-reasoning models. On any failure — no key, timeout, API error, schema mismatch — the caller gets `mode: "deterministic"` and uses its fallback. Prompts, outputs and keys are never logged; only the failure class is.
+`src/lib/ai/client.ts` — defaults to **gpt-4o-mini** for every call (`OPENAI_MODEL`, `OPENAI_MODEL_FAST`); Responses API with **Structured Outputs** (`json_schema`, `strict: true`). Schemas are written in zod, converted to JSON Schema, and the reply is validated again with zod. 30 s timeout (45 s for extraction), one retry, temperature 0.2 on non-reasoning models. On any failure — no key, timeout, API error, schema mismatch — the caller gets `mode: "deterministic"` and uses its fallback. Prompts, outputs and keys are never logged; only the failure class is.
 
 Untrusted text (a user's question, a paper's abstract) is fenced in `<untrusted>` blocks and the system prompt says it is data, never instructions.
 
@@ -34,7 +34,9 @@ Deterministic tiers first: canonical id → exact name → alias (e.g. *SMEI →
 - every entity mention to appear in the text;
 - every quote to be a verbatim span of the abstract (after normalizing PubMed typography such as U+2010 hyphens);
 - the quote to be about the claim (one side named in it, the other in it or in the title);
-- relation and entity types to match the graph (e.g. `causes` = gene/variant → disease; reversed pairs are flipped).
+- relation and entity types to match the graph (e.g. `causes` = gene/variant → disease; reversed pairs are flipped);
+- **no `treats`**: a treatment finding is `studied_for` with a qualifier decided from the quote (`reported_response` for "some patients responded" / case reports, `clinical_trial`, `preclinical`, `proposed`, `approved_indication` only if the quote says approved). These are shown in the drawer as questions for an expert and are never drawn as graph edges (QA-31).
+- names the model skipped are added from the atlas names and aliases (e.g. "Munc18-1" → STXBP1), and a short disease name borrows the fuller resolved name in the same quote (QA-42).
 
 Every entity is reconciled to the atlas. Only OpenAI-mode results are saved (Supabase RPC `save_extraction`); the loader draws them as **dotted "AI-extracted · needs expert review"** edges, never as observed facts. The dictionary fallback is shown but never saved.
 
@@ -69,6 +71,7 @@ curl -s localhost:3000/api/reconcile -H 'content-type: application/json' \
   -d '{"names":["SMEI","Munc18-1","Pompe illness","infantile Batten"]}'
 curl -s localhost:3000/api/extract -H 'content-type: application/json' -d '{"pmid":"42182245","save":false}'
 npm run extract -- --limit 40          # idempotent by PMID; demo-route papers first
+npm run extract -- --supersede-treats  # re-extract papers whose latest row still says "treats" (latest per PMID wins)
 node .claude/qa/redteam.mjs http://localhost:3000
 npm test                               # mocked OpenAI: happy path, fallback, uncited dropped, injection
 ```

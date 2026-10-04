@@ -1,77 +1,117 @@
 /**
- * Server-side: a small, real neighbourhood of one disease from the atlas snapshot, laid out
- * deterministically in 3D for the landing preview (no physics on the client). Pure function.
+ * Server-side: a real slice of one disease's neighbourhood from the atlas snapshot, laid out ONCE as an ordered
+ * radial diagram (WAVE 5B "same radial, ordered layout"): no physics, no drift.
+ *   centre  = the disease
+ *   ring 1  = its gene + the pathways that gene takes part in (mechanism), left
+ *   ring 2  = neighbour diseases Nedamex infers (dashed), right, ordered by strength (Strong / Possible / Weak lead)
+ *   ring 3  = labelled sectors: Studies & assets (top) · People (upper left) · Symptoms (bottom) · Treatments (top right)
+ * Coordinates are in a plane (x right, y up) with a little z per ring for depth in 3D. Pure function.
  */
-import type { Edge, EdgeKind, Entity, EntityType } from "@/lib/atlas/types";
+import { strengthOf, type Strength } from "@/components/atlas/evidence";
+import type { AtlasSnapshot, Edge, EdgeKind, Entity, EntityType } from "@/lib/atlas/types";
 
-export interface PreviewNode { id: string; type: EntityType; name: string; pos: [number, number, number]; size: number; center?: boolean }
+export type SectorKey = "mechanism" | "similar" | "studies" | "people" | "symptoms" | "treatments";
+export interface PreviewNode {
+  id: string; type: EntityType; name: string; /** short real label (alias) for the diagram */ label: string; pos: [number, number, number]; size: number;
+  ring: 0 | 1 | 2 | 3; sector?: SectorKey; center?: boolean; strength?: Strength; angle: number;
+}
 export interface PreviewEdge { id: string; from: string; to: string; kind: EdgeKind; relation: string }
-export interface Neighborhood { center: string; centerName: string; nodes: PreviewNode[]; edges: PreviewEdge[] }
+export interface PreviewSector { key: SectorKey; title: string; pos: [number, number, number]; angle: number; count: number }
+export interface Neighborhood { center: string; centerName: string; nodes: PreviewNode[]; edges: PreviewEdge[]; sectors: PreviewSector[] }
 
-interface Index { byId: Map<string, Entity>; out: Map<string, Edge[]>; in: Map<string, Edge[]> }
+interface Index { snap: AtlasSnapshot; byId: Map<string, Entity>; out: Map<string, Edge[]>; in: Map<string, Edge[]> }
 
-type V = [number, number, number];
-const norm = (v: V): V => { const l = Math.hypot(...v) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
-const add = (a: V, b: V, k = 1): V => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
-const cross = (a: V, b: V): V => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+export const RING_R = [0, 1.45, 2.6, 3.6] as const;
+const RING_Z = [0.25, 0.15, 0.05, -0.1] as const;
+const deg = (d: number) => (d * Math.PI) / 180;
+const at = (r: number, a: number, z: number): [number, number, number] => [r * Math.cos(deg(a)), r * Math.sin(deg(a)), z];
+/** n angles evenly spread across [from, to] (centred when n = 1). */
+const spread = (n: number, from: number, to: number) => (n <= 1 ? [(from + to) / 2] : Array.from({ length: n }, (_, i) => from + ((to - from) * i) / (n - 1)));
 
-/** n points fanned around `dir` (unit), `spread` = offset size on the tangent plane. */
-function fan(dir: V, n: number, spread: number, twist = 0): V[] {
-  const d = norm(dir);
-  const u = norm(cross(d, Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
-  const w = cross(d, u);
-  if (n === 1) return [d];
-  return Array.from({ length: n }, (_, k) => {
-    const a = twist + (Math.PI * 2 * k) / n;
-    return norm(add(add(d, u, Math.cos(a) * spread), w, Math.sin(a) * spread));
-  });
+/** A short, real label: the name if short, else an English alias ("STXBP1 encephalopathy", "KCNQ2-DEE", "EIMFS"), else a clipped name. */
+export function shortLabel(e: Entity, max = 30): string {
+  if (e.name.length <= max) return e.name;
+  const en = e.aliases.filter((a) => a.lang !== "es" && a.alias.length >= 3 && a.alias.length <= 24 && a.alias !== e.name).map((a) => a.alias);
+  const pick = en.find((a) => /-DEE$/.test(a)) ?? en.find((a) => /encephalopathy|syndrome|disease|epilepsy/i.test(a) && /[A-Z0-9]{3,}/.test(a)) ?? en.find((a) => /^[A-Z0-9-]{3,10}$/.test(a) && !/^[A-Z]+[0-9]+$/.test(a));
+  return pick ?? `${e.name.slice(0, max - 1)}…`;
 }
 
-// Group directions + distances (three.js space, y up, camera on +z).
-const GROUPS: { key: string; type: EntityType; relation: string; max: number; dir: V; r: number; spread: number; size: number }[] = [
-  { key: "similar", type: "disease", relation: "similar_to", max: 4, dir: [1, 0.15, 0.1], r: 2.35, spread: 0.55, size: 0.27 },
-  { key: "trials", type: "trial", relation: "studies", max: 3, dir: [0.35, 0.95, -0.35], r: 2.0, spread: 0.42, size: 0.2 },
-  { key: "papers", type: "study", relation: "studies", max: 2, dir: [-0.35, 0.95, -0.45], r: 2.1, spread: 0.3, size: 0.19 },
-  { key: "orgs", type: "organization", relation: "supports", max: 3, dir: [0.35, -0.45, 0.9], r: 2.05, spread: 0.42, size: 0.22 },
-  { key: "phenotypes", type: "phenotype", relation: "has_phenotype", max: 4, dir: [-0.15, -1, 0.15], r: 1.95, spread: 0.5, size: 0.18 },
-  { key: "people", type: "investigator", relation: "researches", max: 2, dir: [0.8, 0.55, 0.55], r: 2.15, spread: 0.3, size: 0.19 },
-];
+const STRENGTH_RANK: Record<Strength, number> = { strong: 0, possible: 1, weak: 2 };
 
 export function neighborhood(idx: Index, center: string): Neighborhood | null {
   const c = idx.byId.get(center);
   if (!c) return null;
-  const touching = [...(idx.out.get(center) ?? []), ...(idx.in.get(center) ?? [])];
-  const other = (e: Edge) => (e.from === center ? e.to : e.from);
-  const nodes: PreviewNode[] = [{ id: c.id, type: c.type, name: c.name, pos: [0, 0, 0], size: 0.46, center: true }];
+  const edgesOf = (id: string) => [...(idx.out.get(id) ?? []), ...(idx.in.get(id) ?? [])];
+  const other = (e: Edge, id: string) => (e.from === id ? e.to : e.from);
+  const typeOf = (id: string) => idx.byId.get(id)?.type;
+  const touching = edgesOf(center);
+
+  const nodes: PreviewNode[] = [{ id: c.id, type: c.type, name: c.name, label: shortLabel(c, 34), pos: [0, 0, RING_Z[0]], size: 0.46, ring: 0, center: true, angle: 0 }];
   const edges: PreviewEdge[] = [];
   const seen = new Set([c.id]);
-  const push = (e: Edge, id: string, pos: V, size: number) => {
+  const add = (e: Edge, id: string, ring: 1 | 2 | 3, angle: number, size: number, sector: SectorKey, strength?: Strength) => {
     const ent = idx.byId.get(id);
-    if (!ent || seen.has(id)) return;
+    if (!ent || seen.has(id)) return false;
     seen.add(id);
-    nodes.push({ id, type: ent.type, name: ent.name, pos, size });
+    nodes.push({ id, type: ent.type, name: ent.name, label: shortLabel(ent, ring === 1 ? 26 : 28), pos: at(RING_R[ring], angle, RING_Z[ring]), size, ring, sector, strength, angle });
     edges.push({ id: e.id, from: e.from, to: e.to, kind: e.kind, relation: e.relation });
+    return true;
+  };
+  const byConfidence = (a: Edge, b: Edge) => b.confidence - a.confidence || a.id.localeCompare(b.id);
+  const sectors: PreviewSector[] = [];
+  // Headers sit where no node label goes: ring 3 just outside its arc; mechanism below-left of the gene; similar above its fan.
+  const sector = (key: SectorKey, title: string, ring: 1 | 2 | 3, angle: number, count: number) => {
+    if (count <= 0) return;
+    const [r, a] = ring === 3 ? [RING_R[3] + 0.8, angle] : ring === 2 ? [RING_R[2] + 0.55, 44] : [RING_R[1] + 0.75, 232];
+    sectors.push({ key, title, angle: a, count, pos: at(r, a, RING_Z[ring]) });
   };
 
-  // Gene (+ its pathways and a couple of variants, two hops) on the left.
-  const causes = touching.filter((e) => e.relation === "causes").sort((a, b) => b.confidence - a.confidence)[0];
+  // Ring 1 · mechanism: the gene (left) and the pathways it takes part in, either side of it.
+  const causes = touching.filter((e) => e.relation === "causes").sort(byConfidence)[0];
+  let ring1 = 0;
   if (causes) {
-    const geneId = other(causes);
-    const gpos: V = [-1.55, 0.35, 0.25];
-    push(causes, geneId, gpos, 0.32);
-    const gEdges = [...(idx.out.get(geneId) ?? []), ...(idx.in.get(geneId) ?? [])];
-    const pathways = gEdges.filter((e) => e.relation === "participates_in").sort((a, b) => b.confidence - a.confidence).slice(0, 3);
-    fan([-0.75, 0.75, -0.25], pathways.length, 0.6).forEach((d, i) => push(pathways[i], pathways[i].from === geneId ? pathways[i].to : pathways[i].from, add(gpos, d, 1.2), 0.21));
-    const variants = gEdges.filter((e) => e.relation === "has_variant").sort((a, b) => b.confidence - a.confidence).slice(0, 2);
-    fan([-0.7, -0.75, 0.35], variants.length, 0.45, 0.6).forEach((d, i) => push(variants[i], variants[i].from === geneId ? variants[i].to : variants[i].from, add(gpos, d, 1.05), 0.16));
+    const geneId = other(causes, center);
+    if (add(causes, geneId, 1, 180, 0.3, "mechanism")) ring1++;
+    const pathways = edgesOf(geneId).filter((e) => e.relation === "participates_in").sort(byConfidence).slice(0, 2);
+    pathways.forEach((e, i) => {
+      if (add(e, other(e, geneId), 1, i === 0 ? 155 : 205, 0.22, "mechanism")) ring1++;
+    });
   }
+  sector("mechanism", "Mechanism", 1, 180, ring1);
 
-  for (const g of GROUPS) {
-    const picks = touching
-      .filter((e) => e.relation === g.relation && idx.byId.get(other(e))?.type === g.type)
-      .sort((a, b) => b.confidence - a.confidence || a.id.localeCompare(b.id))
-      .slice(0, g.max);
-    fan(g.dir, picks.length, g.spread, 0.4).forEach((d, i) => push(picks[i], other(picks[i]), add([0, 0, 0], d, g.r), g.size));
-  }
-  return { center: c.id, centerName: c.name, nodes, edges };
+  // Ring 2 · similar diseases (inferred), strongest first, fanned on the right.
+  const similar = touching
+    .filter((e) => e.relation === "similar_to" && typeOf(other(e, center)) === "disease")
+    .map((e) => {
+      const sim = idx.snap.analytics?.similarity?.[e.id];
+      return { e, strength: sim ? strengthOf(sim) : ("weak" as Strength) };
+    })
+    .sort((a, b) => STRENGTH_RANK[a.strength] - STRENGTH_RANK[b.strength] || byConfidence(a.e, b.e))
+    .slice(0, 4);
+  spread(similar.length, 30, -30).forEach((a, i) => {
+    const { e, strength } = similar[i];
+    add(e, other(e, center), 2, a, strength === "strong" ? 0.3 : strength === "possible" ? 0.26 : 0.22, "similar", strength);
+  });
+  sector("similar", "Similar diseases", 2, 0, similar.length);
+
+  // Ring 3 · labelled sectors.
+  const pick = (pred: (e: Edge, t: EntityType | undefined) => boolean, n: number) =>
+    touching.filter((e) => pred(e, typeOf(other(e, center)))).sort(byConfidence).slice(0, n);
+  const studies = [...pick((e, t) => e.relation === "studies" && t === "trial", 3), ...pick((e, t) => e.relation === "studies" && t === "study", 1)];
+  const people = [...pick((e, t) => e.relation === "supports" && t === "organization", 2), ...pick((e, t) => e.relation === "researches" && t === "investigator", 1)];
+  const symptoms = pick((e, t) => e.relation === "has_phenotype" && t === "phenotype", 5);
+  const treatments = pick((e, t) => e.relation === "treats" && t === "treatment", 2);
+
+  const place = (list: Edge[], from: number, to: number, key: SectorKey, title: string, size: number) => {
+    const angles = spread(list.length, from, to);
+    let n = 0;
+    list.forEach((e, i) => { if (add(e, other(e, center), 3, angles[i], size, key)) n++; });
+    sector(key, title, 3, (from + to) / 2, n);
+  };
+  place(studies, 72, 108, "studies", "Studies & assets", 0.19);
+  place(people, 124, 146, "people", "People", 0.19);
+  place(symptoms, 236, 304, "symptoms", "Symptoms", 0.18);
+  place(treatments, 48, 58, "treatments", "Treatments", 0.19);
+
+  return { center: c.id, centerName: c.name, nodes, edges, sectors };
 }

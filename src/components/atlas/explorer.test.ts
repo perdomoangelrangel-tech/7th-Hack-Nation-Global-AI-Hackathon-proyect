@@ -86,3 +86,54 @@ describe("focus view keeps mechanisms", () => {
     expect(out.nodes.map((x) => x.id).sort()).toEqual(["A", "B", "mechanism:gof", "mechanism:lof"]);
   });
 });
+
+import { constellationLayout, routeLayout, RING, YSCALE } from "./radial";
+
+describe("route radial layout", () => {
+  const N = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, name: id, cluster: null, color: null, size: 8, ...extra }) as never;
+  const L = (id: string, source: string, target: string, relation: string) => ({ id, source, target, relation, kind: "observed" as const, confidence: 0.5 });
+  const phen = Array.from({ length: 12 }, (_, i) => N(`p${i}`, "phenotype", { props: { ic: i / 12 } }));
+  const view = {
+    focus: "F", clusters: [],
+    nodes: [N("F", "disease", { cluster: "c1" }), N("g", "gene"), N("m", "mechanism"), N("A", "disease", { cluster: "c2" }), N("B", "disease", { cluster: "c1" }), N("Z", "disease"), ...phen, N("t", "trial", { props: { asset_kind: "registry" } })],
+    links: [L("1", "g", "F", "causes"), L("2", "F", "m", "has_mechanism"), L("3", "F", "A", "similar_to"), L("4", "B", "F", "similar_to"), L("5", "t", "F", "studies"),
+      ...phen.map((p, i) => L(`ph${i}`, "F", (p as { id: string }).id, "has_phenotype"))],
+  };
+  const opts = { strength: { A: "strong" as const, B: "weak" as const }, expanded: new Set<never>(), layers: new Set(["mechanism", "symptoms", "studies", "people", "treatments"] as const),
+    strengthLabel: { strong: "Strong lead", possible: "Possible lead", weak: "Weak lead" }, sectorLabel: { symptoms: "Symptoms", studies: "Studies & assets", people: "People", treatments: "Treatments" },
+    moreLabel: (n: number) => `+${n} more`, fewerLabel: "show fewer", noneLabel: "none in our sources" };
+  type P = { id: string; ring?: number; fx: number; fy: number; name: string; header?: string };
+  const out = routeLayout(view as never, "F", opts as never);
+  const nodes = out.view.nodes as unknown as P[];
+  const at = (id: string) => nodes.find((n) => n.id === id)!;
+  const r = (n: P) => Math.round(Math.hypot(n.fx, n.fy / YSCALE));
+  it("puts the focus at the center and rings ≥ 140 apart", () => {
+    expect(r(at("F"))).toBe(0);
+    expect(r(at("g"))).toBe(RING[1]); expect(r(at("m"))).toBe(RING[1]);
+    expect(r(at("A"))).toBe(RING[2]);
+    expect(RING[2] - RING[1]).toBeGreaterThanOrEqual(140); expect(RING[3] - RING[2]).toBeGreaterThanOrEqual(140);
+  });
+  it("orders neighbours same-cluster first and labels their strength; hides unrelated diseases", () => {
+    expect(at("B").name).toBe("B · Weak lead"); expect(at("A").name).toBe("A · Strong lead");
+    expect(nodes.find((n) => n.id === "Z")).toBeUndefined();
+  });
+  it("shows the top 8 symptoms by information content with a +N more header", () => {
+    const shown = nodes.filter((n) => n.id.startsWith("p"));
+    expect(shown).toHaveLength(8); expect(shown.map((n) => n.id)).toContain("p11"); expect(shown.map((n) => n.id)).not.toContain("p0");
+    expect(at("sector:symptoms").name).toBe("Symptoms · +4 more");
+    expect(at("sector:treatments").name).toBe("Treatments · none in our sources");
+  });
+  it("expands a sector and respects layers", () => {
+    const o2 = routeLayout(view as never, "F", { ...opts, expanded: new Set(["symptoms"]), layers: new Set(["symptoms"]) } as never);
+    const n2 = o2.view.nodes as unknown as P[];
+    expect(n2.filter((n) => n.id.startsWith("p"))).toHaveLength(12);
+    expect(n2.find((n) => n.id === "m")).toBeUndefined();
+    expect(n2.find((n) => n.id === "sector:studies")).toBeUndefined();
+  });
+  it("constellation places every disease in its cluster region with a labelled header", () => {
+    const v = { focus: "", nodes: [N("a", "disease"), N("b", "disease"), N("c", "disease")], links: [], clusters: [{ id: "k1", label: "Lysosomal", color: "#000", diseases: ["a", "b"] }, { id: "k2", label: "Channels", color: "#111", diseases: ["c"] }] };
+    const o = constellationLayout(v as never); const ns = o.view.nodes as unknown as P[];
+    expect(ns.filter((n) => n.header === "region").map((n) => n.name).sort()).toEqual(["Channels", "Lysosomal"]);
+    expect(ns.filter((n) => !n.header)).toHaveLength(3);
+  });
+});

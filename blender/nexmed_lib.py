@@ -207,6 +207,39 @@ def triangles(objects):
 
 # ---------------------------------------------------------------- animation
 
+# Looping clips (WAVE 5 motion): seamless at the seam, constant angular velocity on spins.
+LOOP_TRACKS = {"Idle", "Listen", "Think", "Speak"}
+
+
+def action_fcurves(action):
+    """All F-curves of an action: legacy (<=4.x) and layered/slotted (5.x) APIs."""
+    legacy = getattr(action, "fcurves", None)
+    if legacy is not None and len(legacy):
+        return list(legacy)
+    out = []
+    for layer in getattr(action, "layers", []):
+        for strip in layer.strips:
+            for bag in getattr(strip, "channelbags", []):
+                out.extend(bag.fcurves)
+    return out
+
+
+def finish_action(action, track_name, linear=()):
+    """Spins (data paths in `linear`) get LINEAR keys = constant angular velocity; everything else smooth Bezier with
+    auto handles. Looping clips get a Cycles F-modifier on their periodic curves so auto handles are computed across
+    the seam (no ease-out/ease-in pause where the loop wraps). Callers guarantee first key = last key."""
+    loop = track_name in LOOP_TRACKS
+    for fc in action_fcurves(action):
+        spin = fc.data_path in linear
+        for kp in fc.keyframe_points:
+            kp.interpolation = "LINEAR" if spin else "BEZIER"
+            if not spin:
+                kp.handle_left_type = kp.handle_right_type = "AUTO"
+        if loop and not spin and not any(m.type == "CYCLES" for m in fc.modifiers):
+            fc.modifiers.new("CYCLES")
+        fc.update()
+
+
 def push_scale_track(ob, track_name, keys):
     """keys: [(frame, scale_float)] -> an NLA track named `track_name` (merged by name on glTF export)."""
     ad = ob.animation_data_create()
@@ -217,6 +250,7 @@ def push_scale_track(ob, track_name, keys):
         ob.keyframe_insert(data_path="scale", frame=frame)
     act = ad.action
     act.name = f"{track_name}__{ob.name}"
+    finish_action(act, track_name)
     ad.action = None
     ob.scale = rest
     _register(track_name, ob, ["scale"])
@@ -227,8 +261,8 @@ def push_scale_track(ob, track_name, keys):
     return strip
 
 
-def push_track(ob, track_name, keyframes):
-    """Generic: keyframes = [(frame, {data_path: value, ...})]."""
+def push_track(ob, track_name, keyframes, linear=()):
+    """Generic: keyframes = [(frame, {data_path: value, ...})]. `linear`: data paths that must keep constant speed."""
     ad = ob.animation_data_create()
     ad.action = None
     rest = {"location": ob.location.copy(), "rotation_euler": ob.rotation_euler.copy(), "scale": ob.scale.copy()}
@@ -238,10 +272,11 @@ def push_track(ob, track_name, keyframes):
             ob.keyframe_insert(data_path=path, frame=frame)
     act = ad.action
     act.name = f"{track_name}__{ob.name}"
+    finish_action(act, track_name, linear)
     ad.action = None
     for path, val in rest.items():
         setattr(ob, path, val)
-    _register(track_name, ob, {p for _, values in keyframes for p in values})
+    _register(track_name, ob, {p for _, values in keyframes for p in values}, linear)
     track = ad.nla_tracks.new()
     track.name = track_name
     strip = track.strips.new(track_name, int(keyframes[0][0]), act)
@@ -349,7 +384,7 @@ def export_glb(filepath, objects, animations=True, compression="draco"):
         export_animations=animations,
     )
     if animations:
-        kwargs.update(export_animation_mode="NLA_TRACKS", export_force_sampling=True, export_optimize_animation_size=True)
+        kwargs.update(export_animation_mode="NLA_TRACKS", export_force_sampling=True, export_optimize_animation_size=True, export_anim_slide_to_zero=True)
     if compression == "draco":
         kwargs.update(
             export_draco_mesh_compression_enable=True,
@@ -376,11 +411,13 @@ def rng(seed):
 # Blender's NLA-track export bakes the rest pose at the current frame (where "Appear"/"Intro" scale everything to 0)
 # and adds constant channels for paths a clip never keyed. We record what we keyed + the true rest pose and patch the GLB.
 ANIM_KEEP = {}
+SPINS = set()  # (track, object, gltf path) keyed with constant speed
 _PATH = {"location": "translation", "rotation_euler": "rotation", "scale": "scale"}
 
 
-def _register(track_name, ob, data_paths):
+def _register(track_name, ob, data_paths, linear=()):
     ANIM_KEEP.setdefault(track_name, set()).update((ob.name, _PATH[p]) for p in data_paths)
+    SPINS.update((track_name, ob.name, _PATH[p]) for p in linear)
 
 
 def snapshot_rest(objects):
@@ -434,13 +471,47 @@ def patch_glb(filepath, rest, keep=None):
             ch["sampler"] = len(samplers) - 1
             channels.append(ch)
         anim["channels"], anim["samplers"] = channels, samplers
+    # Seam repair for looping clips: in nested hierarchies the NLA export bakes the FIRST sample before the parent
+    # layers are evaluated (scale 0 / identity), which snaps once per loop in three.js. Every later sample is right.
+    # Periodic channels: first = last (first key = last key by construction). Spins: extrapolate back one step.
+    binbuf = bytearray(rest_bin)
+    bin_data = 8  # rest_bin = [chunk length, chunk type] + data
+    repaired = 0
+    for anim in gltf.get("animations", []):
+        if anim.get("name") not in LOOP_TRACKS:
+            continue
+        for ch in anim["channels"]:
+            smp = anim["samplers"][ch["sampler"]]
+            acc = gltf["accessors"][smp["output"]]
+            n = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[acc["type"]]
+            bv = gltf["bufferViews"][acc["bufferView"]]
+            off = bin_data + bv.get("byteOffset", 0) + acc.get("byteOffset", 0)
+            cnt = acc["count"]
+            if cnt < 3:
+                continue
+            row = lambda k: list(struct.unpack_from(f"<{n}f", binbuf, off + k * n * 4))  # noqa: E731
+            r0, r1, r2, rl = row(0), row(1), row(2), row(cnt - 1)
+            name = gltf["nodes"][ch["target"]["node"]].get("name")
+            if (anim["name"], name, ch["target"]["path"]) in SPINS:
+                if n == 4 and sum(a * b for a, b in zip(r1, r2)) < 0:
+                    r2 = [-v for v in r2]
+                new0 = [2 * a - b for a, b in zip(r1, r2)]
+                if n == 4:
+                    norm = math.sqrt(sum(v * v for v in new0)) or 1.0
+                    new0 = [v / norm for v in new0]
+            else:
+                new0 = rl
+            if max(abs(a - b) for a, b in zip(new0, r0)) > 1e-5:
+                struct.pack_into(f"<{n}f", binbuf, off, *new0)
+                repaired += 1
+    rest_bin = bytes(binbuf)
     blob = json.dumps(gltf, separators=(",", ":")).encode()
     blob += b" " * ((4 - len(blob) % 4) % 4)
     out = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(blob) + len(rest_bin)) + struct.pack("<II", len(blob), json_type) + blob + rest_bin
     with open(filepath, "wb") as fh:
         fh.write(out)
     summary = {a["name"]: len(a["channels"]) for a in gltf.get("animations", [])}
-    print(f"[nexmed] patched {os.path.basename(filepath)}: rest pose for {len(rest)} nodes, dropped {dropped} baked channels, clips {summary}")
+    print(f"[nexmed] patched {os.path.basename(filepath)}: rest pose for {len(rest)} nodes, dropped {dropped} baked channels, repaired {repaired} loop seams, clips {summary}")
 
 
 def fade_shadow(png_path, cx=0.5, cy=0.2, rx=0.46, ry=0.2, strength=0.9):

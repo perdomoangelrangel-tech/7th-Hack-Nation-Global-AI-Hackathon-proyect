@@ -154,4 +154,6 @@ export interface AtlasSnapshot {
   analytics: Analytics | null;
   /** Community drafts (kind "proposed" overlay). Absent in the bundled file snapshot. */
   proposals?: Proposal[];
+  /** Where the observed graph came from: live Supabase, the bundled file, or the file plus live overlays (extractions + proposals). */
+  origin?: "supabase" | "file" | "file+live-overlays";
 }

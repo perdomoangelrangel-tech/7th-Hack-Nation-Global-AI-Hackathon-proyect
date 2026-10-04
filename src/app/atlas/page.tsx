@@ -6,7 +6,7 @@ import { NoRoute, type Lead } from "@/components/home/NoRoute";
 import { Tour } from "@/components/home/Tour";
 import { atlasHref } from "@/components/home/memory";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
-import { atlas, loadAtlas, search, stats } from "@/lib/atlas/store";
+import { atlas, loadAtlas, nameOf, search, stats } from "@/lib/atlas/store";
 import type { Locale } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -23,19 +23,20 @@ export default async function AtlasPage({ searchParams }: { searchParams: Promis
   const initialLocale: Locale = one("l") === "es" ? "es" : "en";
   const d = one("d");
   const p = one("p");
+  const embed = one("embed") === "1";
   // S7: /atlas?q=<text> — a match opens its route; nothing → the honest "no supported route" page.
   const q = one("q")?.trim().slice(0, 120);
   if (q && !d) {
     const persona: PersonaId = p && p in PERSONAS ? (p as PersonaId) : "maria";
     const hit = search(q, initialLocale, 1).find((h) => h.disease);
     if (hit?.disease) redirect(atlasHref({ p: persona, d: hit.disease, l: initialLocale }));
-    return <NoRoute query={q} locale={initialLocale} persona={persona} sources={noRouteSources()} leads={closestLeads(q, initialLocale)} />;
+    return <NoRoute query={q} locale={initialLocale} persona={persona} embed={embed} sources={noRouteSources()} leads={closestLeads(q, initialLocale)} />;
   }
   // S0 Home: no disease and no role yet → "Who are you?" (UX_WAVE4 §2 S0). Any of them → the atlas.
   if (!d && !p) {
     const s = stats();
-    const diseaseNames = Object.fromEntries(atlas().snap.entities.filter((x) => x.type === "disease").map((x) => [x.id, x.name]));
-    return <Home initialLocale={initialLocale} stats={{ diseases: s.diseases, sources: s.sources }} maria={MARIA} diseaseNames={diseaseNames} />;
+    const diseaseNames = Object.fromEntries(atlas().snap.entities.filter((x) => x.type === "disease").map((x) => [x.id, nameOf(x, initialLocale)]));
+    return <Home initialLocale={initialLocale} stats={{ diseases: s.diseases, sources: s.sources }} maria={MARIA} diseaseNames={diseaseNames} embed={embed} />;
   }
   const initialDisease = d && atlas().byId.get(d)?.type === "disease" ? d : null;
   const initialPersona: PersonaId = p && p in PERSONAS ? (p as PersonaId) : "maria";

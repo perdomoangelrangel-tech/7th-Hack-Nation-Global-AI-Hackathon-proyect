@@ -33,7 +33,7 @@ export const CANVAS = {
   ink: "#0e2c47",           // --brand-ink (labels, focus ring)
   labelBg: "rgba(255,255,255,0.9)",
   bridge: "#d0603f",        // cross-cluster bridges
-  dimAlpha: 0.14,
+  dimAlpha: 0.4,
   fallbackDisease: "#3a86bf",
 };
 

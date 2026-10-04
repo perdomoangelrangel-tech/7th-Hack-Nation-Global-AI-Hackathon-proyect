@@ -12,8 +12,10 @@ export const site = {
   challenge: "Hack-Nation 7 · Challenge 05 · AI Atlas for Rare Diseases · Buffalo Initiative × OpenAI",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? (vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000"),
   github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect",
-  /** The Nedamex app (MVP). WAVE 4: same domain, /atlas on Vercel. Every website CTA lands here. */
+  /** Deep links into the atlas (mode cards, "Explore it"): programHref({ p, d }). Prod env = https://nedamex.lovable.app/atlas. */
   programUrl: (process.env.NEXT_PUBLIC_PROGRAM_URL ?? "/atlas").replace(/\/$/, ""),
+  /** WAVE 5B: "Open Nedamex" (nav, hero, how-to strip, footer) lands on the app home, where you pick your role. */
+  appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "https://nedamex.lovable.app").replace(/\/$/, "") || "/",
   /** Submission videos: real URLs from env; until then the storyboard drafts in public/videos (shown with a "Draft" label). */
   videos: {
     pitch: process.env.NEXT_PUBLIC_VIDEO_PITCH ?? process.env.NEXT_PUBLIC_VIDEO_TEAM ?? "",

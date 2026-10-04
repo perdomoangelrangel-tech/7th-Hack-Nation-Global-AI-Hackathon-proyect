@@ -12,22 +12,41 @@ Nedamex is an evidence knowledge graph of rare diseases — diseases, genes and 
 
 | Deliverable | URL |
 | --- | --- |
-| Website (story, videos, how it works) | https://nedamex.vercel.app |
-| The Nedamex app (atlas, route, evidence, voice) | https://nedamex.vercel.app/atlas |
-| Nedamex on Lovable (home + embedded atlas + research page) | https://nedamex.lovable.app |
+| **Website** — the story, videos and how it works | https://nedamex.vercel.app |
+| **Nedamex platform** (Lovable) — pick your role, search, then the atlas | https://nedamex.lovable.app |
+| Medicines bank | https://nedamex.lovable.app/medicines |
+| Community (for researchers & clinicians) | https://nedamex.lovable.app/community |
+| The atlas engine (also runs standalone) | https://nedamex.vercel.app/atlas |
 | Maria's demo route (STXBP1-DEE, family mode) | https://nedamex.vercel.app/atlas?p=maria&d=disease:ORPHA:599373 |
+
+The flow is **website → "Open Nedamex" → platform home (who are you?) → your route in the atlas**. The Lovable platform embeds the same atlas engine (`?embed=1`) and reads the same Supabase graph, so both deliverables show one atlas.
 
 Videos: pitch · demo · functionality — `[links added when recorded]`.
 
+## How to use it
+
+1. **Pick your role** — Patient or caregiver · Family & patient group · Researcher · Pharma & biotech. You can change it anytime.
+2. **Search your disease** — by name, synonym, gene, symptom or mechanism ("Munc18-1" → STXBP1, "lysosomal storage" → its cluster), or browse all diseases.
+3. **Follow your route** — four questions, one at a time, each lighting up the part of the map that explains it.
+4. **Tap any line for its evidence** — source and external id, relationship, kind, confidence and any contradicting evidence; *Explain in plain words* rewrites it with OpenAI, still cited.
+
 ## What it does
 
-- **Evidence graph.** 21 monogenic diseases across 5 mechanism clusters: 5,933 edges backed by 6,846 evidence rows from 10 open sources (live numbers: [`/api/atlas/stats`](https://nedamex.vercel.app/api/atlas/stats)). An edge without evidence cannot exist (Postgres trigger + loader filter).
+- **Evidence graph.** 21 monogenic diseases across 5 mechanism clusters: 6,018 edges backed by 6,931 evidence rows from 11 sources, including 69 AI-extracted links that need expert review (at submission time; live numbers: [`/api/atlas/stats`](https://nedamex.vercel.app/api/atlas/stats)). An edge without evidence cannot exist (Postgres trigger + loader filter).
 - **Four kinds of link, always visible.** `observed` (a source states it · solid line) · `inferred` (Nedamex analysis · dashed, "needs expert review") · `extracted` (OpenAI pulled it from a cited paper · dotted, "needs expert review") · `proposed` (community draft · ghost, never evidence).
 - **Mechanism clusters, not name lists.** Louvain communities over phenotype information content, Reactome pathways and shared genes; each cluster is named by its dominant mechanism with the basis shown. Counterexamples ("same symptoms, different mechanism") are first-class.
 - **A route, not a map.** Four questions answered only from the graph, each with its evidence one click away: who shares our disease characteristics → what useful work already exists → who could help → what we should do together next. Steps are labelled *Strong / Possible / Weak lead* and step 4 is a recommendation, never "observed".
 - **Four modes.** Patient or caregiver · Family & patient group · Researcher · Pharma & biotech — same graph, different order and depth (plain-language cards, research tabs, a cluster table ranked by unmet need).
 - **Co-creation.** Propose a hypothesis, a collaboration or missing evidence; drafts appear as ghost lines and never count as evidence.
 - **The 10× route.** Typical vs Nedamex route to a shared natural-history study, every duration labelled as an assumption.
+
+## Medicines bank
+
+A searchable list of the medicines linked to the diseases in the atlas (Supabase view `medicines_public`, built from Open Targets known-drug evidence and ChEMBL ids). For each medicine: mechanism and targets, the indications it is linked to, its highest clinical stage and the **source link** behind every statement. Links are taken only from source API responses, never guessed. Nedamex shows what the sources say about a medicine; whether it fits a person is a decision for their clinician. **No doses, no efficacy claims, no recommendations.**
+
+## Community
+
+For the **Researcher & clinician** role only. Researcher profiles come from NIH RePORTER principal investigators already linked to diseases in the atlas (Supabase view `community_profiles_public`), each with the funded project as its source. Researchers can add their own profile or start a research project through the `submit_profile` RPC — explicit consent required; self-submitted profiles are stored separately (`profile_submissions`), labelled **"not verified · not evidence"**, and never change the graph.
 
 ## Architecture
 
@@ -95,6 +114,14 @@ Checks: `npm run typecheck && npm run lint && npm test && npm run build`.
 5. **AI extraction (optional).** With `OPENAI_API_KEY`: `npm run extract -- --limit 40` extracts claims from the PubMed papers in the graph (idempotent by PMID) and saves them with `save_extraction`.
 
 Integrity checks: `.claude/qa/integrity.sql` (every `expect = 0` row must be 0).
+
+**Sources & coverage:** [`GET /api/atlas/sources`](https://nedamex.vercel.app/api/atlas/sources) lists every source with its license, last read and edge / evidence counts per kind (observed · inferred · extracted).
+
+### Add a disease or a source
+
+- **A disease:** put its ORPHA code in `supabase/seed/diseases.json` and verify it (`npx tsx scripts/resolve-seed.ts` — never guess an id), regenerate the Edge Function seed (`npx tsx scripts/build-edge-seed.ts`) and deploy `ingest`, run the ingest for it (`select private.invoke_ingest('ORPHA:<code>','all')` via pg_net, or the `ingest` GitHub workflow), then `npm run snapshot`. Clusters, similarity and the route are recomputed automatically. Step by step: [`docs/ADD_A_DISEASE.md`](docs/ADD_A_DISEASE.md).
+- **A source:** add a module under `supabase/functions/ingest/sources/` (and `scripts/ingest/sources/` for the local pipeline) that writes entities, edges and evidence rows with `source`, `external_id`, `url` and `retrieved_at`; register the source id in a new migration.
+- **From the platform:** on https://nedamex.lovable.app anyone can *Request a disease* or *Suggest a data source*; requests are stored as community drafts and never count as evidence.
 
 ## Data and licenses
 
