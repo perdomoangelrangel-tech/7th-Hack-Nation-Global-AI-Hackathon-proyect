@@ -52,11 +52,18 @@ export function atlas(): Index {
  * Loads the live graph from Supabase (see ./source.ts) with a 5-minute cache; falls back to the file.
  */
 export async function loadAtlas(): Promise<Index> {
-  if (cache?.source === "supabase" && Date.now() - loadedAt < TTL_MS) return cache;
-  const live = await loadFromSupabase().catch((e) => { console.error("[atlas] supabase load failed:", (e as Error).message); return null; });
-  if (live && live.entities.length) { cache = buildIndex(live, "supabase"); loadedAt = Date.now(); return cache; }
-  return atlas();
+  // The decision (live or file fallback) is cached for the TTL either way, and concurrent requests share one load:
+  // a failed / incomplete live read must not be retried on every request (QA-18).
+  if (Date.now() - loadedAt < TTL_MS && cache) return cache;
+  inflight ??= (async () => {
+    const live = await loadFromSupabase().catch((e) => { console.error("[atlas] supabase load failed:", (e as Error).message); return null; });
+    loadedAt = Date.now();
+    if (live && live.entities.length) cache = buildIndex(live, "supabase");
+    return live && live.entities.length ? cache! : atlas();
+  })().finally(() => { inflight = null; });
+  return inflight;
 }
+let inflight: Promise<Index> | null = null;
 
 export const atlasSource = () => (cache ? cache.source : "file");
 

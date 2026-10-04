@@ -22,7 +22,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   const missing = (what: string) => NextResponse.json({ error: `${what} not found` }, { status: 404 });
 
   switch (view) {
-    case "search": return ok({ hits: search(sp.get("q") ?? "", l) });
+    case "search": {
+      const q = sp.get("q") ?? "";
+      const hits = search(q, l);
+      if (hits.length || q.trim().length < 3) return ok({ hits });
+      return ok({ hits: await reconciled(q, l, req.nextUrl.origin) });
+    }
     case "graph": { const g = graphView(d, l); return g ? ok(g) : missing("disease"); }
     case "journey": { const j = journey(d, l); return j ? ok(j) : missing("disease"); }
     case "edge": { const e = edgeDetail(sp.get("id") ?? "", l); return e ? ok(e) : missing("edge"); }
@@ -31,4 +36,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     case "stats": return ok(stats());
     default: return NextResponse.json({ error: `unknown view ${view}` }, { status: 404 });
   }
+}
+
+/**
+ * Nothing matched locally: ask the ai lane's /api/reconcile (server-side, so a missing route is silent in the browser)
+ * and keep only matches that resolve to an atlas entity. Labeled `reconciled` in the UI ("closest match").
+ */
+async function reconciled(q: string, l: Locale, origin: string) {
+  try {
+    const r = await fetch(`${origin}/api/reconcile`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ names: [q.trim()] }), signal: AbortSignal.timeout(4000) });
+    if (!r.ok) return [];
+    const j = (await r.json()) as { matches?: { entity_id: string | null; label?: string }[] };
+    return (j.matches ?? []).flatMap((m) => {
+      if (!m.entity_id || !m.label) return [];
+      const hit = search(m.label, l, 30).find((h) => h.id === m.entity_id);
+      return hit ? [{ ...hit, matched: q.trim(), via_synonym: true, reconciled: true }] : [];
+    });
+  } catch { return []; }
 }

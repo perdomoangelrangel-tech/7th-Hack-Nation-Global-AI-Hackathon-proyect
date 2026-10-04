@@ -1,23 +1,24 @@
 "use client";
 /**
- * <ExplainButton edgeIds persona locale simple? onHighlight? />
+ * <ExplainButton edgeIds persona locale simple? onHighlight? apiBase? />
  * "Explain in plain words": calls POST /api/explain and shows verified, cited sentences.
  * Each sentence shows its kind (observed / inferred / AI-extracted) and lights its edges on hover/focus.
- * `simple` defaults to the user's "simple language" preference.
+ * `simple` defaults to the user's "simple language" preference. Portable: no Next-only imports;
+ * `apiBase` = API origin when mounted outside the Next app (e.g. the Lovable program → the Vercel URL).
  */
 import { useState } from "react";
-import type { PersonaId } from "@/lib/agents/profiles";
 import { usePrefs } from "@/lib/prefs";
-import type { ExplainResponse } from "@/lib/ai/explain";
+import { apiUrl, type ExplainResponse, type PersonaKey } from "@/lib/ai/contract";
 
 type Props = {
   edgeIds: string[];
-  persona: PersonaId;
+  persona: PersonaKey;
   locale: "en" | "es";
   simple?: boolean;
   /** Called with the edge ids of the sentence under the pointer / focus (null on leave). */
   onHighlight?: (edgeIds: string[] | null) => void;
   className?: string;
+  apiBase?: string;
 };
 
 const T = {
@@ -31,7 +32,7 @@ const KIND_STYLE: Record<string, string> = {
   gap: "border-amber",
 };
 
-export function ExplainButton({ edgeIds, persona, locale, simple, onHighlight, className = "" }: Props) {
+export function ExplainButton({ edgeIds, persona, locale, simple, onHighlight, className = "", apiBase }: Props) {
   const prefs = usePrefs();
   const t = T[locale];
   const [state, setState] = useState<{ status: "idle" | "loading" | "error" } | { status: "done"; data: ExplainResponse }>({ status: "idle" });
@@ -40,7 +41,7 @@ export function ExplainButton({ edgeIds, persona, locale, simple, onHighlight, c
   async function run() {
     setState({ status: "loading" });
     try {
-      const r = await fetch("/api/explain", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ edgeIds, persona, locale, simple: useSimple }) });
+      const r = await fetch(apiUrl(apiBase, "/api/explain"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ edgeIds, persona, locale, simple: useSimple }) });
       if (!r.ok) throw new Error(String(r.status));
       setState({ status: "done", data: (await r.json()) as ExplainResponse });
     } catch {

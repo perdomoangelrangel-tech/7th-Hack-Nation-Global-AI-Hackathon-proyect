@@ -27,6 +27,7 @@ import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
+import { api } from "./api";
 
 const Loading = () => <div className="absolute inset-0 grid place-items-center text-ink-3 text-sm" aria-busy>…</div>;
 const GraphCanvas = dynamic(() => import("./GraphCanvas"), { ssr: false, loading: Loading });
@@ -55,6 +56,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [hiddenKinds, setHiddenKinds] = useState<Set<string>>(EMPTY);
   const [loadError, setLoadError] = useState(false);
   const pendingNarration = useRef(false);
+  const panelRef = useRef<HTMLElement>(null);
+  const firstInspect = useRef(true);
   const n = useNarration();
   const { prefs, setPrefs } = usePrefs();
   const autoNarrate = prefs.autoRead;
@@ -77,7 +80,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   // Focused disease data (or the initial constellation). If the user just chose it, narration starts on arrival.
   useEffect(() => {
     const c = new AbortController();
-    const q = (p: string) => fetch(p, { signal: c.signal }).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); });
+    const q = (p: string) => fetch(api(p), { signal: c.signal }).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); });
     const fail = (e: unknown) => { if ((e as Error).name !== "AbortError") setLoadError(true); };
     if (!focus) { q(`/api/atlas/constellation?l=${locale}`).then((v) => { setView(v); setLoadError(false); }).catch(fail); return () => c.abort(); }
     Promise.all([q(`/api/atlas/graph?d=${encodeURIComponent(focus)}&l=${locale}`), q(`/api/atlas/journey?d=${encodeURIComponent(focus)}&l=${locale}`)])
@@ -95,7 +98,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   useEffect(() => {
     if (!focus) return;
     const c = new AbortController();
-    const load = () => fetch(`/api/proposals?d=${encodeURIComponent(focus)}`, { signal: c.signal })
+    const load = () => fetch(api(`/api/proposals?d=${encodeURIComponent(focus)}`), { signal: c.signal })
       .then((r) => (r.ok ? r.json() : [])).then((j) => setDrafts(parseDrafts(j))).catch(() => {});
     void load();
     // The action lane fires `nexmed:proposal` after a draft is saved: show it right away.
@@ -114,6 +117,12 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (inspect && !isDraftId(inspect)) u.searchParams.set("e", inspect); else u.searchParams.delete("e");
     window.history.replaceState(null, "", u.toString());
   }, [focus, persona, locale, inspect]);
+
+  // Small screens: the panel sits under the graph, so bring an opened edge into view (not on first load).
+  useEffect(() => {
+    if (firstInspect.current) { firstInspect.current = false; return; }
+    if (inspect && window.innerWidth < 1024) panelRef.current?.scrollIntoView({ behavior: prefs.reduceMotion ? "auto" : "smooth", block: "start" });
+  }, [inspect, prefs.reduceMotion]);
 
   const { stop: stopNarration } = n;
   const goTo = useCallback((d: string, narrate = autoNarrate) => {
@@ -251,14 +260,14 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         </details>
 
         {/* Right panel: the journey */}
-        <aside className="relative border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh]" aria-label={shownJourney?.disease.name ?? t.q1}>
+        <aside ref={panelRef} className="relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh]" aria-label={shownJourney?.disease.name ?? t.q1}>
           {/* Cross-lane mount points (voice lane, action lane). Keep them. */}
           <VoiceDock persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
           <CoCreate persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} edgeIds={inspect && !isDraftId(inspect) ? [inspect] : undefined} />
           <AnimatePresence mode="wait">
             {shownJourney ? (
               <motion.div key={shownJourney.disease.id + locale} className="lg:h-full" initial={{ opacity: 0, x: motionTokens.distance.md }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={springs.gentle}>
-                <JourneyPanel j={shownJourney} t={t} onInspect={setInspect} onHover={(nodes, edges) => setHover({ nodes, edges })} onFocusDisease={(d) => goTo(d)} />
+                <JourneyPanel j={shownJourney} t={t} persona={persona} locale={locale} onInspect={setInspect} onHover={(nodes, edges) => setHover({ nodes, edges })} onFocusDisease={(d) => goTo(d)} />
               </motion.div>
             ) : (
               <motion.div key="empty" className="p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -270,7 +279,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             )}
           </AnimatePresence>
           <AnimatePresence>
-            {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => setInspect(null)} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} />}
+            {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => setInspect(null)} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} persona={persona} onHighlight={(edges) => setHover({ nodes: [], edges: edges ?? [] })} />}
             {draft && <DraftInspector key={inspect!} draft={draft} t={t} onClose={() => setInspect(null)} />}
           </AnimatePresence>
         </aside>
