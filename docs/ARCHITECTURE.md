@@ -1,6 +1,6 @@
 # Architecture
 
-> **Nexmed** by **Nedamex** · Hack-Nation 7 · Challenge 05 — AI Atlas for Rare Diseases (OpenAI × Buffalo Initiative)
+> **Nedamex** · Hack-Nation 7 · Challenge 05 — AI Atlas for Rare Diseases (OpenAI × Buffalo Initiative)
 >
 > The rule that governs the whole system: **the AI knows nothing on its own. It can only say what the graph supports with a source and a date.**
 
@@ -63,7 +63,7 @@ flowchart TB
 1. HEAD count per table, then every 1,000-row page in parallel (PostgREST row cap, 3 s anon statement timeout) — ~1 s for the current graph.
 2. Map rows to the `AtlasSnapshot` contract (`src/lib/atlas/types.ts`): ids `${type}:${canonical_id}`, edges `edge:<uuid>` with their evidence, aliases, props; drop edges without evidence; keep only entities that take part in an edge.
 3. Saved extractions → `kind: "extracted"` edges (subject/object = `entity_ids[0..1]`, PubMed evidence row, `needs_review`); proposals → `snapshot.proposals` overlay.
-4. `withAnalytics()` in-process; `store.ts` caches the result for 5 minutes and falls back to `data/atlas.json` if Supabase is unreachable or (coverage guard) misses a disease the bundled snapshot has. `NEXMED_DATA_SOURCE=file|supabase` forces either.
+4. `withAnalytics()` in-process; `store.ts` caches the result for 5 minutes and falls back to `data/atlas.json` if Supabase is unreachable or (coverage guard) misses a disease the bundled snapshot has. `NEDAMEX_DATA_SOURCE=file|supabase` forces either.
 
 ### Analytics (`src/lib/atlas/analyze.ts`, pure and deterministic)
 
@@ -71,7 +71,7 @@ flowchart TB
 | --- | --- |
 | Phenotype IC | `-ln(n/N)/ln(N)` from HPO annotation counts; fallback: frequency of the term in the atlas diseases' phenotype closure (`ic_basis` says which) |
 | Disease similarity | `0.55 · simGIC phenotypes (confidence × IC, with HPO ancestors) + 0.35 · (0.7 Reactome pathway Jaccard + 0.3 top-level Jaccard) + 0.10 · shared gene` |
-| `similar_to` edges | top 3 per disease above 0.06, kind **inferred**, evidence = Nexmed analysis row + the observed evidence of the supporting edges |
+| `similar_to` edges | top 3 per disease above 0.06, kind **inferred**, evidence = Nedamex analysis row + the observed evidence of the supporting edges |
 | Clusters | Louvain (seeded) over the similarity graph; named after the most specific shared Reactome pathway, else the most informative shared phenotype; `label_basis` explains it with counts |
 | Variant effect | per disease (not per gene): ClinVar P/LP counts for the gene **and** the disease's ClinVar trait → truncating vs missense |
 | Bridges | investigators / organizations / trial sponsors linked to ≥ 2 diseases, flagged when they cross clusters |
@@ -101,7 +101,7 @@ The LLM answers in JSON `{ claims: [{ text, evidence_ids[] }] }`; `src/lib/verif
 | --- | --- | --- |
 | Postgres as the graph | Neo4j | one platform with RLS, RPCs, vector, cron; enough for millions of edges |
 | Analytics in-process, pure | SQL / stored analytics | deterministic, unit-tested, same code for the live graph and the offline snapshot |
-| Inferred / extracted / proposed kept apart from observed | one undifferentiated graph | a user always sees whether a source said it, Nexmed inferred it, an LLM extracted it or the community proposed it |
+| Inferred / extracted / proposed kept apart from observed | one undifferentiated graph | a user always sees whether a source said it, Nedamex inferred it, an LLM extracted it or the community proposed it |
 | Deterministic verifier | LLM-checks-LLM | reproducible, cheap, cannot hallucinate the check |
 | Ids verified against Orphadata / Monarch / HGNC before seeding | hand-typed ids | never invent an ORPHA / MONDO / HGNC id |
 

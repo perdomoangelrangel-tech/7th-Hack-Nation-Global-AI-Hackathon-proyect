@@ -5,6 +5,7 @@
  */
 import type { Edge } from "../atlas/types";
 import type { PersonaId } from "../agents/profiles";
+import { leadStrength } from "./build";
 import { ACTIVE_STATUSES, cite, inOf, nameOf, other, outOf, tr, type Cite, type GraphIndex, type Locale } from "./graph";
 
 export type ReasonCode = "shared_mechanism" | "works_on_ours" | "network_overlap" | "active_study" | "active_funding" | "patient_community";
@@ -58,9 +59,11 @@ export function matchPartners(g: GraphIndex, d: string, persona: PersonaId = "ma
     const onNb = diseases.filter((x) => simOf.has(x)).sort((a, b) => simOf.get(b)!.score - simOf.get(a)!.score);
     if (onNb.length) {
       const s = simOf.get(onNb[0])!;
-      const shared = A?.similarity[s.edge.id]?.shared_phenotypes.length ?? 0;
+      const sim = A?.similarity[s.edge.id];
+      const shared = sim?.shared_phenotypes.length ?? 0;
+      const strength = leadStrength({ pathways: sim?.shared_pathways ?? [], genes: sim?.shared_genes ?? [] }, sim?.shared_phenotypes ?? [], l).label;
       reasons.push({ code: "shared_mechanism", weight: WEIGHT.shared_mechanism * s.score * 5,
-        text: tr(l, `Works on ${name(onNb[0])}, which shares ${shared} symptoms with ${dn} (inferred, ${s.score.toFixed(2)}).`, `Trabaja en ${name(onNb[0])}, que comparte ${shared} síntomas con ${dn} (inferido, ${s.score.toFixed(2)}).`),
+        text: tr(l, `Works on ${name(onNb[0])}, which shares ${shared} symptoms with ${dn} (inferred · ${strength}).`, `Trabaja en ${name(onNb[0])}, que comparte ${shared} síntomas con ${dn} (inferido · ${strength}).`),
         edges: [s.edge.id, ...c.edges.filter((e) => e.to === onNb[0] || e.from === onNb[0]).map((e) => e.id)] });
     }
     const onOurs = c.edges.filter((e) => e.to === d);
@@ -98,7 +101,7 @@ function sourcesFor(g: GraphIndex, edgeIds: string[]) {
   for (const id of edgeIds) {
     const ev = g.edgeById.get(id)?.evidence[0];
     if (!ev || out.some((o) => o.url === ev.url)) continue;
-    const label = ev.source === "atlas_analysis" ? "Nexmed analysis — inferred similarity, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 70)}` : ""}`;
+    const label = ev.source === "atlas_analysis" ? "Nedamex analysis — inferred similarity, needs expert review" : `${ev.external_id}${ev.quote ? ` — ${ev.quote.slice(0, 70)}` : ""}`;
     out.push({ label, url: ev.url });
     if (out.length === 3) break;
   }

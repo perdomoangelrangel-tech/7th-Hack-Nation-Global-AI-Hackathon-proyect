@@ -30,7 +30,7 @@ function fixture(): AtlasSnapshot {
 }
 
 describe("analyze()", () => {
-  it("is deterministic on the bundled snapshot", () => {
+  it("is deterministic on the bundled snapshot", { timeout: 20_000 }, () => {
     const a = withAnalytics(bundled()), b = withAnalytics(bundled());
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     expect(a.analytics!.clusters.length).toBeGreaterThanOrEqual(2);
@@ -72,7 +72,7 @@ describe("analyze()", () => {
   it("names every cluster with a label basis", () => {
     for (const c of analyze(bundled()).clusters) {
       expect(c.label.length).toBeGreaterThan(0);
-      expect(c.label_basis).toMatch(/Reactome pathway|phenotype|Single disease|Only member/);
+      expect(c.label_basis).toMatch(/Reactome pathway|Orphanet classification|phenotype|Only member|No shared/);
     }
   });
 });

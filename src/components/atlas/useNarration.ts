@@ -3,7 +3,8 @@
  * Plays the verified narration claim by claim and exposes the current claim so the graph can
  * highlight its nodes/edges (contract used by AtlasApp: `current.nodes` / `current.edges`).
  * Voice: ElevenLabs persona voice via /api/speak, next claim prefetched; 503 → browser speech.
- * Speed follows usePrefs().voiceRate; voice choice follows the voice lane's prefs. OWNER: voice lane.
+ * Speed follows usePrefs().voiceRate, plain language follows prefs.simpleLanguage; voice choice follows the
+ * voice lane's prefs. OWNER: voice lane.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Narration } from "@/lib/atlas/narrate";
@@ -27,6 +28,8 @@ export function useNarration() {
   const ctx = useRef<{ persona: PersonaId; locale: Locale }>({ persona: "maria", locale: "en" });
   const rate = useRef(prefs.voiceRate);
   useEffect(() => { rate.current = prefs.voiceRate; }, [prefs.voiceRate]);
+  const simple = useRef(prefs.simpleLanguage);
+  useEffect(() => { simple.current = prefs.simpleLanguage; }, [prefs.simpleLanguage]);
 
   const fetchAudio = useCallback((n: Narration, i: number): Promise<string | null> => {
     if (i >= n.claims.length) return Promise.resolve(null);
@@ -76,7 +79,7 @@ export function useNarration() {
     ctx.current = { persona, locale };
     setState("loading"); setNarration(null);
     try {
-      const r = await fetch("/api/narrate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ disease, persona, locale }) });
+      const r = await fetch("/api/narrate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ disease, persona, locale, simple: simple.current }) });
       if (!r.ok) throw new Error(String(r.status));
       const n = (await r.json()) as Narration;
       if (run.current !== id) return;

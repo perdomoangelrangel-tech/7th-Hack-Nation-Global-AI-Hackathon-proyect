@@ -66,6 +66,8 @@ export async function opentargets(ctx: Ctx, d: SeedDisease) {
     ctx.sample("opentargets.raw", `${r.status} ${(await r.text()).slice(0, 7900)}`);
     return;
   }
+  // Verified as not indexed by Open Targets (scripts/resolve-seed.ts): a name search could attach another disease's drugs.
+  if (d.opentargets_indexed === false) { ctx.note(`opentargets: ${d.mondo} is not indexed by Open Targets; skipped (coverage gap)`); return; }
   const efo = await resolveDiseaseId(ctx, d);
   if (!efo) { ctx.note(`opentargets: no disease id for ${d.name}`); return; }
 

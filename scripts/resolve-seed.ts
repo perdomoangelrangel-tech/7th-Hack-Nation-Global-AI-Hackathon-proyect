@@ -46,7 +46,7 @@ const CANDIDATES: Candidate[] = [
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
-const UA = { "user-agent": "nexmed-resolve-seed/1.0 (+https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect)", accept: "application/json" };
+const UA = { "user-agent": "nedamex-resolve-seed/1.0 (+https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect)", accept: "application/json" };
 async function getJSON(url: string): Promise<Any> {
   for (let i = 0; i < 3; i++) {
     const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(20_000) }).catch(() => null);

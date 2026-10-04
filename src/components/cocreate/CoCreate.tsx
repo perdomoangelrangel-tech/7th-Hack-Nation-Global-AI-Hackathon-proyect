@@ -5,100 +5,70 @@
  * Proposals are DRAFTS: never evidence, always rendered dashed and labeled "community draft".
  * Saved through POST /api/proposals (Supabase RPC submit_proposal; in-memory "saved locally (demo)" fallback).
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { PencilLine } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
 import type { JourneyV2 } from "@/lib/journey/build";
 import { prefillDraft, type Draft } from "@/lib/journey/prefill";
-import { PROPOSAL_EVENT, type ProposalKind, type ProposalPublic, type ProposalSaved } from "@/lib/journey/proposals";
+import { PROPOSAL_EVENT, type ProposalSaved } from "@/lib/journey/proposals";
+import { COCREATE_EVENT, type CoCreateRequest } from "@/components/journey/events";
 import { isNoRoute, useJourney } from "@/components/journey/useJourney";
 import { KindBadge } from "@/components/journey/KindBadge";
 import { journeyCopy } from "@/components/journey/copy";
 import { motionTokens } from "@/lib/motion";
 import { coCopy } from "./copy";
-import { Partners } from "./Partners";
 
 export interface CoCreateProps { persona: PersonaId; locale: Locale; disease: string | null; diseaseName?: string; edgeIds?: string[] }
 
 export function CoCreate({ persona, locale, disease, diseaseName, edgeIds }: CoCreateProps) {
   const c = coCopy[locale];
-  const jc = journeyCopy[locale];
   const { data } = useJourney(disease, persona, locale);
   const j = data && !isNoRoute(data) ? data : null;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "warn" } | null>(null);
-  const [drafts, setDrafts] = useState<ProposalPublic[]>([]);
   const reduce = useReducedMotion();
 
-  const loadDrafts = useCallback((d: string, signal?: AbortSignal) =>
-    fetch(`/api/proposals?d=${encodeURIComponent(d)}`, { signal }).then((r) => r.json()).then((b: { proposals: ProposalPublic[] }) => setDrafts(b.proposals ?? [])).catch(() => {}), []);
+  // UX_WAVE4 S2/S4: co-create is no longer a strip above the route. This mount only hosts the dialog and the
+  // toast; the S4 card, step 3 partners and the evidence drawer open it with openCoCreate(kind, draft?).
+  const ctx = useRef({ j, disease, edgeIds });
+  useEffect(() => { ctx.current = { j, disease, edgeIds }; });
   useEffect(() => {
-    if (!disease) return;
-    const ctl = new AbortController();
-    void loadDrafts(disease, ctl.signal);
-    return () => ctl.abort();
-  }, [disease, loadDrafts]);
-  useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(null), 6000); return () => window.clearTimeout(id); }, [toast]);
+    const onOpen = (e: Event) => {
+      const { kind, draft: extra } = (e as CustomEvent<CoCreateRequest>).detail;
+      const { j: jj, disease: d, edgeIds: ids } = ctx.current;
+      if (!d) return;
+      const base = jj ? prefillDraft(kind, jj, ids ?? []) : { kind, title: "", body: "", entities: [d], edges: ids ?? [] };
+      setDraft({ ...base, ...(extra ?? {}) });
+    };
+    window.addEventListener(COCREATE_EVENT, onOpen);
+    return () => window.removeEventListener(COCREATE_EVENT, onOpen);
+  }, []);
+  useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(null), 7000); return () => window.clearTimeout(id); }, [toast]);
 
   if (!disease) return null;
-  const start = (kind: ProposalKind, extra: Partial<Draft> = {}) => {
-    const base = j ? prefillDraft(kind, j, edgeIds ?? []) : { kind, title: "", body: "", entities: [disease], edges: edgeIds ?? [] };
-    setDraft({ ...base, ...extra });
-  };
-
   return (
-    <section aria-label={c.title} className="border-b border-line bg-brand-mist/60 px-5 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs uppercase tracking-widest text-ink-3">{c.title}</p>
-        {drafts.length > 0 && <span className="text-[11px] text-ink-3">{drafts.length} {c.drafts_count}</span>}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {(["hypothesis", "collaboration", "evidence"] as const).map((k) => (
-          <button key={k} onClick={() => start(k)} disabled={!j}
-            className="rounded-full border border-brand/50 bg-paper px-3 py-1.5 text-xs font-medium text-brand-deep hover:bg-brand-soft disabled:opacity-50 disabled:cursor-wait">
-            {c.actions[k]}
-          </button>
-        ))}
-      </div>
-
-      {j && <Partners persona={persona} locale={locale} disease={disease} journey={j} onPropose={(partner) => start("collaboration", partner)} />}
-
-      {drafts.length > 0 && (
-        <details className="mt-2 text-xs">
-          <summary className="cursor-pointer text-ink-3">{c.drafts_title} ({drafts.length})</summary>
-          <ul className="mt-2 space-y-1.5">
-            {drafts.slice(0, 8).map((p) => (
-              <li key={p.id} className="rounded-lg border border-dashed border-ink-3/40 bg-paper px-2.5 py-2">
-                <p className="flex flex-wrap items-center gap-2"><KindBadge kind="proposed" c={jc} /><span className="text-[11px] text-ink-3">{c.actions[p.kind]} · {p.stored === "local" ? c.stored_local : c.stored_shared}</span></p>
-                <p className="mt-1 text-ink-2">{p.title}</p>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
+    <>
       <ProposalDialog draft={draft} locale={locale} persona={persona} disease={disease} diseaseName={diseaseName ?? j?.disease.name ?? ""} journey={j}
         onClose={() => setDraft(null)}
         onSaved={(s) => {
           setDraft(null);
           setToast({ text: s.stored === "supabase" ? c.saved_shared : c.saved_local, tone: s.stored === "supabase" ? "ok" : "warn" });
-          setDrafts((prev) => [s.proposal, ...prev.filter((p) => p.id !== s.proposal.id)]);
           window.dispatchEvent(new CustomEvent(PROPOSAL_EVENT, { detail: s.proposal }));
         }} />
-
       <div aria-live="polite" className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 pointer-events-none flex justify-end">
         <AnimatePresence>
           {toast && (
-            <motion.div key={toast.text} initial={{ opacity: 0, y: reduce ? 0 : motionTokens.distance.md }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: motionTokens.duration.normal, ease: motionTokens.easing.smooth }}
+            <motion.div key={toast.text} initial={{ opacity: 0, y: reduce ? 0 : motionTokens.distance.md }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0.12 : motionTokens.duration.normal, ease: motionTokens.easing.smooth }}
               className={`pointer-events-auto max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg bg-paper ${toast.tone === "ok" ? "border-brand/50" : "border-amber/60"}`}>
-              <p className="font-medium text-ink">{toast.tone === "ok" ? "✓ " : ""}{toast.text}</p>
+              <p className="font-medium text-ink flex gap-1.5 items-start"><PencilLine size={15} className="mt-0.5 shrink-0 text-brand-deep" aria-hidden />{toast.text}</p>
               <p className="text-xs text-ink-3 mt-1">{c.toast_detail}</p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -172,7 +142,10 @@ function ProposalDialog({ draft, locale, persona, disease, diseaseName, journey,
                   className={`rounded-full px-3 py-1 text-xs border ${form.kind === k ? "bg-brand-deep text-white border-brand-deep" : "border-line text-ink-2 hover:bg-paper-2"}`}>{c.actions[k]}</button>
               ))}
             </div>
-            <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-2"><KindBadge kind="proposed" c={jc} />{c.draft_note}</p>
+            <ol className="mt-3 flex flex-wrap gap-1.5 text-[11px]" aria-label={c.progress_label}>
+              {c.progress.map((x, i) => <li key={x} className="rounded-full border border-brand/40 bg-brand-mist px-2 py-0.5 text-brand-deep"><span className="font-semibold mr-1">{i + 1}</span>{x}</li>)}
+            </ol>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-2"><KindBadge kind="proposed" c={jc} />{c.draft_note}</p>
           </header>
 
           <div className="px-5 py-4 overflow-y-auto space-y-4">
