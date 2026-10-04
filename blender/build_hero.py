@@ -495,3 +495,26 @@ if RENDER:
     bpy.ops.render.render(write_still=True)
     fade_shadow(png_path)
     print(f"[nexmed] poster {png_path} ({os.path.getsize(png_path) / 1024:.0f} KB)")
+
+# ------------------------------------------------------------------ optional: growth + orbit video for the submission videos
+#   blender -b --factory-startup -P blender/build_hero.py -- --no-render --turntable blender/renders/nexmed-hero.mp4
+if "--turntable" in ARGS:
+    out_mp4 = os.path.abspath(ARGS[ARGS.index("--turntable") + 1])
+    frames_dir = os.path.join(os.path.dirname(out_mp4), "_frames_hero")
+    for ob in C_HERO.objects:  # Intro first (frames 0-75), then the Idle loop
+        if ob.animation_data:
+            for tr in ob.animation_data.nla_tracks:
+                if tr.name == "Idle":
+                    for st in tr.strips:
+                        st.frame_start_ui = 76
+    pivot = bpy.data.objects.new("RIG-orbit", None)
+    C_RIG.objects.link(pivot)
+    cam.parent = pivot
+    pivot.rotation_euler = (0, 0, math.radians(-30))
+    pivot.keyframe_insert("rotation_euler", frame=0)
+    pivot.rotation_euler = (0, 0, math.radians(40))
+    pivot.keyframe_insert("rotation_euler", frame=210)
+    setup_cycles(scene, samples=40, width=1080, height=1080, transparent=True)
+    scene.frame_start, scene.frame_end = 0, 210
+    render_frames(scene, range(0, 211), frames_dir)
+    encode_mp4(frames_dir, out_mp4, fps=30)

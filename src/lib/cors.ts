@@ -1,12 +1,9 @@
-// Cross-origin access to /api/* for the Lovable app (see src/proxy.ts).
-// Allow-list only: Lovable hosts, local Vite dev servers, the published program URL
-// (NEXT_PUBLIC_PROGRAM_URL) and any extra origins in CORS_EXTRA_ORIGINS (comma-separated).
+// Cross-origin access to /api/* for an external front end such as a Lovable app (see src/proxy.ts).
+// Exact origins only: local Vite dev servers, the published program URL (NEXT_PUBLIC_PROGRAM_URL)
+// and any extra origins in CORS_EXTRA_ORIGINS (comma-separated). No wildcard hosts: any app on a
+// shared domain could otherwise drive the POST endpoints (OpenAI spend, Supabase writes).
 
-const PATTERNS: RegExp[] = [
-  /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.lovable\.app$/,
-  /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.lovableproject\.com$/,
-  /^http:\/\/localhost:(8080|5173)$/,
-];
+const PATTERNS: RegExp[] = [/^http:\/\/localhost:(8080|5173)$/];
 
 function originOf(url: string | undefined): string | null {
   if (!url) return null;

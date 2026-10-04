@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 import { palette3d as c } from "@/components/three/palette";
 import { site } from "@/lib/site";
 
-export const alt = `${site.name} by ${site.company} — rare disease, connected. A DNA helix grows from a forest into an evidence graph.`;
+export const alt = `${site.name} — rare disease, connected. A DNA helix grows from a forest into an evidence graph.`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -25,7 +25,7 @@ export default async function Image() {
             <img src={logoSrc} width={72} height={72} alt="" style={{ borderRadius: 999 }} />
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span style={{ fontSize: 44, fontWeight: 700, color: c.brandInk }}>{site.name}</span>
-              <span style={{ fontSize: 22, color: c.brandDeep }}>by {site.company}</span>
+              <span style={{ fontSize: 22, color: c.brandDeep }}>AI atlas for rare diseases</span>
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", marginTop: 44, fontSize: 76, fontWeight: 700, lineHeight: 1.02, color: c.brandInk }}>

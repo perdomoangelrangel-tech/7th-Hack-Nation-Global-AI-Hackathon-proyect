@@ -1,7 +1,7 @@
 /**
  * Nexmed logo: the cyanotype mark (DNA helix rising from a forest) + wordmark. Server-safe.
- *   <Logo />                 mark + "Nexmed"
- *   <Logo size="lg" byline /> mark + "Nexmed" + "by Nedamex"
+ *   <Logo />                 mark + site.name
+ *   <Logo size="lg" byline /> mark + name + byline ("AI atlas for rare diseases", or "by <company>" if they differ)
  *   <Logo wordmark={false} /> mark only (still labelled for screen readers)
  */
 import Image from "next/image";
@@ -17,7 +17,7 @@ export function Logo({ size = "md", wordmark = true, byline = false, className =
       {wordmark && (
         <span className="leading-none">
           <span className={`display font-semibold tracking-tight text-brand-ink ${s.text}`}>{site.name}</span>
-          {byline && <span className="block text-[0.7rem] text-ink-3 mt-1 tracking-wide">by {site.company}</span>}
+          {byline && <span className="block text-[0.7rem] text-ink-3 mt-1 tracking-wide">{site.company === site.name ? "AI atlas for rare diseases" : `by ${site.company}`}</span>}
         </span>
       )}
     </span>

@@ -425,3 +425,58 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - mvp-builder / explorer: call `${VITE_NEXMED_API_URL}/api/*` directly once Vercel exists; until then Vite proxy to localhost.
 - No lane merges this tick (no new green checkpoints: explorer @b8ba51d +2, brand @4009861 +3).
 - Still NOT pushed: origin/main reconciliation needs the human's confirmation in the brain session (head-brain relayed approval; the safety check requires it first-hand). Port 3000 PID 9764 is not a brain process (the brain's servers run on 3010 and are stopped after each check) — whoever owns it, restart it on main if you need it.
+
+## 19:10 · brand · PROGRESS — green checkpoint (WAVE 3)
+- `feat/brand` @18089fb (main @7c4ddb2+ merged): typecheck ✓ · lint ✓ (0 errors) · test 100/100 ✓ · build ✓. Ready to merge.
+- WAVE 3 website done on my side: **Nedamex** everywhere I own (site.name = site.company = "Nedamex", wordmark, metadata, OG, manifest, copy) · hero **[Open Nedamex] → site.programUrl** + **[Watch the pitch] → #videos** · videos **Pitch · Demo · Functionality** (env `NEXT_PUBLIC_VIDEO_PITCH|DEMO|FUNCTIONALITY`; drafts Team60/Demo60/Tech60 labelled "Draft" until then) · Built with: Vercel · Lovable · Supabase · OpenAI · ElevenLabs · Blender · team section ([Name] placeholders — humans, send names).
+- Content audit of `/`: every number is read from the snapshot (`stats()`) or the brief (labelled); removed "free", "thousands of places"; softened sentences about voice citations, expert confirmation and drafts→evidence to what is shipped.
+- **CONTRACT for mvp-builder:** `docs/DESIGN_TOKENS.md` — paste-ready Tailwind 4 `styles.css` tokens, Google Fonts link, evidence grammar, logo + Blender glyph icons (`public/models/glyphs/*.png`), and the exact `src/components/three/*` + `public/models/*` + `public/draco/*` copy list (no Next-only imports; Hero3D is website-only).
+- Blender media for the human video editors: `blender/renders/nexmed-agent-states.mp4` (13.5 s, agent appear → idle → listen → think → speak → dismiss) — hero growth/orbit turntable rendering now (`blender/renders/nexmed-hero.mp4`, ~30 min).
+- Leftover "Nexmed" strings outside my paths: `src/app/atlas/page.tsx` (explorer, metadata title) and `src/app/plan/page.tsx` (action, "Nexmed analysis" label).
+
+## 19:13 · head-brain · CONTRACT — WAVE 4 (FINAL)
+- **Read `../nexmed-shared/ORDERS_WAVE4.md` + `../nexmed-shared/UX_WAVE4.md` now.** UX_WAVE4 supersedes the UX parts of WAVE 3 §3. P0 is assigned per lane in ORDERS_WAVE4 §2.
+- Decision: website `/` + MVP `/atlas` on the same Vercel project `nedamex`; CTAs → same-domain `/atlas`. Lovable = stretch only.
+- Fix-first list F1–F10 by 21:15. Freeze 06:00. Submit 06:30.
+- Live Supabase check (head brain, 19:15): still 6 diseases / 784 entities / 0 pathways / 0 investigators → data F8 is P0.
+
+## 19:14 · brand · CONTRACT (narration)
+- `feat/brand` @a17aa85 (main @5548f5e merged; typecheck ✓ · test 103/103 ✓): the hero now has a **story player** that turns on by itself when `public/audio/nedamex-story-en.mp3` exists (and uses `public/audio/nedamex-story-en.vtt` for captions if present). Press play → the Blender voice agent **pops in and speaks with the real audio level** (WebAudio analyser → `AgentOrb getLevel`), captions under it, idles on pause, leaves at the end. Tested locally with a temporary tone + VTT (removed, not committed).
+- NEED(voice): just drop the two files with exactly those names (`public/audio/` is fine for you to write); no component needed for the website. If you still export `<StoryNarration>`, tell me and I'll mount yours instead.
+
+## 19:40 · user-verifier · PROGRESS
+- WAVE 4 read. Naming check flipped: user-facing name must be **Nedamex**, 0 "Nexmed". Built `qa/dod.mjs` = UX_WAVE4 §6 / ORDERS_WAVE4 §4 checklist (name sweep incl. <title>/meta/aria · Home→Maria next step ≤ 5 clicks on the same domain · claim→evidence ≤ 2 clicks · no raw score outside the drawer · step 4 never "observed" · 390 px · reduced motion · 0 console errors). Read-only: it never submits drafts.
+- Pre-wave-4 calibration on main @5548f5e (no new bugs filed, all already covered by F4/F5/explorer S3/voice): "Nexmed" in text and <title> on /, /atlas, /plan (F5) · "See Maria's journey" → nedamex-research.lovable.app 404 (F4) · route card shows "(inferred, score 0.13)" outside the drawer (explorer/action S3) · hydration warning (voice). PASS: claim→evidence 2 clicks / 8 source links, step 4 "inferred — needs expert review", 390 px, reduced motion.
+- CORS smoke (src/proxy.ts): *.lovable.app origin → ACAO + 204 preflight ✓ · foreign origin → no ACAO ✓ · pages unaffected ✓.
+- NEED(brain): QA-24 the CORS allow-list matches ANY `*.lovable.app` / `*.lovableproject.com` subdomain (cors.ts L6-7), so any third-party Lovable app can drive our POST endpoints from a browser: `/api/extract` (OpenAI spend once the key is live), `/api/proposals` (writes to live Supabase), `/api/ask`. Expected: pin the exact project subdomain(s) (e.g. `nedamex-research.lovable.app`) via NEXT_PUBLIC_PROGRAM_URL / CORS_EXTRA_ORIGINS and drop the wildcard · severity: minor (abuse/cost, not data exposure; the GET graph is public anyway)
+- I run the full journeys + dod.mjs on the Vercel URL as soon as it is posted, and the final freeze pass at 06:00.
+
+## 01:24 · explorer · PROGRESS
+- WAVE 4 acknowledged. **F6 fixed** on feat/explorer @33ea5cf: `enableNodeDrag={false}` in GraphCanvas3D (no more OrbitControls.onPointerUp error). Lovable work stopped.
+- Next (P0): readable graph (Focus = disease + 1 hop + route edges, zoomToFit on focus change, label policy, floating controls, compact legend, left icon rail with tabs) → S3 evidence drawer (Why · Sources · Uncertain · Contradicting + Back to route) → ⌘K grouped search (diseases + mechanisms first; "lysosomal storage" → cluster + diseases) → card↔edge sync.
+- NEED(brain): `lucide-react` on main (WAVE 4 §2 says brain installs at h0) — not there yet; I code against it and need it to build.
+
+## 19:30 · action · START — WAVE 4
+- Merged main @d3ead7e (clean). Read ORDERS_WAVE4 §2 + UX_WAVE4 S2/S4/S6/S7.
+- P0 (now): right-panel stepper 1→4 (GitCompareArrows → Recycle → Handshake → Footprints) with Back/Next, ●●○○, `?step=` in the URL, ←/→ keys, aria-live · S4 "Your route is ready" (summary · Propose a collaboration · Save my plan · Share link · 10× route) · step 4 badge "Suggested by Nedamex · based on N sourced records" · Strong/Possible/Weak lead (UX §3 rule; raw score only in the drawer) · F5: my user-facing "Nexmed" → Nedamex.
+- Co-create moves to the end WITHOUT touching AtlasApp: the existing `<CoCreate>` mount becomes an invisible dialog/toast host; the S4 card + step 3 "Suggested partners" open it via the `window` event `nedamex:cocreate` `{ kind, draft? }`. explorer: no change needed (you may later drop the mount position, the props contract stays).
+- HANDOFF NEED(brain): `lucide-react` isn't on main yet (ORDERS §2 says brain installs it at h0). Until then I ship the ~16 icons I need as inline SVGs in `src/components/journey/icons.tsx` (lucide paths, ISC) → one-file swap later.
+- HANDOFF NEED(brand): I'll adopt `<PanelHeader>` as soon as its CONTRACT is posted; meanwhile a local equivalent with the same props (`icon title subtitle info`).
+- Then P1 with explorer: Patient plain cards · Researcher tabs · Pharma ranked cluster table (I'll expose `GET /api/journey/clusters` + `<ClusterTable>` for explorer to mount in the center).
+
+## 19:37 · brand · CONTRACT (WAVE 4 shared UX — use these, every lane)
+- `feat/brand` @3b8349b. Needs `lucide-react@^1.51` on main (it is modified in the brain's working tree, not committed yet — **NEED(brain): commit package.json/lock with lucide-react so lanes can import it**; I installed it locally with `--no-save`).
+- **Icons** `import { … } from "@/lib/icons"` (UX_WAVE4 §1, all names verified in lucide-react 1.51): `ICON` {ui:20, chip:16, card:24, stroke:1.75} · `NAV_ICON` (search, command, help, readingMotion, language, guide, mic, micOff, listen, pause, panel*, back, next) · `MODE_ICON`/`MODE_COPY` per PersonaId (UserRound · HeartHandshake · Microscope · Target; "Patient or caregiver"/"e.g. Devon"…) · `NODE_ICON`/`NODE_LABEL` per EntityType + registry/funding (CircleDot, Dna, Asterisk, Waypoints, Droplet, FlaskConical, ClipboardList, FileText, Users, GraduationCap, Pill, Landmark) · `KIND_ICON`/`KIND_BADGE` (BadgeCheck/Sigma/Sparkles/PencilLine + exact badges) · `SIGNAL_ICON`/`SIGNAL_LABEL` (contradicting, bridge, gap) · `STEP_ICON`/`STEP_COPY` (GitCompareArrows → Recycle → Handshake → Footprints + the 4 questions) · `ACTION_ICON`/`ACTION_LABEL` (10×, propose*, addEvidence, explain, external, copyCitation, flag, share, export, print, plan, viewMap/Table, 2D/3D, focus/all, zoom/fit/rotate, clusters, howToRead, community, error/retry, snapshot, info, done…). `Map` is exported as `ACTION_ICON.viewMap` (no JS Map clash).
+- **Panels** `import { PanelHeader, PanelState } from "@/components/ui/PanelHeader"`: `<PanelHeader icon={ACTION_ICON.route} title="Your route" subtitle="Four questions from your disease to a next step." info="Each answer links to its evidence…" actions={…} id="route-h" level={2|3} />` (accessible (i) popover, Esc/outside closes) · `<PanelState status="loading"|"empty"|"error"|"ready" empty={{title, hint, action}} onRetry={fn} loadingLabel? skeleton?>{content}</PanelState>` (loading = Blender HelixLoader + "Following the evidence…" + skeleton; error = CloudOff + "We couldn't load this. Try again." + Try again; empty = amber CircleDashed).
+- **Glossary** `import { Term, Glossed } from "@/components/ui/Glossary"`: `<Term k="registry">registries</Term>` or `<Glossed text={sentence} active={persona === "devon" || prefs.simpleLanguage} />` (wraps first occurrence of: phenotype, loss/gain of function, pathway, natural history study, registry, truncating/missense variant, centrality — exact UX_WAVE4 copy). Data in `src/components/ui/glossary.ts` (`lookupTerm`, `splitGlossary`).
+- All portable (no Next-only imports). Ping me with NEED(brand) for new icons/labels — add them here, not ad hoc.
+
+## 19:37 · brain · MERGED + PUSHED (main is on GitHub)
+- **F1 DONE:** human confirmed first-hand → `git merge -s ours origin/main` + push. origin/main = main (no force; 8effc73 kept in history). QA-20 (GitHub provenance links) should now resolve.
+- **lucide-react ^1.51.0 on main** (@591745a). Lockfile carries only the lucide entries (the Windows-pruned @emnapi entries were preserved). explorer/action: `git merge main`, then `npm install` in your worktree (and do NOT commit the lockfile churn it leaves).
+- Merged **brand** @18089fb (WAVE 3: Nedamex on the website, Open Nedamex / Watch the pitch, videos, DESIGN_TOKENS.md). brand @a17aa85/ab8a4de (StoryNarration) → post a new checkpoint and I merge.
+- QA-24 fixed (@df80abb): CORS is exact-origin only — localhost:8080/5173 + `NEXT_PUBLIC_PROGRAM_URL` + `CORS_EXTRA_ORIGINS`; no `*.lovable.app` wildcard. Per WAVE 4 the MVP is same-domain `/atlas`, so CORS only matters for the Lovable stretch.
+- Verified on main @df80abb: typecheck ✓ · lint ✓ · test 103/103 ✓ · build ✓ · `/`, Maria `/atlas`, stats 200 · red-team 10/10.
+- Vercel: waiting for Ángel's import as `nedamex`; brain then sets env and posts the URL. `.env.local`: brain is confirming with the human which file to distribute.
+- ALL LANES: `git merge main` now. Name sweep: brand flagged `src/app/atlas/page.tsx` (explorer, metadata title) and `src/app/plan/page.tsx` (action, "Nexmed analysis") — fix in your files; brain sweeps leftovers at the end.
+- user-verifier: refresh `../nexmed-qa` and re-test (QA-20 on GitHub, QA-24, brand WAVE 3).

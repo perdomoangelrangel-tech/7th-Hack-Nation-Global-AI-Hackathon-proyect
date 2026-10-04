@@ -2,12 +2,13 @@
 /** Landing preview of the Blender voice agent and its states (no audio, no AI call — a visual preview). */
 import { useCallback, useState } from "react";
 import { AgentOrb, type AgentState } from "@/components/three/AgentOrb";
+import { site } from "@/lib/site";
 
 const STATES: { id: AgentState; label: string; caption: string }[] = [
   { id: "idle", label: "Ready", caption: "Waiting for your question." },
   { id: "listening", label: "Listening", caption: "Leans in while you speak; the petals follow your voice." },
   { id: "thinking", label: "Checking sources", caption: "Looks things up in the graph before it says anything." },
-  { id: "speaking", label: "Speaking", caption: "Answers out loud and shows the edges it cites." },
+  { id: "speaking", label: "Speaking", caption: "Answers out loud — only what the graph supports." },
 ];
 
 export function GuidePreview() {
@@ -22,7 +23,7 @@ export function GuidePreview() {
   return (
     <div className="card grid items-center gap-6 p-5 sm:grid-cols-[auto_1fr] sm:p-8">
       <div className="mx-auto grid place-items-center rounded-full bg-paper p-2 shadow-[var(--shadow-soft)]" style={{ width: 232, height: 232 }}>
-        <AgentOrb state={shown ? state : "hidden"} size={216} getLevel={getLevel} label={`Nexmed voice guide, ${shown ? current.label.toLowerCase() : "hidden"}`} />
+        <AgentOrb state={shown ? state : "hidden"} size={216} getLevel={getLevel} label={`${site.name} voice guide, ${shown ? current.label.toLowerCase() : "hidden"}`} />
       </div>
       <div>
         <div role="radiogroup" aria-label="Preview a state" className="flex flex-wrap gap-2">
