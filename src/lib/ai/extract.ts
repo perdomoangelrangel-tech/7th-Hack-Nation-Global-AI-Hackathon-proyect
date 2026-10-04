@@ -124,7 +124,7 @@ export function treatmentQualifier(relation: string, modelQualifier: string, quo
 
 export type Saver = (pmid: string, model: string, payload: Record<string, unknown>) => Promise<string>;
 
-export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: string; title?: string; save?: boolean }, saver?: Saver): Promise<ExtractResult> {
+export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: string; title?: string; save?: boolean; /** Save even with 0 claims (to supersede an older row). */ saveEmpty?: boolean }, saver?: Saver): Promise<ExtractResult> {
   const title = input.paper?.title ?? input.title ?? "";
   const body = input.paper?.abstract ?? input.text ?? "";
   const text = [title, body].filter(Boolean).join("\n").slice(0, 12_000);
@@ -220,7 +220,7 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
   if (input.save === false) result.save_note = "not saved (save:false)";
   else if (!input.paper) result.save_note = "not saved: only PubMed papers (pmid) are persisted";
   else if (llm.mode !== "openai") result.save_note = "not saved: deterministic dictionary pass (needs OPENAI_API_KEY to persist)";
-  else if (!claims.length) result.save_note = "not saved: no verified claims";
+  else if (!claims.length && !input.saveEmpty) result.save_note = "not saved: no verified claims";
   else if (!saver) result.save_note = "not saved: storage unavailable";
   else {
     try {

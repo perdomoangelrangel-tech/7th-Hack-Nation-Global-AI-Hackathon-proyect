@@ -57,7 +57,7 @@ async function main() {
     try {
       const paper = await fetchPaper(pmid);
       if (!paper) { console.log(`  ${i + 1}/${todo.length} PMID:${pmid} · no abstract`); continue; }
-      const r = await extract(idx, { paper, save: !dryRun }, async (p, model, payload) => {
+      const r = await extract(idx, { paper, save: !dryRun, saveEmpty: supersedeTreats }, async (p, model, payload) => {
         const { data, error: e } = await db.rpc("save_extraction", { p_pmid: p, p_model: model, p_payload: payload });
         if (e) throw new Error(e.message);
         return String(data);
