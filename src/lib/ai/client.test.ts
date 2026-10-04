@@ -26,7 +26,7 @@ describe("ai client", () => {
     const r = await structured({ name: "t", system: "s", input: "i", schema: Schema });
     expect(r.mode).toBe("openai");
     expect(r.data).toEqual({ answer: "ok", ids: ["e1"] });
-    expect(r.model).toBe("gpt-4o");
+    expect(r.model).toBe("gpt-4o-mini");
   });
 
   it("uses the fast model when asked", async () => {

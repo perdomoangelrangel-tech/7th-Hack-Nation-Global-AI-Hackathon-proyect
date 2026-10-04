@@ -50,7 +50,10 @@ export type MatchKind = "exact" | "alias" | "fuzzy" | "llm" | "new";
 export interface ExtractedEntity { mention: string; type: ExtractType; entity_id: string | null; canonical_id: string | null; label: string | null; match: MatchKind; confidence: number }
 export interface ExtractedClaim {
   subject: string;
-  relation: "causes" | "has_phenotype" | "has_variant" | "treats" | "participates_in" | "researches";
+  /** No "treats": treatment findings are `studied_for` + qualifier and never become graph edges. */
+  relation: "causes" | "has_phenotype" | "has_variant" | "studied_for" | "participates_in" | "researches";
+  /** For studied_for: what kind of evidence the quote is. "none" for every other relation. */
+  qualifier: "reported_response" | "clinical_trial" | "preclinical" | "proposed" | "approved_indication" | "none";
   object: string;
   polarity: "supports" | "contradicts";
   quote: string;
