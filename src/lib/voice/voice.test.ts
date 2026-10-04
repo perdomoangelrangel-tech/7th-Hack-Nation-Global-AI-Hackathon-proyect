@@ -117,3 +117,22 @@ describe("agents", () => {
     expect(agentVariables({ persona: "osei", locale: "es", disease: "disease:ORPHA:1", diseaseName: "X" }).disease_name).toBe("X");
   });
 });
+
+import { cycledPersona, nextLayers, PERSONA_ORDER } from "./orb";
+
+describe("persona orb cross-fade", () => {
+  it("keeps only the outgoing and incoming layers, and ignores a repeat", () => {
+    let ls = [{ p: "maria" as const, k: 0 }] as { p: (typeof PERSONA_ORDER)[number]; k: number }[];
+    ls = nextLayers(ls, "maria");
+    expect(ls).toHaveLength(1);
+    ls = nextLayers(ls, "osei");
+    expect(ls.map((l) => l.p)).toEqual(["maria", "osei"]);
+    ls = nextLayers(ls, "priya");
+    expect(ls.map((l) => l.p)).toEqual(["osei", "priya"]);
+    expect(new Set(ls.map((l) => l.k)).size).toBe(2);
+  });
+
+  it("cycles through the four agents and loops back", () => {
+    expect([0, 1, 2, 3, 4].map((t) => cycledPersona("maria", t))).toEqual(["maria", "osei", "priya", "devon", "maria"]);
+  });
+});

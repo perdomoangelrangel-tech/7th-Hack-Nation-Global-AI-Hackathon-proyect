@@ -9,7 +9,6 @@
  */
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { AgentOrb } from "@/components/three/AgentOrb";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
@@ -19,6 +18,7 @@ import { stopSpeaking } from "@/lib/voice/client";
 import { voiceCopy, type VoiceCopy } from "@/lib/voice/copy";
 import { VOICE_LIVE_EVENT } from "@/lib/voice/events";
 import { STATUS_STYLE } from "@/components/atlas/NarrationBar";
+import { PersonaOrb } from "./PersonaOrb";
 import { VoiceSettings } from "./VoiceSettings";
 import type { Line, LiveState } from "./VoiceSession";
 
@@ -109,7 +109,7 @@ export function VoiceDock({ persona, locale, disease, diseaseName }: VoiceDockPr
         <section id={`${ids}-panel`} aria-label={t.guide_title(mode)}
           className="pointer-events-auto w-[23rem] max-w-full max-h-[min(80vh,40rem)] flex flex-col rounded-2xl border border-line bg-paper/95 backdrop-blur-md shadow-xl shadow-brand-ink/10 text-ink">
           <header className="flex items-center gap-3 p-3 pb-2">
-            <AgentOrb state={orbState} size={72} reduce={prefs.reduceMotion} getLevel={() => levelRef.current()} />
+            <PersonaOrb persona={persona} state={orbState} size={76} reduce={prefs.reduceMotion} getLevel={() => levelRef.current()} />
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold">{t.guide_title(mode)}</h2>
               <p className="text-xs text-ink-2" role="status" aria-live="polite">{status}</p>
