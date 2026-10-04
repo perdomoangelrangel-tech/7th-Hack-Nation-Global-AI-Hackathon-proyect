@@ -32,9 +32,15 @@ import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
 import { ClusterTable } from "@/components/journey/ClusterTable";
+import { HelixLoader } from "@/components/three/HelixLoader";
 import { api } from "./api";
 
-const Loading = () => <div className="absolute inset-0 grid place-items-center text-ink-3 text-sm" aria-busy>…</div>;
+/** Loading state for the graph (canvas chunk or data): Blender-style helix + "Following the evidence…". */
+const Loading = () => (
+  <div className="absolute inset-0 grid place-items-center" aria-busy>
+    <span className="flex flex-col items-center gap-3 text-sm text-ink-3"><HelixLoader size={48} label="Following the evidence…" />Following the evidence…</span>
+  </div>
+);
 const GraphCanvas = dynamic(() => import("./GraphCanvas"), { ssr: false, loading: Loading });
 const GraphCanvas3D = dynamic(() => import("./GraphCanvas3D"), { ssr: false, loading: Loading });
 
@@ -242,6 +248,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 
         {/* Center: the graph */}
         <main id="atlas-main" className="relative h-[62vh] min-h-[380px] lg:h-auto lg:min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_30%_20%,var(--paper)_0%,var(--brand-mist)_55%,var(--brand-soft)_100%)]">
+          {/* Data still on its way (first load or a new focus): keep the helix up until the view matches. */}
+          {(!graph.ready || !shownView || (focus && shownView.focus !== focus)) && !loadError && <Loading />}
           {graph.ready && <Canvas view={shownView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={focus ? barH : 0} hiddenKinds={hiddenKinds} still={reduce}
             labelIds={labelIds} command={command} spin={spin} onNode={onNode} onLink={onLink}
             onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); }} />}
