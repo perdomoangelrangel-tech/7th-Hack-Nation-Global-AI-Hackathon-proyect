@@ -4,10 +4,11 @@ import { site } from "@/lib/site";
 
 const LINKS = [
   { href: "#how", label: "How it works" },
-  { href: "#modes", label: "Modes" },
-  { href: "#evidence", label: "Evidence" },
-  { href: "#guide", label: "Voice guide" },
+  { href: "#start", label: "Get started" },
+  { href: "#medicines", label: "Medicines" },
+  { href: "#community", label: "Community" },
   { href: "#videos", label: "Videos" },
+  { href: "#data", label: "Data" },
 ];
 
 export function Nav() {
@@ -18,7 +19,7 @@ export function Nav() {
         <Link href="/" aria-label={`${site.name} home`}><Logo size="sm" /></Link>
         <nav aria-label="Main" className="flex items-center gap-1 text-sm text-ink-2">
           {LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="hidden rounded-full px-3 py-1.5 hover:bg-brand-mist hover:text-brand-ink md:inline-block">{l.label}</a>
+            <a key={l.href} href={l.href} className="hidden rounded-full px-3 py-1.5 hover:bg-brand-mist hover:text-brand-ink lg:inline-block">{l.label}</a>
           ))}
           <a href={site.github} target="_blank" rel="noreferrer" className="hidden rounded-full px-3 py-1.5 hover:bg-brand-mist hover:text-brand-ink sm:inline-block">GitHub</a>
           <Link href={site.appUrl} className="ml-1 rounded-full bg-brand-deep px-4 py-2 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
