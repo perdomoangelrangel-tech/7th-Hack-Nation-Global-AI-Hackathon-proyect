@@ -1,33 +1,50 @@
 "use client";
 /**
- * Maria's journey: disease → shared mechanism → reusable asset → collaborator → next step.
- * Progressive reveal: one summary line per question (ordered by mode), depth on click. Every card cites
- * edges; hovering lights them in the graph; the edge kind (observed / inferred) is always visible.
+ * Maria's route, one question at a time (UX_WAVE4 S2/S4): a 1→4 stepper with Back/Next and ●●○○ progress,
+ * then "Your route is ready" with co-create at the end. Every answer opens its evidence; opening a step
+ * lights its edges in the graph. Raw similarity scores never appear here (Strong/Possible/Weak lead instead).
  * Data: GET /api/journey (Journey v2, action lane). The `j` prop (v1, from AtlasApp) renders the header instantly.
  */
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { ChevronLeft, ChevronRight, CircleCheck, CircleDot, Dna, FastForward, FilePlus2, Footprints, GitCompareArrows, Handshake, Info, Lightbulb, ListChecks, Recycle, Share2, Users, Waypoints, type LucideIcon } from "lucide-react";
 import type { Journey } from "@/lib/atlas/store";
 import { dict, type Dict, type Locale } from "@/lib/i18n";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { AssetCard, CollaboratorCard, JourneyV2, NoneFound, QuestionId, StepCard } from "@/lib/journey/build";
 import { motionTokens, springs } from "@/lib/motion";
 import { journeyCopy, type JourneyCopy } from "@/components/journey/copy";
-import { KindBadge, weakestKind } from "@/components/journey/KindBadge";
+import { KindBadge, RecommendationBadge, StrengthBadge, weakestKind } from "@/components/journey/KindBadge";
 import { isNoRoute, useJourney, useUrlParam } from "@/components/journey/useJourney";
 import { TenXButton } from "@/components/journey/TenXButton";
+import { openCoCreate } from "@/components/journey/events";
+import { Partners } from "@/components/cocreate/Partners";
 
 interface Props {
   j: Journey; t: Dict;
   onInspect: (edgeId: string) => void;
   onHover: (nodes: string[], edges: string[]) => void;
   onFocusDisease: (id: string) => void;
-  /** Optional until AtlasApp passes them (HANDOFF NEED(explorer)); falls back to the URL. */
   persona?: PersonaId; locale?: Locale;
 }
 
 const PERSONA_IDS = ["devon", "maria", "osei", "priya"] as const;
 type Hoverable = (nodes: string[], edges: string[]) => Record<string, () => void>;
+export const STEP_ICON: Record<QuestionId, LucideIcon> = { connections: GitCompareArrows, assets: Recycle, people: Handshake, next: Footprints };
+const DONE = 4;
+
+/** Step index from `?step=` (1–4 or "done"); a new disease always starts at step 1. */
+let lastDisease: string | null = null;
+function initialStep(disease: string): number {
+  if (typeof window === "undefined") return 0;
+  const fresh = lastDisease !== null && lastDisease !== disease;
+  lastDisease = disease;
+  if (fresh) return 0;
+  const s = new URLSearchParams(window.location.search).get("step");
+  if (s === "done") return DONE;
+  const n = Number(s);
+  return n >= 1 && n <= 4 ? n - 1 : 0;
+}
 
 export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona: pp, locale: lp }: Props) {
   const locale: Locale = lp ?? (t.q1 === dict.es.q1 ? "es" : "en");
@@ -35,30 +52,65 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
   const c = journeyCopy[locale];
   const { data, loading, error } = useJourney(j.disease.id, persona, locale);
   const v2 = data && !isNoRoute(data) ? data : null;
-  const [open, setOpen] = useState<QuestionId | null>(null);
+  const [step, setStep] = useState(() => initialStep(j.disease.id));
+  const [depth, setDepth] = useState(false);
   const reduce = useReducedMotion();
   const leave = () => onHover([], []);
   const hoverable: Hoverable = (nodes, edges) => ({ onMouseEnter: () => onHover(nodes, edges), onMouseLeave: leave, onFocus: () => onHover(nodes, edges), onBlur: leave });
   const Q: Record<QuestionId, string> = { connections: t.q1, assets: t.q2, people: t.q3, next: t.q4 };
 
-  const nodesFor = (q: QuestionId, x: JourneyV2): string[] => {
+  const nodesFor = useCallback((q: QuestionId, x: JourneyV2): string[] => {
     const d = x.disease.id;
     if (q === "connections") return [d, ...x.connections.neighbors.map((n) => n.disease)];
     if (q === "assets") return [d, ...x.assets.own.slice(0, 3).map((a) => a.id), ...x.assets.reusable.slice(0, 3).map((a) => a.id)];
     if (q === "people") return [d, ...x.people.collaborators.slice(0, 5).map((p) => p.id)];
     return [d, ...x.next.steps.flatMap((s) => s.nodes)];
-  };
+  }, []);
+
+  // The URL is the state (?step=…), and "the map responds": opening a step lights its cited edges.
+  const announce = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    u.searchParams.set("step", step === DONE ? "done" : String(step + 1));
+    window.history.replaceState(null, "", u.toString());
+    if (!v2) return;
+    if (step < DONE) { const q = v2.order[step]; onHover(nodesFor(q, v2), v2.summary[q].cite.edges); if (announce.current) announce.current.textContent = c.announce(step + 1, 4, Q[q]); }
+    else { onHover([], []); if (announce.current) announce.current.textContent = c.ready; }
+    // onHover/Q/c change identity every render; the step and the data are what matter here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, v2]);
+
+  const go = useCallback((n: number) => { setDepth(false); setStep(Math.max(0, Math.min(DONE, n))); }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.altKey || e.metaKey || e.ctrlKey || document.querySelector("dialog[open]") || (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)))) return;
+      if (e.key === "ArrowRight") go(step + 1);
+      if (e.key === "ArrowLeft") go(step - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [go, step]);
+
+  const groups = v2?.people.collaborators.filter((p) => p.kind === "patient_org" && p.diseases.some((d) => d.id === j.disease.id)).length ?? 0;
+  const showVariant = persona === "osei" || persona === "priya";
+  const nextRecords = v2 ? new Set(v2.next.steps.flatMap((s) => s.cite.evidence)).size : 0;
 
   return (
     <div className="flex flex-col lg:min-h-0 lg:h-full">
       <header className="px-5 pt-5 pb-4 border-b border-line">
-        <div className="flex items-center gap-2 flex-wrap">
-          {j.cluster && <span className="chip" title={j.cluster.label_basis}><span className="w-2 h-2 rounded-full" style={{ background: j.cluster.color }} aria-hidden />{t.cluster}: {j.cluster.label}</span>}
-          <span className="text-xs text-ink-3">{j.disease.canonical_id}</span>
+        <div className="flex items-start gap-2">
+          <CircleDot size={18} className="mt-1.5 shrink-0" style={{ color: j.cluster?.color ?? "var(--brand)" }} aria-hidden />
+          <h2 className="serif text-xl leading-snug text-brand-ink flex-1">{j.disease.full_name}</h2>
+          <span className="text-[11px] text-ink-3 mt-1.5 shrink-0">{j.disease.canonical_id}</span>
         </div>
-        <h2 className="serif text-2xl leading-tight text-brand-ink mt-2">{j.disease.full_name}</h2>
-        {j.disease.definition && <p className="text-sm text-ink-2 mt-2 line-clamp-3">{j.disease.definition}</p>}
-        {j.disease.variant_effect && (
+        {j.disease.definition && <p className="text-sm text-ink-2 mt-2 line-clamp-2" title={j.disease.definition}>{j.disease.definition}</p>}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {j.disease.variant_effect && <span className="chip"><Dna size={13} aria-hidden />{j.disease.variant_effect.gene}</span>}
+          {j.cluster && <span className="chip" title={j.cluster.label_basis}><Waypoints size={13} aria-hidden />{j.cluster.label}</span>}
+          {v2 && <span className="chip"><Users size={13} aria-hidden />{c.groups(groups)}</span>}
+        </div>
+        {showVariant && j.disease.variant_effect && (
           <button className="mt-3 w-full text-left group text-xs" onClick={() => onInspect(j.disease.variant_effect!.edge)}>
             <span className="text-ink-3">{t.variant_effect} · {j.disease.variant_effect.gene}</span>
             <span className="mt-1 h-1.5 rounded-full overflow-hidden flex bg-paper-2" aria-hidden>
@@ -71,60 +123,129 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
       </header>
 
       <div className="lg:flex-1 lg:overflow-y-auto px-5 py-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-xs uppercase tracking-widest text-ink-3">{c.your_route}</p>
-          {v2 && <span className="text-[11px] text-ink-3">{c.route_hint}</span>}
+        <div className="flex items-center gap-2">
+          <Footprints size={16} className="text-brand-deep" aria-hidden />
+          <p className="text-xs uppercase tracking-widest text-ink-2 font-medium">{c.your_route}</p>
+          <span className="text-ink-3" title={c.route_info} aria-label={c.route_info} role="img"><Info size={13} /></span>
+          <span className="ml-auto flex items-center gap-2">
+            <span className="flex gap-1" aria-hidden>{[0, 1, 2, 3].map((i) => <span key={i} className={`w-2 h-2 rounded-full ${i < step || step === DONE ? "bg-brand-deep" : i === step ? "bg-brand" : "bg-line"}`} />)}</span>
+            <span className="text-[11px] text-ink-3 tabular-nums">{step === DONE ? c.step_of(4, 4) : c.step_of(step + 1, 4)}</span>
+          </span>
         </div>
+        <p className="text-[11px] text-ink-3 mt-0.5">{c.route_sub}</p>
+        <p ref={announce} className="sr-only" aria-live="polite" />
 
         {loading && <RouteSkeleton label={c.loading} />}
         {error && <p className="mt-3 text-sm text-ink-3">{c.error}</p>}
-
         {v2?.no_route && <NoneCard none={v2.no_route} c={c} badge={c.no_route_badge} coverage={v2.coverage} className="mt-3" />}
 
-        {v2 && (
-          <ol className="mt-3 space-y-2">
-            {v2.order.map((q, i) => {
-              const s = v2.summary[q];
-              const isOpen = open === q;
-              const hasCite = s.cite.edges.length > 0;
-              return (
-                <motion.li key={q} layout={!reduce} initial={{ opacity: 0, y: reduce ? 0 : motionTokens.distance.sm }} animate={{ opacity: 1, y: 0 }} transition={{ ...springs.gentle, delay: reduce ? 0 : i * 0.06 }}
-                  className={`rounded-xl border bg-paper transition-colors ${isOpen ? "border-brand/60 shadow-sm" : "border-line hover:border-brand/40"}`}>
-                  <button className="w-full text-left p-3.5 flex gap-3 items-start" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : q)} {...hoverable(nodesFor(q, v2), s.cite.edges)}>
-                    <span className={`mt-0.5 w-6 h-6 rounded-full grid place-items-center text-xs font-semibold shrink-0 ${hasCite ? "bg-brand-deep text-white" : "bg-amber text-white"}`}>{i + 1}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] uppercase tracking-wider text-ink-3">{Q[q]}</span>
-                      <span className="block text-sm text-ink mt-0.5">{s.text}</span>
-                      {hasCite && <span className="mt-1.5 flex flex-wrap items-center gap-2"><KindBadge kind={weakestKind(s.cite.kinds)} c={c} /><span className="text-[11px] text-ink-3">{s.cite.evidence.length} {c.evidence_records}</span></span>}
-                    </span>
-                    <span className={`text-ink-3 transition-transform ${isOpen ? "rotate-90" : ""}`} aria-hidden>›</span>
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div key="depth" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: reduce ? 0 : motionTokens.duration.normal, ease: motionTokens.easing.smooth }} className="overflow-hidden">
-                        <div className="px-3.5 pb-4 pt-1 border-t border-line">
-                          {q === "connections" && <Connections x={v2} t={t} c={c} onInspect={onInspect} onFocusDisease={onFocusDisease} hoverable={hoverable} />}
-                          {q === "assets" && <Assets x={v2} t={t} c={c} onInspect={onInspect} hoverable={hoverable} />}
-                          {q === "people" && <People x={v2} t={t} c={c} onInspect={onInspect} hoverable={hoverable} />}
-                          {q === "next" && <Next x={v2} c={c} onInspect={onInspect} hoverable={hoverable} />}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.li>
-              );
-            })}
-          </ol>
-        )}
+        {v2 && step === DONE && <RouteReady x={v2} c={c} Q={Q} locale={locale} onInspect={onInspect} hoverable={hoverable} onReview={() => go(0)} reduce={!!reduce} />}
 
-        {v2 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <TenXButton journey={v2} locale={locale} />
-          </div>
+        {v2 && step < DONE && (
+          <>
+            <ol className="mt-3 space-y-2">
+              {v2.order.map((q, i) => {
+                const s = v2.summary[q];
+                const Icon = STEP_ICON[q];
+                const state = i < step ? "done" : i === step ? "current" : "todo";
+                const hasCite = s.cite.edges.length > 0;
+                return (
+                  <li key={q} className={`rounded-xl border bg-paper transition-colors ${state === "current" ? "border-brand/60 shadow-sm" : "border-line"}`}>
+                    <button className="w-full text-left px-3.5 py-3 flex gap-3 items-start" aria-current={state === "current" ? "step" : undefined} onClick={() => go(i)} {...hoverable(nodesFor(q, v2), s.cite.edges)}>
+                      <span className={`mt-0.5 w-6 h-6 rounded-full grid place-items-center text-xs font-semibold shrink-0 ${state === "done" ? "bg-brand-deep text-white" : state === "current" ? (hasCite ? "bg-brand text-white" : "bg-amber text-white") : "border border-line text-ink-3"}`}>
+                        {state === "done" ? <CircleCheck size={14} aria-hidden /> : i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-3"><Icon size={13} aria-hidden />{Q[q]}</span>
+                        {state !== "todo" && <span className={`block mt-0.5 ${state === "current" ? "text-sm text-ink" : "text-xs text-ink-2 line-clamp-1"}`}>{s.text}</span>}
+                      </span>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {state === "current" && (
+                        <motion.div key="cur" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: reduce ? 0.12 : motionTokens.duration.normal, ease: motionTokens.easing.smooth }} className="overflow-hidden">
+                          <div className="px-3.5 pb-3.5 pl-[3.25rem]">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {q === "next" ? (hasCite && <RecommendationBadge records={nextRecords} c={c} />) : hasCite && <KindBadge kind={weakestKind(s.cite.kinds)} c={c} />}
+                              {q === "connections" && v2.connections.neighbors[0] && <StrengthBadge {...v2.connections.neighbors[0].strength} />}
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                              {hasCite && <button onClick={() => onInspect(s.cite.edges[0])} className="font-medium text-brand-deep hover:underline">{c.see_evidence} →</button>}
+                              <button onClick={() => setDepth((x) => !x)} aria-expanded={depth} className="text-ink-2 hover:underline">{depth ? c.less : c.more}</button>
+                            </div>
+                            {depth && (
+                              <div className="mt-1 border-t border-line">
+                                {q === "connections" && <Connections x={v2} t={t} c={c} onInspect={onInspect} onFocusDisease={onFocusDisease} hoverable={hoverable} />}
+                                {q === "assets" && <Assets x={v2} t={t} c={c} onInspect={onInspect} hoverable={hoverable} />}
+                                {q === "people" && <People x={v2} t={t} c={c} onInspect={onInspect} hoverable={hoverable} />}
+                                {q === "next" && <Next x={v2} c={c} onInspect={onInspect} hoverable={hoverable} />}
+                              </div>
+                            )}
+                            {q === "people" && <Partners persona={persona} locale={locale} disease={v2.disease.id} journey={v2} defaultOpen onPropose={(d) => openCoCreate("collaboration", d)} />}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="mt-3 flex items-center justify-between">
+              <button onClick={() => go(step - 1)} disabled={step === 0} className="inline-flex items-center gap-1 rounded-full border border-line px-3.5 py-2 text-sm text-ink-2 hover:bg-paper-2 disabled:opacity-40 min-h-10"><ChevronLeft size={16} aria-hidden />{c.back}</button>
+              <button onClick={() => go(step + 1)} className="inline-flex items-center gap-1 rounded-full bg-brand-deep px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink min-h-10">{step === 3 ? c.finish : c.next}<ChevronRight size={16} aria-hidden /></button>
+            </div>
+          </>
         )}
       </div>
-      <p className="px-5 py-3 border-t border-line text-[11px] text-ink-3">{v2?.disclaimer ?? t.disclaimer}</p>
+      <p className="px-5 py-3 border-t border-line text-[11px] text-ink-3 flex gap-1.5 items-start"><Info size={13} className="shrink-0 mt-px" aria-hidden /><span>{v2?.disclaimer ?? t.disclaimer}</span></p>
     </div>
+  );
+}
+
+/* ------------------------------ S4 · your route is ready ------------------------------ */
+
+function RouteReady({ x, c, Q, locale, onInspect, hoverable, onReview, reduce }: { x: JourneyV2; c: JourneyCopy; Q: Record<QuestionId, string>; locale: Locale; onInspect: (e: string) => void; hoverable: Hoverable; onReview: () => void; reduce: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const share = () => {
+    const u = new URL(window.location.href); u.searchParams.set("step", "done");
+    void navigator.clipboard?.writeText(u.toString()).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2500); });
+  };
+  const plan = `/plan?d=${encodeURIComponent(x.disease.id)}&p=${x.persona}&l=${locale}`;
+  return (
+    <motion.section initial={{ opacity: 0, y: reduce ? 0 : motionTokens.distance.sm }} animate={{ opacity: 1, y: 0 }} transition={reduce ? { duration: 0.12 } : springs.gentle}
+      className="mt-3 rounded-2xl border border-brand/50 bg-brand-mist p-4" aria-labelledby="route-ready">
+      <div className="flex items-center gap-2">
+        <motion.span initial={reduce ? false : { scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={springs.snappy}><CircleCheck size={22} className="text-brand-deep" aria-hidden /></motion.span>
+        <h3 id="route-ready" className="serif text-xl text-brand-ink">{c.ready}</h3>
+      </div>
+      <p className="text-xs text-ink-3 mt-0.5">{c.ready_sub}</p>
+      <ol className="mt-3 space-y-1.5">
+        {(["connections", "assets", "people", "next"] as const).map((q) => {
+          const s = x.summary[q]; const Icon = STEP_ICON[q];
+          return (
+            <li key={q}>
+              <button onClick={() => s.cite.edges[0] && onInspect(s.cite.edges[0])} disabled={!s.cite.edges.length} {...hoverable([], s.cite.edges)} title={Q[q]}
+                className="w-full text-left flex gap-2.5 items-start rounded-lg px-2 py-1.5 hover:bg-paper disabled:cursor-default">
+                <Icon size={16} className="mt-0.5 shrink-0 text-brand-deep" aria-hidden />
+                <span className="text-sm text-ink">{s.text}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-4 grid gap-2">
+        <button onClick={() => openCoCreate("collaboration")} className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-deep px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-ink min-h-10"><Handshake size={16} aria-hidden />{c.propose_collab}</button>
+        <div className="grid grid-cols-2 gap-2">
+          <a href={plan} target="_blank" rel="noopener" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-3 py-2 text-sm text-ink-2 hover:bg-paper-2 min-h-10"><ListChecks size={15} aria-hidden />{c.save_plan}</a>
+          <button onClick={share} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-3 py-2 text-sm text-ink-2 hover:bg-paper-2 min-h-10"><Share2 size={15} aria-hidden />{copied ? c.copied : c.share}</button>
+        </div>
+        <TenXButton journey={x} locale={locale} icon={<FastForward size={15} aria-hidden />} full />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <button onClick={() => openCoCreate("hypothesis")} className="inline-flex items-center gap-1 text-brand-deep hover:underline"><Lightbulb size={13} aria-hidden />{c.propose_hyp}</button>
+        <button onClick={() => openCoCreate("evidence")} className="inline-flex items-center gap-1 text-brand-deep hover:underline"><FilePlus2 size={13} aria-hidden />{c.add_evidence}</button>
+        <button onClick={onReview} className="ml-auto text-ink-3 hover:underline">{c.review_steps}</button>
+      </div>
+    </motion.section>
   );
 }
 
@@ -139,7 +260,7 @@ function Connections({ x, t, c, onInspect, onFocusDisease, hoverable }: { x: Jou
         <article key={n.disease} className="rounded-lg border border-line p-3" {...hoverable([x.disease.id, n.disease], n.cite.edges)}>
           <div className="flex items-start justify-between gap-3">
             <button className="text-left font-medium text-sm hover:underline" onClick={() => onFocusDisease(n.disease)}>{n.name}</button>
-            <span className="text-xs text-ink-3 shrink-0 tabular-nums">{t.similarity} {n.score.toFixed(2)}</span>
+            <StrengthBadge {...n.strength} />
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-2"><KindBadge kind="inferred" c={c} /><span className="text-[11px] text-ink-3">{n.same_cluster ? t.same_cluster : t.other_cluster}</span></p>
           {n.shared.phenotypes.length > 0 && <Facet label={t.shared_symptoms} items={n.shared.phenotypes.slice(0, 5).map((p) => p.name)} />}

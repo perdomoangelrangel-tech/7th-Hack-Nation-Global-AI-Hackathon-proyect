@@ -1,6 +1,6 @@
 "use client";
 /**
- * 10× view: typical route vs Nexmed route to "launch a shared natural-history study", as two animated
+ * 10× view: typical route vs Nedamex route to "launch a shared natural-history study", as two animated
  * timelines on one weeks axis. Every duration is labeled "assumption" with its rationale; reduced motion = static.
  */
 import { motion, useReducedMotion } from "motion/react";
@@ -9,8 +9,8 @@ import type { TenX as TenXData, Phase } from "@/lib/journey/tenx";
 import { motionTokens } from "@/lib/motion";
 
 const C = {
-  en: { title: "The 10× route", milestone: "Milestone", typical: "Typical route", nexmed: "With Nexmed", discovery: "Discovery", protocol: "Protocol & ethics", week: "week", weeks: "weeks", months: "months", assumption: "assumption", why: "Rationale", what: "What the atlas gives you", validate: "What must be validated next", cited: "cited edges", discovery_gain: "Discovery phase", unchanged: "Nexmed does not shorten this unless an existing study already enrolls your disease.", total: "Whole milestone" },
-  es: { title: "La ruta 10×", milestone: "Hito", typical: "Ruta típica", nexmed: "Con Nexmed", discovery: "Descubrimiento", protocol: "Protocolo y ética", week: "semana", weeks: "semanas", months: "meses", assumption: "supuesto", why: "Razón", what: "Qué te da el atlas", validate: "Qué hay que validar después", cited: "aristas citadas", discovery_gain: "Fase de descubrimiento", unchanged: "Nexmed no acorta esto salvo que un estudio existente ya incluya tu enfermedad.", total: "Hito completo" },
+  en: { title: "The 10× route", milestone: "Milestone", typical: "Typical route", nexmed: "With Nedamex", discovery: "Discovery", protocol: "Protocol & ethics", week: "week", weeks: "weeks", months: "months", assumption: "assumption", why: "Rationale", what: "What the atlas gives you", validate: "What must be validated next", cited: "cited edges", discovery_gain: "Discovery phase", unchanged: "Nedamex does not shorten this unless an existing study already enrolls your disease.", total: "Whole milestone" },
+  es: { title: "La ruta 10×", milestone: "Hito", typical: "Ruta típica", nexmed: "Con Nedamex", discovery: "Descubrimiento", protocol: "Protocolo y ética", week: "semana", weeks: "semanas", months: "meses", assumption: "supuesto", why: "Razón", what: "Qué te da el atlas", validate: "Qué hay que validar después", cited: "aristas citadas", discovery_gain: "Fase de descubrimiento", unchanged: "Nedamex no acorta esto salvo que un estudio existente ya incluya tu enfermedad.", total: "Hito completo" },
 };
 
 const fmt = (w: number, c: (typeof C)["en"]) => (w === 0 ? "0" : w >= 8 ? `${Math.round(w / 4.345)} ${c.months}` : w < 1 ? `${Math.max(1, Math.round(w * 7))} d` : `${Math.round(w)} ${Math.round(w) === 1 ? c.week : c.weeks}`);
