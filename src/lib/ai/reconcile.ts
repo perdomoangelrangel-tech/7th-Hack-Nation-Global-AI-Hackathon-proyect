@@ -32,7 +32,7 @@ const TYPE_RANK: Partial<Record<EntityType, number>> = { disease: 0, gene: 1, ph
 /** Words that never identify an entity on their own (function words + generic disease vocabulary). */
 const GENERIC = new Set([
   "the", "and", "with", "for", "from", "that", "this", "what", "which", "who", "whom", "how", "are", "is", "my", "our", "your", "about", "does", "have", "has", "there", "else", "other", "works", "work", "tell", "me",
-  "syndrome", "disease", "disorder", "deficiency", "type", "related", "associated", "developmental", "epileptic", "encephalopathy", "infancy", "late", "early", "onset", // "infantile"/"juvenile" are NOT generic: they tell CLN types apart
+  "syndrome", "disease", "disorder", "deficiency", "type", "related", "linked", "associated", "developmental", "epileptic", "encephalopathy", "infancy", "late", "early", "onset", // "infantile"/"juvenile" are NOT generic: they tell CLN types apart
   "neuronal", "ceroid", "muscular", "atrophy", "dystrophy", "spinal", "storage", "epilepsy", "seizure", "seizures", "focal", "migrating", "child", "children", "childhood", "gene", "genes", "mechanism",
   "treatment", "therapy", "drug", "study", "trial", "patient", "patients", "family", "families", "group", "rare",
   "el", "la", "los", "las", "de", "del", "con", "para", "por", "que", "qué", "una", "uno", "mi", "su", "sobre", "hay", "tiene", "síndrome", "sindrome", "enfermedad", "trastorno", "deficiencia", "tipo",
