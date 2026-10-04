@@ -30,7 +30,7 @@ Videos: pitch · demo · functionality — `[links added when recorded]`.
 
 ## What it does
 
-- **Evidence graph.** 21 monogenic diseases across 5 mechanism clusters: 5,933 edges backed by 6,846 evidence rows from 10 open sources (live numbers: [`/api/atlas/stats`](https://nedamex.vercel.app/api/atlas/stats)). An edge without evidence cannot exist (Postgres trigger + loader filter).
+- **Evidence graph.** 21 monogenic diseases across 5 mechanism clusters: 6,018 edges backed by 6,931 evidence rows from 11 sources, including 69 AI-extracted links that need expert review (at submission time; live numbers: [`/api/atlas/stats`](https://nedamex.vercel.app/api/atlas/stats)). An edge without evidence cannot exist (Postgres trigger + loader filter).
 - **Four kinds of link, always visible.** `observed` (a source states it · solid line) · `inferred` (Nedamex analysis · dashed, "needs expert review") · `extracted` (OpenAI pulled it from a cited paper · dotted, "needs expert review") · `proposed` (community draft · ghost, never evidence).
 - **Mechanism clusters, not name lists.** Louvain communities over phenotype information content, Reactome pathways and shared genes; each cluster is named by its dominant mechanism with the basis shown. Counterexamples ("same symptoms, different mechanism") are first-class.
 - **A route, not a map.** Four questions answered only from the graph, each with its evidence one click away: who shares our disease characteristics → what useful work already exists → who could help → what we should do together next. Steps are labelled *Strong / Possible / Weak lead* and step 4 is a recommendation, never "observed".
