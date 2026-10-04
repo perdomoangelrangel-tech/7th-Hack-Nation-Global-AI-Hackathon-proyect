@@ -102,6 +102,7 @@ export default async function Home() {
     return snap.sources[id]?.name ?? (id === "atlas_analysis" ? `${site.name} analysis` : id);
   };
   const updated = s.generated_at ? new Date(s.generated_at).toISOString().slice(0, 10) : null;
+  const stepStats = [`${s.sources} sources`, `${fmt(s.edges)} edges`, `${s.clusters} clusters`, "4 modes"];
   const counters = [
     { n: s.diseases, t: "diseases" },
     { n: s.genes, t: "genes" },
@@ -186,6 +187,7 @@ export default async function Home() {
                   <div className="flex items-center gap-3">
                     <NodeOrb size={26} tone={st.tone} float />
                     <span className="mono text-xs text-ink-3">0{i + 1}</span>
+                    <span className="ml-auto rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-deep">{stepStats[i]}</span>
                   </div>
                   <h3 className="mt-4 text-lg font-bold text-brand-ink">{st.title}</h3>
                   <p className="mt-2 text-sm text-ink-2">{st.body}</p>

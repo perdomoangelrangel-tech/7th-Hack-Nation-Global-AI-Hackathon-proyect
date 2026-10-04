@@ -84,6 +84,10 @@ Scale (rem, root 16 px × `prefs.textScale` 1 / 1.15 / 1.3): display 4.5 / 3.75 
 
 Run: `"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --factory-startup -P blender/build_hero.py` (add `-- --no-render` to skip the Cycles poster, `-- --preview <png>` for a fast check). Shared helpers in `blender/nexmed_lib.py` (palette, curve tubes, NLA tracks, GLB post-pass that fixes the rest pose Blender bakes at the first animated frame).
 
+Videos for the submission cuts (Cycles frames → ffmpeg H.264 over the page colour `#f3f8fc`, frames in `blender/renders/_frames_*`, git-ignored):
+`blender -b --factory-startup -P blender/build_hero.py -- --no-render --turntable blender/renders/nexmed-hero.mp4` (helix growth + 70° orbit, 7 s, 1080²) ·
+`blender -b --factory-startup -P blender/build_agent.py -- --no-render --reel blender/renders/nexmed-agent-states.mp4` (appear → idle → listen → think → speak → dismiss, 14 s, 720²).
+
 **Budgets:** ≤ 60k triangles per scene · GLB < 2 MB (hero) / < 512 KB (others) · DPR ≤ 1.75 · `flat` (no tone mapping, so blues match the CSS) · Draco decoder self-hosted in `public/draco/` · three.js always code-split (`next/dynamic`, `ssr: false`).
 
 **Lifecycle:** canvases stop rendering off-screen and in hidden tabs (`Scene3D`); the agent stops after its dismiss clip. Hero: the Cycles poster is the LCP and the 3D cross-fades in at the exact same camera, so the swap is invisible.
