@@ -10,8 +10,8 @@ import { apiUrl, type ExtractResult } from "@/lib/ai/contract";
 type Props = { pmid: string; locale?: "en" | "es"; onExtracted?: (r: ExtractResult) => void; className?: string; /** API origin when mounted outside the Next app. */ apiBase?: string };
 
 const T = {
-  en: { cta: "Extract with OpenAI", again: "Extract again", loading: "Reading the abstract…", error: "Could not extract right now.", entities: "Entities", claims: "Claims from the paper", none: "Nothing extractable in this abstract.", review: "AI-extracted · needs expert review", contradicts: "evidence against", supports: "supports", inAtlas: "in the atlas", isNew: "not in the atlas", ai: "Extracted by OpenAI", tpl: "Dictionary pass from atlas names (no AI)", saved: "saved to the graph as dotted edges", dropped: "dropped (quote or name not in the paper)" },
-  es: { cta: "Extraer con OpenAI", again: "Extraer de nuevo", loading: "Leyendo el resumen…", error: "No se pudo extraer ahora.", entities: "Entidades", claims: "Afirmaciones del artículo", none: "Nada extraíble en este resumen.", review: "Extraído por IA · revisar con un experto", contradicts: "evidencia en contra", supports: "apoya", inAtlas: "en el atlas", isNew: "no está en el atlas", ai: "Extraído por OpenAI", tpl: "Búsqueda por diccionario del atlas (sin IA)", saved: "guardado en el grafo como aristas punteadas", dropped: "descartadas (cita o nombre no está en el artículo)" },
+  en: { cta: "Extract with OpenAI", again: "Extract again", loading: "Reading the abstract…", error: "Could not extract right now.", entities: "Entities", claims: "Claims from the paper", none: "Nothing extractable in this abstract.", review: "AI-extracted · needs expert review", dictReview: "Name match, no AI · needs expert review", contradicts: "evidence against", supports: "supports", inAtlas: "in the atlas", isNew: "not in the atlas", ai: "Extracted by OpenAI", tpl: "Dictionary pass from atlas names (no AI)", saved: "saved to the graph as dotted edges", dropped: "dropped (quote or name not in the paper)" },
+  es: { cta: "Extraer con OpenAI", again: "Extraer de nuevo", loading: "Leyendo el resumen…", error: "No se pudo extraer ahora.", entities: "Entidades", claims: "Afirmaciones del artículo", none: "Nada extraíble en este resumen.", review: "Extraído por IA · revisar con un experto", dictReview: "Coincidencia de nombres, sin IA · revisar con un experto", contradicts: "evidencia en contra", supports: "apoya", inAtlas: "en el atlas", isNew: "no está en el atlas", ai: "Extraído por OpenAI", tpl: "Búsqueda por diccionario del atlas (sin IA)", saved: "guardado en el grafo como aristas punteadas", dropped: "descartadas (cita o nombre no está en el artículo)" },
 };
 const REL: Record<string, string> = { causes: "causes", has_phenotype: "has sign", has_variant: "has variant", treats: "tested for", participates_in: "takes part in", researches: "researches" };
 
@@ -71,7 +71,7 @@ function Result({ data, t }: { data: ExtractResult; t: (typeof T)["en"] }) {
                 <p className="text-ink"><strong>{c.subject}</strong> {REL[c.relation] ?? c.relation} <strong>{c.object}</strong>
                   <span className={`ml-2 chip !text-[10px] ${c.polarity === "contradicts" ? "!border-amber text-amber" : ""}`}>{t[c.polarity]}</span></p>
                 <p className="mt-0.5 text-xs text-ink-2">“<mark className="bg-brand-soft text-ink rounded px-0.5">{c.quote}</mark>”</p>
-                <p className="text-[11px] text-ink-3 mt-0.5">{t.review} · {Math.round(c.confidence * 100)}%</p>
+                <p className="text-[11px] text-ink-3 mt-0.5">{data.mode === "openai" ? t.review : t.dictReview} · {Math.round(c.confidence * 100)}%</p>
               </li>
             ))}
           </ul>
