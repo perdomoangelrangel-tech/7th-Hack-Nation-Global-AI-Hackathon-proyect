@@ -84,17 +84,23 @@ const diseases = () => atlas().snap.entities.filter((e) => e.type === "disease")
 /* Búsqueda global con resolución de sinónimos                         */
 /* ------------------------------------------------------------------ */
 export interface SearchHit {
-  id: string; type: EntityType; name: string; matched: string; via_synonym: boolean;
+  /** `cluster` = a mechanism cluster (Louvain over phenotypes + pathways + genes), not an entity. */
+  id: string; type: EntityType | "cluster"; name: string; matched: string; via_synonym: boolean;
   disease: string | null;   // la enfermedad que abre el grafo
   sub: string;
+  /** For clusters: member diseases. For definition matches: true when only the source definition matched. */
+  members?: string[]; via_definition?: boolean;
 }
 
 const TYPE_RANK: Partial<Record<EntityType, number>> = { disease: 0, gene: 1, phenotype: 2, pathway: 3, organization: 4, treatment: 5, investigator: 6, trial: 7 };
 
-export function search(q: string, l: Locale = "en", limit = 12): SearchHit[] {
+export function search(q: string, l: Locale = "en", limit = 30): SearchHit[] {
   const nq = norm(q); if (nq.length < 2) return [];
   const { snap } = atlas();
   const hits: (SearchHit & { score: number })[] = [];
+  const words = nq.split(/\s+/).filter((w) => w.length > 2);
+  // Diseases whose source definition (Orphanet) contains every word of the query: "lysosomal storage" → Gaucher, Fabry…
+  const byDefinition = new Set(words.length ? diseases().filter((d) => { const def = norm(String(d.props.definition ?? "")); return words.every((w) => def.includes(w)); }).map((d) => d.id) : []);
   for (const e of snap.entities) {
     if (!(e.type in TYPE_RANK)) continue;
     const names = [{ s: e.name, syn: false }, { s: e.canonical_id, syn: false }, ...(typeof e.props.name_es === "string" ? [{ s: e.props.name_es, syn: false }] : []), ...e.aliases.map((a) => ({ s: a.alias, syn: true }))];
@@ -104,12 +110,28 @@ export function search(q: string, l: Locale = "en", limit = 12): SearchHit[] {
       const score = nn === nq ? 0 : nn.startsWith(nq) ? 1 : nn.split(/[\s,()-]+/).some((w) => w.startsWith(nq)) ? 2 : nn.includes(nq) ? 3 : 9;
       if (score < 9 && (!best || score < best.score)) best = { ...n, score };
     }
-    if (!best) continue;
+    const viaDef = !best && byDefinition.has(e.id);
+    if (!best && !viaDef) continue;
     const disease = e.type === "disease" ? e.id : bestDiseaseFor(e.id);
     if (!disease) continue;
+    const sc = best?.score ?? 4;
     hits.push({
-      id: e.id, type: e.type, name: nameOf(e, l), matched: best.s, via_synonym: best.syn && norm(best.s) !== norm(e.name),
-      disease, sub: subtitle(e, disease, l), score: best.score * 10 + (TYPE_RANK[e.type] ?? 9) + (e.type === "investigator" ? 5 : 0),
+      id: e.id, type: e.type, name: nameOf(e, l), matched: best?.s ?? q, via_synonym: !!best && best.syn && norm(best.s) !== norm(e.name),
+      disease, sub: subtitle(e, disease, l), score: sc * 10 + (TYPE_RANK[e.type] ?? 9) + (e.type === "investigator" ? 5 : 0),
+      ...(viaDef ? { via_definition: true } : {}),
+    });
+  }
+  // Mechanism clusters: by label / basis / shared pathway names, or when ≥ 2 of their diseases matched the query.
+  const A = snap.analytics;
+  for (const c of A?.clusters ?? []) {
+    const texts = [c.label, c.label_basis, ...c.shared_pathways.map((p) => p.name)].map(norm);
+    const textHit = texts.some((x) => x.includes(nq) || (words.length > 1 && words.every((w) => x.includes(w))));
+    const memberHits = c.diseases.filter((d) => byDefinition.has(d) || hits.some((h) => h.id === d));
+    if (!textHit && memberHits.length < 2) continue;
+    const lead = [...c.diseases].sort((a, b) => (A!.centrality[b] ?? 0) - (A!.centrality[a] ?? 0))[0];
+    hits.push({
+      id: c.id, type: "cluster", name: c.label, matched: q, via_synonym: false, disease: lead ?? null, members: c.diseases,
+      sub: c.diseases.map((d) => nameOf(atlas().byId.get(d), l)).join(" · "), score: textHit ? 1 : 3,
     });
   }
   return hits.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name)).slice(0, limit).map((h) => { const { score, ...rest } = h; void score; return rest; });

@@ -14,7 +14,7 @@ import * as THREE from "three";
 import SpriteText from "three-spritetext";
 import type { GLink, GNode } from "@/lib/atlas/store";
 import { CANVAS, KIND_STYLE, TYPE_COLOR, kindOf } from "./colors";
-import { endId, trim, type GraphCanvasProps } from "./graphProps";
+import { endId, nodeSize, trim, type GraphCanvasProps } from "./graphProps";
 import { useGlyphGeometries } from "@/components/three/glyphs";
 
 type N = NodeObject<GNode>;
@@ -55,16 +55,15 @@ function assets() {
   return shared;
 }
 
-const radiusOf = (n: GNode) => n.size * (n.type === "disease" ? 0.95 : 0.85);
+const radiusOf = (n: GNode) => nodeSize(n.size) * (n.type === "disease" ? 0.95 : 0.85);
 
-export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, hiddenKinds, still, onNode, onLink }: GraphCanvasProps) {
+export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, hiddenKinds, still, labelIds = null, command = null, spin = false, onNode, onLink, onLinkHover, onBackground }: GraphCanvasProps) {
   const fg = useRef<ForceGraphMethods<N, L> | undefined>(undefined);
   const wrap = useRef<HTMLDivElement>(null);
   const nodeParts = useRef(new Map<string, NodeParts>());
   const linkParts = useRef(new Map<string, LinkParts>());
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState<string | null>(null);
-  const [spin, setSpin] = useState(false);
   // Blender glyphs per entity type (brand lane); procedural primitives until loaded / if loading fails.
   const glyphs = useGlyphGeometries();
   const settled = useRef(false);
@@ -171,7 +170,7 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
       p.mat.emissive.set(lit && !dim ? p.mat.color : 0x000000).multiplyScalar(lit ? 0.25 : 0);
       (p.halo.material as THREE.SpriteMaterial).opacity = dim ? 0 : lit ? 0.45 : isDisease ? 0.28 : 0;
       (p.ring.material as THREE.SpriteMaterial).opacity = dim ? 0 : n.focus || n.id === selected ? 0.9 : n.bridge ? 0.7 : 0;
-      p.label.visible = !dim && (isDisease || lit);
+      p.label.visible = !dim && (lit || (labelIds ? labelIds.has(String(n.id)) : isDisease));
       // Hover lift (P2 micro-interaction): the hovered node grows.
       const lift = n.id === hover && !still ? 1.25 : 1;
       p.mesh.scale.setScalar(p.base * lift);
@@ -183,7 +182,7 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
       p.mat.color.set(lit ? CANVAS.ink : l.bridge ? CANVAS.bridge : s.color);
       p.mat.opacity = narrating && !lit ? 0.05 : lit ? 1 : l.bridge ? 0.9 : s.opacity;
     }
-  }, [data, highlightNodes, highlightEdges, selected, hover, clusterFilter, narrating, still]);
+  }, [data, highlightNodes, highlightEdges, selected, hover, clusterFilter, narrating, still, labelIds]);
 
   /* ---------- Camera ---------- */
   /** Fit a set of nodes (null = all) using the camera's FOV and aspect, centered above the narration bar. */
@@ -267,6 +266,18 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     flyTo(selected, still ? 0 : 1200);
   }, [selected, view, flyTo, still]);
 
+  // Floating controls: zoom toward / away from the orbit target, or re-frame the story.
+  useEffect(() => {
+    const g = fg.current; if (!g || !command) return;
+    if (command.kind === "fit") { frameStory(still ? 0 : 600); return; }
+    const cam = g.camera(); const ctl = g.controls() as { target?: THREE.Vector3 };
+    const target = ctl.target ?? new THREE.Vector3();
+    const k = command.kind === "zoomIn" ? 0.75 : 1.33;
+    const p = cam.position.clone().sub(target).multiplyScalar(k).add(target);
+    g.cameraPosition({ x: p.x, y: p.y, z: p.z }, { x: target.x, y: target.y, z: target.z }, still ? 0 : 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [command]);
+
   // Idle rotation (orbit controls autoRotate) — off by default, user toggle.
   useEffect(() => {
     const c = fg.current?.controls() as { autoRotate?: boolean; autoRotateSpeed?: number } | undefined;
@@ -303,16 +314,14 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
         onNodeHover={(n) => { setHover(n ? String(n.id) : null); if (wrap.current) wrap.current.style.cursor = n ? "pointer" : ""; }}
         onNodeClick={(n) => onNode(n as GNode)}
         onLinkClick={(l) => onLink({ ...(l as GLink), source: endId(l.source), target: endId(l.target) })}
+        onLinkHover={(l) => { onLinkHover?.(l ? (l as GLink).id : null); if (wrap.current) wrap.current.style.cursor = l ? "pointer" : ""; }}
+        onBackgroundClick={() => onBackground?.()}
         onEngineStop={onEngineStop}
         cooldownTicks={still ? 60 : 200}
         cooldownTime={4000}
         d3VelocityDecay={0.32}
         enableNodeDrag={false}
       />
-      <button type="button" onClick={() => setSpin((s) => !s)} aria-pressed={spin} disabled={still}
-        className="absolute right-3 top-3 z-10 rounded-full border border-line bg-paper/90 px-3 py-1 text-xs text-ink-2 shadow-sm hover:bg-brand-soft disabled:opacity-50">
-        {spin ? "Stop rotation" : "Rotate"}
-      </button>
     </div>
   );
 }

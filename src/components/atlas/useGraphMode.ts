@@ -1,7 +1,8 @@
 "use client";
 /**
  * 3D first, 2D fallback. Automatic 2D when: prefers-reduced-motion, usePrefs().reduceMotion, no WebGL,
- * small screen (< 768 px) or a low-power device. The visible "3D / 2D" toggle overrides the automatic choice
+ * small screen (< 768 px) or a low-power device. Patient and Family modes start in 2D (UX_WAVE4 §2 S2); Researcher and
+ * Pharma start in 3D. The visible "3D / 2D" toggle overrides the automatic choice
  * (persisted per viewer; storage is a convenience and may be unavailable).
  */
 import { useCallback, useEffect, useState } from "react";
@@ -31,7 +32,7 @@ function autoReason(prefReduce: boolean): FallbackReason {
   return null;
 }
 
-export function useGraphMode() {
+export function useGraphMode(persona?: string) {
   const { prefs } = usePrefs();
   const [choice, setChoice] = useState<GraphMode | null>(null);
   const [reason, setReason] = useState<FallbackReason>(null);
@@ -48,7 +49,8 @@ export function useGraphMode() {
   }, [prefs.reduceMotion]);
 
   const webgl = reason !== "no-webgl";
-  const mode: GraphMode = !webgl ? "2d" : choice ?? (reason ? "2d" : "3d");
+  const personaDefault: GraphMode = persona === "devon" || persona === "maria" ? "2d" : "3d";
+  const mode: GraphMode = !webgl ? "2d" : choice ?? (reason ? "2d" : personaDefault);
   const setMode = useCallback((m: GraphMode) => {
     setChoice(m);
     try { localStorage.setItem(KEY, m); } catch { /* storage unavailable */ }

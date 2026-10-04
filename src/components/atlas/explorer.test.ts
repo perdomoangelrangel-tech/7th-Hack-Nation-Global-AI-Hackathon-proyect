@@ -42,3 +42,20 @@ describe("proposals layer", () => {
     expect(v.links.map((l) => l.target)).toEqual(["gene:X", "disease:A"]);
   });
 });
+
+import { focusView, labelSet } from "./focus";
+
+describe("focus view (one route, not a map)", () => {
+  const node = (id: string, type: "disease" | "gene" | "phenotype" = "disease") => ({ id, type, name: id, cluster: null, color: null, size: 8 });
+  const link = (id: string, source: string, target: string, relation = "similar_to") => ({ id, source, target, relation, kind: "inferred" as const, confidence: 0.2 });
+  const view = { focus: "A", clusters: [], nodes: [node("A"), node("B"), node("C"), node("D"), node("g", "gene"), node("p", "phenotype")],
+    links: [link("e1", "A", "B"), link("e2", "B", "C"), link("e3", "C", "D"), link("e4", "g", "A", "causes"), link("e5", "p", "D", "has_phenotype")] };
+  it("keeps the focus, its 1-hop neighbours and route-edge endpoints only", () => {
+    const v = focusView(view, "A", new Set(["e3"]));
+    expect(v.nodes.map((n) => n.id).sort()).toEqual(["A", "B", "C", "D", "g"]);
+    expect(v.links.map((l) => l.id).sort()).toEqual(["e1", "e2", "e3", "e4"]);
+  });
+  it("labels the focus, neighbour diseases and route endpoints", () => {
+    expect([...labelSet(view, "A", new Set(["e3"]))].sort()).toEqual(["A", "B", "C", "D"]);
+  });
+});
