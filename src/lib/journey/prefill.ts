@@ -6,7 +6,7 @@ import type { JourneyV2 } from "./build";
 import type { ProposalKind } from "./proposals";
 import { tr } from "./graph";
 
-export interface Draft { kind: ProposalKind; title: string; body: string; entities: string[]; edges: string[] }
+export interface Draft { kind: ProposalKind; title: string; body: string; entities: string[]; edges: string[]; /** set for search-footer requests */ request?: "disease" | "source" }
 
 export function prefillDraft(kind: ProposalKind, j: JourneyV2, extraEdges: string[] = []): Draft {
   const l = j.locale;
@@ -56,4 +56,32 @@ export function prefillDraft(kind: ProposalKind, j: JourneyV2, extraEdges: strin
     entities: [d.id],
     edges: uniq(extraEdges),
   };
+}
+
+/* ---------------- Community requests (search footer: "Request a disease" / "Suggest a source") ---------------- */
+
+export type RequestType = "disease" | "source";
+const REQUEST_PREFIX: Record<RequestType, RegExp> = { disease: /^\s*(disease request|solicitud de enfermedad)\s*:/i, source: /^\s*(source suggestion|sugerencia de fuente)\s*:/i };
+
+/** "Disease request: Alexander disease" → "disease"; anything else → null. */
+export function requestType(title: string | undefined | null): RequestType | null {
+  if (!title) return null;
+  return REQUEST_PREFIX.disease.test(title) ? "disease" : REQUEST_PREFIX.source.test(title) ? "source" : null;
+}
+
+/**
+ * A community request is saved as kind "evidence" (the proposals enum) but is only a request: it cites no
+ * edges and the body is a fill-in template — nothing in it is presented as known.
+ */
+export function prefillRequest(title: string, l: "en" | "es" = "en", disease?: string | null): Draft {
+  const type = requestType(title) ?? "source";
+  const subject = title.replace(REQUEST_PREFIX[type], "").trim();
+  const body = type === "disease"
+    ? tr(l,
+      `Community request (not evidence): please add ${subject || "this disease"} to the atlas.\n\nOrphanet code (ORPHA), if known: \nCausal gene, if known: \nPatient organization (official website): \nWhy it matters to our community: `,
+      `Solicitud de la comunidad (no es evidencia): agreguen ${subject || "esta enfermedad"} al atlas.\n\nCódigo Orphanet (ORPHA), si se conoce: \nGen causal, si se conoce: \nOrganización de pacientes (sitio oficial): \nPor qué importa a nuestra comunidad: `)
+    : tr(l,
+      `Community request (not evidence): a source the atlas could check${subject ? ` — ${subject}` : ""}.\n\nLink: \nWhat it shows: \nWhich disease(s) it covers: \nIs it public / its license, if known: `,
+      `Solicitud de la comunidad (no es evidencia): una fuente que el atlas podría revisar${subject ? ` — ${subject}` : ""}.\n\nEnlace: \nQué muestra: \nQué enfermedad(es) cubre: \nSi es pública / su licencia, si se conoce: `);
+  return { kind: "evidence", request: type, title: title.trim().slice(0, 200), body, entities: disease ? [disease] : [], edges: [] };
 }

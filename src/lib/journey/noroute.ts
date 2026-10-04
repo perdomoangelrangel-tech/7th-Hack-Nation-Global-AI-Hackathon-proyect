@@ -2,7 +2,7 @@
  * The honest answer when a family asks about a disease the atlas cannot route: say so, show what was
  * checked (sources + counts), what evidence would change the answer, and the next question to test.
  */
-import { diseasesOf, nameOf, tr, type GraphIndex, type Locale } from "./graph";
+import { ANALYSIS_LABEL, diseasesOf, isAnalysisSource, nameOf, tr, type GraphIndex, type Locale } from "./graph";
 import { DISCLAIMER, type JourneyV2, type NoneFound } from "./build";
 
 export interface NoRouteAnswer {
@@ -18,7 +18,8 @@ export interface NoRouteAnswer {
 
 export function noRouteForQuery(g: GraphIndex, query: string, l: Locale = "en"): NoRouteAnswer {
   const q = query.trim().slice(0, 120);
-  const sources = Object.values(g.snap.sources).filter((s): s is NonNullable<typeof s> => !!s);
+  const sources = Object.values(g.snap.sources).filter((s): s is NonNullable<typeof s> => !!s)
+    .map((s) => (isAnalysisSource(s.id) ? { ...s, name: ANALYSIS_LABEL[l] } : s));
   const ds = diseasesOf(g);
   return {
     version: 2, kind: "no_route", query: q,

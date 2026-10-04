@@ -42,11 +42,11 @@ Videos: pitch · demo · functionality — `[links added when recorded]`.
 
 ## Medicines bank
 
-A searchable list of the medicines linked to the diseases in the atlas (Supabase view `medicines_public`, built from Open Targets known-drug evidence and ChEMBL ids). For each medicine: mechanism and targets, the indications it is linked to, its highest clinical stage and the **source link** behind every statement. Links are taken only from source API responses, never guessed. Nedamex shows what the sources say about a medicine; whether it fits a person is a decision for their clinician. **No doses, no efficacy claims, no recommendations.**
+A searchable list of the medicines linked to the diseases in the atlas (Supabase view `medicines_public`, built from Open Targets known-drug evidence and ChEMBL ids). For each medicine: mechanism and targets, the indications it is linked to, its highest clinical stage and the **source link** behind every statement. Links are taken only from source API responses, never guessed. Nedamex shows what the sources say about a medicine; whether it fits a person is a decision for their clinician. A plain-language summary (`GET /api/medicine?id=treatment:CHEMBL…`) is written only from graph facts, every sentence cited, and always ends with *"Whether it fits a person is a decision for their clinician."* The list is also available as `GET /api/medicines?q=&d=&approved=`. **No doses, no efficacy claims, no recommendations.**
 
 ## Community
 
-For the **Researcher & clinician** role only. Researcher profiles come from NIH RePORTER principal investigators already linked to diseases in the atlas (Supabase view `community_profiles_public`), each with the funded project as its source. Researchers can add their own profile or start a research project through the `submit_profile` RPC — explicit consent required; self-submitted profiles are stored separately (`profile_submissions`), labelled **"not verified · not evidence"**, and never change the graph.
+For the **Researcher & clinician** role only. Researcher profiles come from NIH RePORTER principal investigators already linked to diseases in the atlas (Supabase view `community_profiles_public`), each with the funded project as its source. Researchers can add their own profile or start a research project through the `submit_profile` RPC — explicit consent required; self-submitted profiles are stored separately (`profile_submissions`), labelled **"not verified · not evidence"**, and never change the graph. API: `GET /api/community?d=&q=` · `POST /api/community/profile` (consent required). In the atlas, step 3 of the route shows researchers who share the mechanism, with the NIH RePORTER record as evidence.
 
 ## Architecture
 
@@ -132,6 +132,7 @@ Integrity checks: `.claude/qa/integrity.sql` (every `expect = 0` row must be 0).
 | Open Targets | CC0 |
 | ClinVar, PubMed metadata, ClinicalTrials.gov, NIH RePORTER, FDA | Public domain |
 | Patient organizations | Public information from each organization's official site |
+| UI sound effects (Kenney "Interface Sounds" + "RPG Audio", `public/sfx/`) | CC0 1.0 |
 
 Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Code license: `[to be chosen by the team]`.
 

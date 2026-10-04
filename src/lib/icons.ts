@@ -51,7 +51,7 @@ export const MODE_ICON: Record<PersonaId, LucideIcon> = { devon: UserRound, mari
 export const MODE_COPY: Record<PersonaId, { title: string; subtitle: string }> = {
   devon: { title: "Patient or caregiver", subtitle: "e.g. Devon" },
   maria: { title: "Family & patient group", subtitle: "e.g. Maria" },
-  osei: { title: "Researcher", subtitle: "e.g. Dr. Osei" },
+  osei: { title: "Researcher & clinician", subtitle: "e.g. Dr. Osei" },
   priya: { title: "Pharma & biotech", subtitle: "e.g. Priya" },
 };
 

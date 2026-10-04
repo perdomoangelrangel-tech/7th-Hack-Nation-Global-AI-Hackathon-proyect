@@ -22,17 +22,18 @@ type Hit = SearchHit & { reconciled?: boolean };
 interface DiseaseRow { id: string; name: string; canonical_id?: string; cluster: string | null; cluster_label?: string | null; color: string | null }
 const QUICK = ["STXBP1", "Dravet", "hand wringing", "Munc18-1"];
 /** Type filters for results (keys of GROUPS; "all" = no filter). */
-const FILTERS = ["all", "diseases", "mechanisms", "genes", "symptoms", "groups", "studies"] as const;
+const FILTERS = ["all", "diseases", "genes", "symptoms", "medicines", "researchers", "trials", "groups"] as const;
 
 /** Fixed group order (UX_WAVE4 S1). `max` = rows shown before "Show N more". */
 const GROUPS: { key: string; types: string[]; max: number }[] = [
-  { key: "diseases", types: ["disease"], max: 6 },
-  { key: "mechanisms", types: ["cluster", "pathway"], max: 4 },
-  { key: "genes", types: ["gene", "variant"], max: 4 },
-  { key: "symptoms", types: ["phenotype"], max: 4 },
-  { key: "groups", types: ["organization"], max: 4 },
-  { key: "studies", types: ["trial", "study"], max: 3 },
-  { key: "other", types: ["treatment", "investigator"], max: 3 },
+  { key: "diseases", types: ["disease"], max: 5 },
+  { key: "mechanisms", types: ["cluster", "pathway", "mechanism"], max: 5 },
+  { key: "genes", types: ["gene", "variant"], max: 5 },
+  { key: "symptoms", types: ["phenotype"], max: 5 },
+  { key: "medicines", types: ["treatment"], max: 5 },
+  { key: "researchers", types: ["investigator"], max: 5 },
+  { key: "trials", types: ["trial", "study"], max: 5 },
+  { key: "groups", types: ["organization"], max: 5 },
 ];
 
 export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; locale: Locale; persona?: string; onPick: (h: SearchHit) => void; autoFocus?: boolean }) {
@@ -55,7 +56,7 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
         const j = await fetch(api(`/api/atlas/search?q=${encodeURIComponent(q)}&l=${locale}`), { signal: c.signal }).then((r) => r.json()) as { hits: Hit[] };
         setHits(j.hits); setSearched(q); setActive(0); setExpanded(new Set()); setOpen(true);
       } catch { /* aborted or offline */ }
-    }, 140);
+    }, 120);
     return () => { clearTimeout(tm); c.abort(); };
   }, [q, locale]);
 
