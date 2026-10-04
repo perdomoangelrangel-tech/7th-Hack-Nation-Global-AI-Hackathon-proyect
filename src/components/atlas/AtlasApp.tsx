@@ -9,7 +9,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Box, ChevronRight, Focus, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Network, Rotate3d, Square, Target, UserRound, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
+import { Box, ChevronRight, CircleHelp, Focus, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Network, Rotate3d, Square, Target, UserRound, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { dict, type Locale } from "@/lib/i18n";
@@ -123,6 +123,14 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const shownKinds = useMemo(() => new Set((shownView?.links ?? []).map((l) => kindOf(l.kind))), [shownView]);
   const centrality = useMemo(() => Object.fromEntries((view?.nodes ?? []).filter((x) => x.type === "disease").map((x) => [x.id, Math.max(0, (x.size - 8) * 14)])), [view]);
 
+  // `?c=<cluster>` (Home sends it with cluster hits): highlight that cluster and open the Clusters panel. Client-only read.
+  useEffect(() => {
+    const c = new URL(window.location.href).searchParams.get("c");
+    if (!c) return;
+    const id = requestAnimationFrame(() => { setClusterFilter(c); setRailTab("clusters"); });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   // Shareable URL state (?d=…&p=maria&l=en).
   useEffect(() => {
     const u = new URL(window.location.href);
@@ -196,8 +204,13 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             <Image src="/brand/nexmed-logo-192.png" alt="" width={30} height={30} priority />
             <span className="font-semibold tracking-tight text-brand-ink hidden sm:inline">{site.name}</span>
           </Link>
-          <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} onPick={onPick} autoFocus={!initialDisease} /></div>
+          <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} persona={persona} onPick={onPick} autoFocus={!initialDisease} /></div>
           <ModeSelector className="hidden xl:flex" t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} />
+          {/* Help → the 3-step tour (mvp-builder's Tour listens to `nedamex:tour`). */}
+          <button type="button" onClick={() => window.dispatchEvent(new Event("nedamex:tour"))} aria-label={t.help} title={t.help}
+            className="grid place-items-center w-9 h-9 shrink-0 rounded-full border border-line text-ink-2 hover:bg-brand-soft hover:text-ink">
+            <CircleHelp aria-hidden size={20} strokeWidth={1.75} />
+          </button>
           <PrefsPanel t={t} />
           <button type="button" onClick={() => switchLocale(locale === "en" ? "es" : "en")} className="shrink-0 flex items-center gap-1 rounded-full border border-line h-9 px-2.5 text-xs font-medium text-ink-2 hover:bg-brand-soft" aria-label={locale === "en" ? "Cambiar a español" : "Switch to English"}><Languages aria-hidden size={16} strokeWidth={1.75} />{locale === "en" ? "ES" : "EN"}</button>
         </div>
