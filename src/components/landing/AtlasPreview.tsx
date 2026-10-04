@@ -34,13 +34,13 @@ function FlatGraph({ data }: { data: Neighborhood }) {
 export function AtlasPreview({ data }: { data: Neighborhood }) {
   const can3d = useCan3D();
   return (
-    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line bg-[radial-gradient(70%_70%_at_50%_45%,var(--paper),var(--brand-mist))]">
+    <div className="relative aspect-square w-full overflow-hidden rounded-2xl sm:aspect-[4/3] border border-line bg-[radial-gradient(70%_70%_at_50%_45%,var(--paper),var(--brand-mist))]">
       {can3d === "3d" ? (
         <GlyphGraph data={data} className="absolute inset-0" />
       ) : (
         <div className="absolute inset-0 p-4"><FlatGraph data={data} /></div>
       )}
-      <p className="pointer-events-none absolute bottom-3 left-4 text-xs text-ink-3">{can3d === "3d" ? "Hover a shape to see what it is" : "Static view"}</p>
+      <p className="pointer-events-none absolute bottom-3 left-4 text-xs text-ink-3">{can3d === "3d" ? "Hover or tap a shape to see what it is" : "Static view"}</p>
     </div>
   );
 }

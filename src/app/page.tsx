@@ -69,7 +69,7 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
         {from} <span className="font-normal text-ink-3">→ {edge.relation.replace(/_/g, " ")} →</span> {to}
       </p>
       <div className={`mt-3 w-16 ${inferred ? "kind-inferred" : "kind-observed"}`} aria-hidden />
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm [&_dd]:break-words">
         <dt className="text-ink-3">Kind</dt><dd className="text-ink-2">{edge.kind}</dd>
         <dt className="text-ink-3">Confidence</dt>
         <dd className="text-ink-2">
@@ -79,7 +79,7 @@ function EdgeCard({ edge, from, to, sourceName, label }: { edge: Edge; from: str
         <dt className="text-ink-3">Source</dt>
         <dd className="text-ink-2">
           {ev?.url ? <a href={ev.url} target="_blank" rel="noreferrer" className="text-brand-deep underline decoration-brand-light underline-offset-2 hover:decoration-brand-deep">{sourceName}</a> : sourceName}
-          {ev?.external_id && <span className="mono ml-1.5 text-xs text-ink-3">{ev.external_id}</span>}
+          {ev?.external_id && <span className="mono ml-1.5 break-all text-xs text-ink-3">{ev.external_id}</span>}
         </dd>
         {ev?.retrieved_at && (<><dt className="text-ink-3">Read on</dt><dd className="text-ink-2">{ev.retrieved_at.slice(0, 10)}</dd></>)}
       </dl>
@@ -201,7 +201,7 @@ export default async function Home() {
         {/* Inside the atlas: a real neighbourhood in 3D (Blender glyphs) */}
         {hood && (
           <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="inside-title">
-            <div className="grid items-center gap-10 lg:grid-cols-[1.25fr_.75fr]">
+            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.25fr_.75fr] [&>*]:min-w-0">
               <AtlasPreview data={hood} />
               <div>
                 <p className="eyebrow">Inside the atlas</p>
@@ -241,7 +241,7 @@ export default async function Home() {
 
         {/* Every edge shows its source */}
         <section id="evidence" className="border-y border-line bg-brand-mist" aria-labelledby="evidence-title">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1fr]">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 [&>*]:min-w-0">
             <div>
               <p className="eyebrow">Every edge shows its source</p>
               <h2 id="evidence-title" className="display mt-2 text-3xl font-semibold text-brand-ink sm:text-4xl">Observed is never confused with inferred.</h2>

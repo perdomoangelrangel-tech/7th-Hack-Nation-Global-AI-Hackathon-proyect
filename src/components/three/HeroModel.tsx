@@ -12,7 +12,9 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { DRACO_PATH, MODELS } from "./palette";
 
-const GROW_SECONDS = 2.4;
+// Growth replay: the helix rises first, the graph edges follow once their nodes have popped in.
+const HELIX_GROW = [0, 1.7] as const;
+const EDGE_GROW = [1.0, 2.6] as const;
 const MODEL_TOP = 2.35; // metres, Blender z -> three y
 
 export interface HeroModelProps {
@@ -28,20 +30,24 @@ export function HeroModel({ replay = 0, onReady, parallax = 0.12 }: HeroModelPro
   const { scene, animations } = useGLTF(MODELS.hero, DRACO_PATH);
   const group = useRef<THREE.Group>(null);
   const mixer = useMemo(() => new THREE.AnimationMixer(scene), [scene]);
-  const plane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, -1, 0), MODEL_TOP), []);
+  const helixPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, -1, 0), MODEL_TOP), []);
+  const edgePlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, -1, 0), MODEL_TOP), []);
   const grow = useRef<number | null>(null); // seconds into the growth, null = idle
   const ready = useRef(false);
 
   // Helix, base pairs and graph edges are revealed by the rising clipping plane during a replay.
   useEffect(() => {
-    const clipped = new Set(["MAT-strand", "MAT-rung-a", "MAT-rung-b", "MAT-edge"]);
+    const helix = new Set(["MAT-strand", "MAT-rung-a", "MAT-rung-b"]);
     scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const m of mats) if (clipped.has(m.name)) m.clippingPlanes = [plane];
+      for (const m of mats) {
+        if (helix.has(m.name)) m.clippingPlanes = [helixPlane];
+        if (m.name === "MAT-edge") m.clippingPlanes = [edgePlane];
+      }
     });
-  }, [scene, plane]);
+  }, [scene, helixPlane, edgePlane]);
 
   const idleAction = useMemo(() => {
     const clip = THREE.AnimationClip.findByName(animations, "Idle");
@@ -79,9 +85,13 @@ export function HeroModel({ replay = 0, onReady, parallax = 0.12 }: HeroModelPro
     mixer.update(dt);
     if (grow.current !== null) {
       grow.current += dt;
-      const t = Math.min(1, grow.current / GROW_SECONDS);
-      plane.constant = 0.12 + (MODEL_TOP - 0.12) * (1 - Math.pow(1 - t, 3));
-      if (t >= 1) grow.current = null;
+      const rise = (plane: THREE.Plane, [from, to]: readonly [number, number]) => {
+        const t = Math.min(1, Math.max(0, (grow.current! - from) / (to - from)));
+        plane.constant = 0.12 + (MODEL_TOP - 0.12) * (1 - Math.pow(1 - t, 3));
+      };
+      rise(helixPlane, HELIX_GROW);
+      rise(edgePlane, EDGE_GROW);
+      if (grow.current >= EDGE_GROW[1]) grow.current = null;
     }
     const g = group.current;
     if (g) {
