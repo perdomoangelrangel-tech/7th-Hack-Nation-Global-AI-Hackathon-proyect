@@ -12,7 +12,7 @@
 import { z } from "zod";
 import type { EntityType } from "../atlas/types";
 import { structured, untrusted } from "./client";
-import { entityKeys, norm, reconcile, type Match } from "./reconcile";
+import { coreTokens, entityKeys, norm, reconcile, type Match } from "./reconcile";
 import type { Paper } from "./pubmed";
 import type { AtlasIndex } from "./types";
 import type { ExtractedClaim, ExtractedEntity, ExtractResult, MatchKind } from "./contract";
@@ -43,7 +43,10 @@ const LlmExtraction = z.object({
 });
 
 
-const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+/** Comparable text: Unicode-normalized, typographic dashes/quotes → ASCII (PubMed writes "4‐PBA" with U+2010), single spaces. */
+const squash = (s: string) => s.normalize("NFKC")
+  .replace(/[‐-―−­]/g, "-").replace(/[‘’‚′]/g, "'").replace(/[“”„″]/g, "\"")
+  .replace(/\s+/g, " ").trim();
 const contains = (hay: string, needle: string) => squash(hay).toLowerCase().includes(squash(needle).toLowerCase());
 const MATCH: Record<Match["method"], MatchKind> = { canonical_id: "exact", exact: "exact", alias: "alias", normalized: "alias", fuzzy: "fuzzy", llm: "llm", none: "new" };
 const clamp = (x: number) => Math.round(Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0)) * 100) / 100;
@@ -57,17 +60,27 @@ const NEGATION = /\b(not|no evidence|did not|does not|lack(?:ed)? of|absence of|
 
 function dictionaryEntities(idx: AtlasIndex, text: string): { mention: string; type: ExtractType }[] {
   const hay = ` ${norm(text)} `;
-  const seen = new Map<string, { mention: string; type: ExtractType }>();
+  const out: { mention: string; type: ExtractType }[] = [];
+  const perEntity = new Map<string, number>();
   const usedKeys = new Set<string>(); // one mention text → one type ("STXBP1" is the gene, not the disease alias)
   const order: ExtractType[] = ["gene", "disease", "phenotype", "pathway", "treatment"];
   const keys = entityKeys(idx, order).sort((a, b) => order.indexOf(a.entity.type as ExtractType) - order.indexOf(b.entity.type as ExtractType));
   for (const k of keys) {
-    if (k.key.length < 4 || seen.has(k.entity.id) || usedKeys.has(k.key)) continue;
-    if (hay.includes(` ${k.key} `)) { seen.set(k.entity.id, { mention: k.raw, type: k.entity.type as ExtractType }); usedKeys.add(k.key); }
+    // Every distinct name an entity appears under counts (gene symbol AND an alias like "Munc18-1"), up to 3.
+    if (k.key.length < 4 || usedKeys.has(k.key) || (perEntity.get(k.entity.id) ?? 0) >= 3) continue;
+    if (!hay.includes(` ${k.key} `)) continue;
+    usedKeys.add(k.key);
+    perEntity.set(k.entity.id, (perEntity.get(k.entity.id) ?? 0) + 1);
+    out.push({ mention: spanInText(text, k.key) ?? k.raw, type: k.entity.type as ExtractType });
   }
-  const out = [...seen.values()];
   for (const v of new Set(text.match(VARIANT_RE) ?? [])) out.push({ mention: v, type: "variant" });
   return out;
+}
+
+/** The text's own spelling of a normalized key ("munc18 1" → "Munc18-1"), so mentions are copied from the paper. */
+function spanInText(text: string, key: string): string | null {
+  const pattern = key.split(" ").map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^a-z0-9]+");
+  return text.match(new RegExp(`(?<![a-z0-9])${pattern}(?![a-z0-9])`, "i"))?.[0] ?? null;
 }
 
 function sentences(text: string) {
@@ -97,7 +110,7 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
   const dropped: ExtractResult["dropped"] = [];
 
   const llm = await structured({
-    name: "nexmed_extract",
+    name: "nedamex_extract",
     system: [
       "You extract structured facts from one biomedical paper for a rare-disease knowledge graph.",
       `Entities: every gene (HGNC symbol as written), variant (HGVS as written), phenotype/sign, disease, biological pathway/mechanism, investigator (person named as an author or researcher) and treatment mentioned. "mention" must be copied exactly as it appears in the text.`,
@@ -146,6 +159,18 @@ export async function extract(idx: AtlasIndex, input: { paper?: Paper; text?: st
     if (!s || !o) {
       const known = entities.some((e) => e.mention.toLowerCase() === c.subject.toLowerCase()) && entities.some((e) => e.mention.toLowerCase() === c.object.toLowerCase());
       dropped.push({ text: `${c.subject} ${c.relation} ${c.object}`, reason: known ? "wrong_entity_types" : "unknown_entity" });
+      continue;
+    }
+    // The quote must be about this claim: one side named in it, the other in it or in the title (the paper's topic).
+    // "Named" = literal mention/label, or all distinctive tokens of the mention ("STXBP1 disorders" ~ "STXBP1-related disorders").
+    const named = (q: string, e: ExtractedEntity, m: string) => {
+      if (contains(q, m) || contains(q, e.mention) || (!!e.label && contains(q, e.label))) return true;
+      const core = coreTokens(m), have = new Set(norm(squash(q)).split(" "));
+      return core.length > 0 && core.every((t) => have.has(t));
+    };
+    const sQ = named(c.quote, s, subject), oQ = named(c.quote, o, object);
+    if (!(sQ || oQ) || !(sQ || named(title, s, subject)) || !(oQ || named(title, o, object))) {
+      dropped.push({ text: `${subject} ${c.relation} ${object}: ${c.quote.slice(0, 120)}`, reason: "quote_not_about_claim" });
       continue;
     }
     const entity_ids = [s.entity_id, o.entity_id];

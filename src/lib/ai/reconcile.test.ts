@@ -79,3 +79,16 @@ describe("findDiseaseInText (QA-01)", () => {
     expect(findDiseaseInText(idx, "What treatment works for the syndrome with seizures?")).toBeNull();
   });
 });
+
+describe("reconcile · fuzzy always confirmed by the model when available", () => {
+  it("a single fuzzy match the model rejects becomes none", async () => {
+    setLlmClient(fakeLlm({ choices: [{ name: "beta illness", entity_id: "none" }] }).client);
+    const r = await reconcile(idx, ["beta illness"]);
+    expect(r.matches[0]).toMatchObject({ entity_id: null, method: "none" });
+  });
+  it("a single fuzzy match the model confirms becomes llm", async () => {
+    setLlmClient(fakeLlm({ choices: [{ name: "beta illness", entity_id: "disease:ORPHA:2" }] }).client);
+    const r = await reconcile(idx, ["beta illness"]);
+    expect(r.matches[0]).toMatchObject({ entity_id: "disease:ORPHA:2", method: "llm" });
+  });
+});

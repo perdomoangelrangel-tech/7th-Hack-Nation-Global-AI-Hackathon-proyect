@@ -63,7 +63,7 @@ export interface ExtractResult {
   source: { pmid?: string; url?: string; title?: string };
   entities: ExtractedEntity[];
   claims: ExtractedClaim[];
-  dropped: { text: string; reason: "mention_not_in_text" | "quote_not_in_text" | "wrong_entity_types" | "unknown_entity" }[];
+  dropped: { text: string; reason: "mention_not_in_text" | "quote_not_in_text" | "quote_not_about_claim" | "wrong_entity_types" | "unknown_entity" }[];
   saved: boolean;
   save_note?: string;
   extraction_id?: string;

@@ -94,3 +94,20 @@ describe("explain · openai mode (mocked)", () => {
     expect(r.sentences).toHaveLength(1);
   });
 });
+
+describe("explain · model echoes ids into prose", () => {
+  it("strips (fact_ids: f1) and [f1] from the text", async () => {
+    setLlmClient(fakeLlm({ sentences: [{ text: "GENE1 causes TS-A (fact_ids: f1).", fact_ids: ["f1"] }, { text: "Per Orphanet [f1], it is genetic.", fact_ids: ["f1"] }, { text: "It is observed (f1, f2).", fact_ids: ["f1"] }] }).client);
+    const r = await explain(idx, { edgeIds: ["edge:c1"], persona: "osei", locale: "en" });
+    expect(r.sentences.map((s) => s.text)).toEqual(["GENE1 causes TS-A.", "Per Orphanet, it is genetic.", "It is observed."]);
+  });
+});
+
+describe("explain · no advice without a step fact", () => {
+  it("drops cited advice sentences", async () => {
+    setLlmClient(fakeLlm({ sentences: [{ text: "GENE1 causes TS-A.", fact_ids: ["f1"] }, { text: "You might explore registries for TS-A.", fact_ids: ["f1"] }, { text: "", fact_ids: [] }] }).client);
+    const r = await explain(idx, { edgeIds: ["edge:c1"], persona: "maria", locale: "en" });
+    expect(r.sentences.map((s) => s.text)).toEqual(["GENE1 causes TS-A."]);
+    expect(r.dropped).toEqual([{ text: "You might explore registries for TS-A.", reason: "advice_without_fact" }]);
+  });
+});

@@ -11,7 +11,7 @@ type L = "en" | "es";
 export const SOURCE_LABEL: Record<SourceId, string> = {
   orphanet: "Orphanet", hpo: "the Human Phenotype Ontology", monarch: "Monarch", clinvar: "ClinVar", ctgov: "ClinicalTrials.gov",
   opentargets: "Open Targets", reactome: "Reactome", pubmed: "PubMed", nih_reporter: "NIH RePORTER", patient_orgs: "the organization's own website",
-  fda: "the FDA", atlas_analysis: "Nexmed analysis", nexmed_analysis: "Nexmed analysis", openai_extraction: "an OpenAI extraction", community: "a community draft",
+  fda: "the FDA", atlas_analysis: "Nedamex analysis", nexmed_analysis: "Nedamex analysis", openai_extraction: "an OpenAI extraction", community: "a community draft",
 };
 
 const short = (e: Entity | undefined, l: L) => {

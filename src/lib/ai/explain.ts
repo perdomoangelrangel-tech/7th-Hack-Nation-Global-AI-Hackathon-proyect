@@ -30,17 +30,17 @@ export async function explain(idx: AtlasIndex, req: ExplainRequest): Promise<Exp
 
   const p = PERSONAS[req.persona];
   const task = req.locale === "es"
-    ? `TAREA: explica estas conexiones del grafo a ${p.name} en un máximo de ${Math.min(p.maxClaims, facts.length + 1)} frases, en el orden más útil para esa persona. Cada frase cita los fact_ids que usa. Si varios hechos forman un camino, explica el camino.`
-    : `TASK: explain these graph connections to ${p.name} in at most ${Math.min(p.maxClaims, facts.length + 1)} sentences, in the order most useful to that person. Each sentence cites the fact_ids it uses. If several facts form a path, explain the path.`;
+    ? `TAREA: explica estas conexiones del grafo a ${p.name} en un máximo de ${Math.min(p.maxClaims, facts.length + 1)} frases, en el orden más útil para esa persona. Cada frase cita los fact_ids que usa. Si varios hechos forman un camino, explica el camino. Explica lo que dicen los hechos; no recomiendes acciones.`
+    : `TASK: explain these graph connections to ${p.name} in at most ${Math.min(p.maxClaims, facts.length + 1)} sentences, in the order most useful to that person. Each sentence cites the fact_ids it uses. If several facts form a path, explain the path. Explain what the facts say; do not recommend actions.`;
   const llm = await structured({
-    name: "nexmed_explain",
-    system: systemPrompt({ persona: req.persona, locale: req.locale, task, simple }),
+    name: "nedamex_explain",
+    system: systemPrompt({ persona: req.persona, locale: req.locale, task, simple, explainOnly: true }),
     input: [factsBlock(facts, req.locale), req.question ? untrusted("question", req.question, 500) : ""].filter(Boolean).join("\n\n"),
     schema: DraftSchema,
     fast: facts.length <= 3,
   });
   const draft = llm.mode === "openai" ? llm.data.sentences.slice(0, p.maxClaims + 1) : templateDraft(facts, simple);
-  const v = verifyDraft(draft, facts, req.locale, { allowNames: namesOf(idx, facts) });
+  const v = verifyDraft(draft, facts, req.locale, { allowNames: namesOf(idx, facts), noAdvice: true });
 
   // Model output that loses every sentence in verification is worse than the template: fall back.
   if (llm.mode === "openai" && !v.sentences.length) {

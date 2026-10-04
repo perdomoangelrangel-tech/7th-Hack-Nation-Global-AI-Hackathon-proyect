@@ -112,3 +112,38 @@ describe("pubmed", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("extract · quote must be about the claim", () => {
+  it("drops a verbatim quote that names neither side", async () => {
+    setLlmClient(fakeLlm({
+      entities: [{ mention: "GENE2", type: "gene" }, { mention: "Beta disease", type: "disease" }],
+      claims: [{ subject: "GENE2", relation: "causes", object: "Beta disease", polarity: "supports", quote: "We report 12 patients.", confidence: 0.9 }],
+    }).client);
+    const r = await extract(idx, { paper });
+    expect(r.claims).toHaveLength(0);
+    expect(r.dropped.map((d) => d.reason)).toContain("quote_not_about_claim");
+  });
+});
+
+describe("extract · typographic characters from PubMed", () => {
+  it("accepts a quote written with ASCII hyphens when the abstract uses U+2010", async () => {
+    setLlmClient(fakeLlm({
+      entities: [{ mention: "GENE1", type: "gene" }, { mention: "Testing syndrome type A", type: "disease" }],
+      claims: [{ subject: "GENE1", relation: "causes", object: "Testing syndrome type A", polarity: "contradicts", quote: "Loss-of-function GENE1 did not cause Testing syndrome type A in mice.", confidence: 0.7 }],
+    }).client);
+    const r = await extract(idx, { paper: { ...paper, abstract: "Loss‐of‐function GENE1 did not cause Testing syndrome type A in mice." } });
+    expect(r.dropped).toEqual([]);
+    expect(r.claims[0]).toMatchObject({ polarity: "contradicts" });
+  });
+});
+
+describe("extract · dictionary pass finds aliases in running text (QA-28)", () => {
+  it("reports the alias with the paper's own spelling, alongside the symbol", async () => {
+    setLlmClient(null);
+    const r = await extract(idx, { text: "We studied munc-1 (GENE1) carriers. Variants in munc-1 cause Testing syndrome type A in most cases." });
+    const genes = r.entities.filter((e) => e.type === "gene");
+    expect(genes.map((e) => e.mention).sort()).toEqual(["GENE1", "munc-1"]);
+    expect(genes.every((e) => e.entity_id === "gene:HGNC:1")).toBe(true);
+    expect(r.claims.find((c) => c.subject === "munc-1")).toMatchObject({ relation: "causes", entity_ids: ["gene:HGNC:1", "disease:ORPHA:1"] });
+  });
+});
