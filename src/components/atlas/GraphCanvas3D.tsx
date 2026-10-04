@@ -99,15 +99,20 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     haloSprite.scale.setScalar(r * 5);
     const ringSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: ring, color: new THREE.Color(n.bridge ? CANVAS.bridge : CANVAS.ink), transparent: true, opacity: 0, depthWrite: false }));
     ringSprite.scale.setScalar(r * 3.1);
-    const label = new SpriteText(trim(n.name, isDisease ? 28 : 34), isDisease ? 6.5 : 4.6, CANVAS.ink);
+    // Constant on-screen size (sizeAttenuation off): readable whatever the camera distance, never giant up close.
+    const label = new SpriteText(trim(n.name, isDisease ? 24 : 30), isDisease ? 0.013 : 0.0105, CANVAS.ink);
     label.fontWeight = isDisease ? "600" : "500";
     label.fontFace = "ui-sans-serif, system-ui, sans-serif";
     label.backgroundColor = CANVAS.labelBg;
-    label.padding = [2.4, 1.2];
-    label.borderRadius = 3;
-    label.position.y = -(r + (isDisease ? 6.5 : 5));
+    // padding/borderRadius are in the same units as textHeight (large values blow up the label canvas).
+    label.padding = [0.004, 0.002];
+    label.borderRadius = 0.0025;
+    label.position.y = -(r + 1.5);
+    label.center.set(0.5, 1);
     label.visible = isDisease;
-    (label.material as THREE.SpriteMaterial).depthWrite = false;
+    // Labels always draw on top of spheres (never hidden behind their own or a neighbor's node).
+    const lm = label.material as THREE.SpriteMaterial; lm.depthWrite = false; lm.depthTest = false; lm.sizeAttenuation = false;
+    label.renderOrder = 10;
     group.add(haloSprite, mesh, ringSprite, label);
     nodeParts.current.get(String(n.id))?.mat.dispose();
     nodeParts.current.set(String(n.id), { group, mesh, mat, halo: haloSprite, ring: ringSprite, label, base: r });
