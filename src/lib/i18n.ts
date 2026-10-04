@@ -23,8 +23,9 @@ const en = {
   n_diseases: "{n} diseases",
   community_pick: "Choose a disease to see its patient groups.",
   bridge_short: "bridge",
-  ctrl: { center: "Map or table", map: "Map", table: "Table", view: "Graph view", focus: "Focus", all: "All", zoom_in: "Zoom in", zoom_out: "Zoom out", fit: "Fit to screen", rotate: "Rotate", stop_rotate: "Stop rotation", focus_hint: "Your disease, its direct neighbours and the route", all_hint: "Everything around this disease" } as Record<string, string>,
+  ctrl: { center: "View", route: "Route", constellation: "Constellation", route_hint: "Your disease at the center, then its gene and mechanism, neighbour diseases and labelled sectors", constellation_hint: "Every disease, grouped by mechanism cluster", layers: "Layers", legend: "Legend", map: "Map", table: "Table", view: "Graph view", focus: "Focus", all: "All", zoom_in: "Zoom in", zoom_out: "Zoom out", fit: "Fit to screen", rotate: "Rotate", stop_rotate: "Stop rotation", focus_hint: "Your disease, its direct neighbours and the route", all_hint: "Everything around this disease" } as Record<string, string>,
   breadcrumb_hint: "Hover a line or a card to see what it connects.",
+  sector: { mechanism: "Mechanism", symptoms: "Symptoms", studies: "Studies & assets", people: "People", treatments: "Treatments", more: "+{n} more", fewer: "show fewer", none: "none in our sources" } as Record<string, string>,
   footer_disclaimer: "Not medical advice · inferred links are hypotheses for experts",
   snapshot: "Snapshot · {d}",
   drawer: {
@@ -173,8 +174,9 @@ const es: typeof en = {
   n_diseases: "{n} enfermedades",
   community_pick: "Elige una enfermedad para ver sus grupos de pacientes.",
   bridge_short: "puente",
-  ctrl: { center: "Mapa o tabla", map: "Mapa", table: "Tabla", view: "Vista del grafo", focus: "Foco", all: "Todo", zoom_in: "Acercar", zoom_out: "Alejar", fit: "Encuadrar", rotate: "Rotar", stop_rotate: "Detener rotación", focus_hint: "Tu enfermedad, sus vecinas directas y la ruta", all_hint: "Todo alrededor de esta enfermedad" },
+  ctrl: { center: "Vista", route: "Ruta", constellation: "Constelación", route_hint: "Tu enfermedad al centro, luego su gen y mecanismo, las enfermedades vecinas y sectores rotulados", constellation_hint: "Todas las enfermedades, agrupadas por cluster de mecanismo", layers: "Capas", legend: "Leyenda", map: "Mapa", table: "Tabla", view: "Vista del grafo", focus: "Foco", all: "Todo", zoom_in: "Acercar", zoom_out: "Alejar", fit: "Encuadrar", rotate: "Rotar", stop_rotate: "Detener rotación", focus_hint: "Tu enfermedad, sus vecinas directas y la ruta", all_hint: "Todo alrededor de esta enfermedad" },
   breadcrumb_hint: "Pasa el cursor sobre una línea o una tarjeta para ver qué conecta.",
+  sector: { mechanism: "Mecanismo", symptoms: "Síntomas", studies: "Estudios y activos", people: "Personas", treatments: "Tratamientos", more: "+{n} más", fewer: "mostrar menos", none: "ninguno en nuestras fuentes" },
   footer_disclaimer: "No es consejo médico · las conexiones inferidas son hipótesis para expertos",
   snapshot: "Copia · {d}",
   drawer: {
