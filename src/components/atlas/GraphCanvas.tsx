@@ -13,7 +13,7 @@ import ForceGraph2D, { type ForceGraphMethods, type LinkObject, type NodeObject 
 import type { GLink, GNode } from "@/lib/atlas/store";
 import { prefersReducedMotion } from "@/lib/motion";
 import { CANVAS, KIND_STYLE, TYPE_COLOR, hexA, kindOf } from "./colors";
-import { endId, nodeSize, trim, type GraphCanvasProps } from "./graphProps";
+import { DOUBLE_CLICK_MS, endId, nodeSize, trim, type GraphCanvasProps } from "./graphProps";
 
 type N = NodeObject<GNode>;
 type L = LinkObject<GNode, GLink>;
@@ -36,6 +36,7 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   const [hover, setHover] = useState<string | null>(null);
   const reduced = useMemo(() => !!still || prefersReducedMotion(), [still]);
   const narrow = size.w < 600;
+  const lastClick = useRef<{ id: string; t: number } | null>(null);
   const narrowRef = useRef(narrow);
   useEffect(() => { narrowRef.current = narrow; }, [narrow]);
   /** Label rectangles already drawn this frame (screen px) — greedy collision avoidance. */
@@ -88,11 +89,11 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   }, [data, reduced]);
   // Resize → re-frame without animation (never reheats).
   useEffect(() => { fitRef.current(0); }, [size.w, size.h]);
-  // Toolbar "Fit".
+  // Zoom control: + / − (300 ms), Fit / Reset (re-frame the whole layout).
   useEffect(() => {
     if (!command) return;
-    if (command.kind === "fit") fitAll(reduced ? 0 : 500);
-    else fg.current?.zoom(fg.current.zoom() * (command.kind === "zoomIn" ? 1.3 : 0.77), reduced ? 0 : 300);
+    if (command.kind === "fit" || command.kind === "reset") fitAll(reduced ? 0 : 500);
+    else fg.current?.zoom(Math.min(4, Math.max(0.3, fg.current.zoom() * (command.kind === "zoomIn" ? 1.35 : 0.74))), reduced ? 0 : 300);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command]);
 
@@ -164,17 +165,22 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
       ctx.textAlign = "center"; ctx.textBaseline = "top";
       const label = trim(node.name, size.w < 600 ? 20 : 40); // narrow canvases: shorter pills
       const w = ctx.measureText(label).width + 10 / scale, h = fs + 6 / scale;
-      const lx = x - w / 2, ly = y + r + 4 / scale;
-      const s = toScreen(lx, ly), rect = { x: s.x, y: s.y, w: w * t.a, h: h * t.d };
-      const hit = drawn.current.some((o) => rect.x < o.x + o.w && rect.x + rect.w > o.x && rect.y < o.y + o.h && rect.y + rect.h > o.y);
+      const lx = x - w / 2;
       const ring = (node as { ring?: number }).ring ?? 9;
-      const core = narrow ? ring === 0 || ring === 2 : ring <= 2; // focus + ring 1–2 always keep their label (phones: focus + ring 2)
-      if (!hit || core || node.id === hover) {
+      const isFocus = !!node.focus || ring === 0;
+      // Try below the node, then above; the focus label always wins (QA-53), others move or drop out on collision.
+      const spots = [y + r + 4 / scale, y - r - 4 / scale - h];
+      const rectAt = (ly: number) => { const sc = toScreen(lx, ly); return { x: sc.x, y: sc.y, w: w * t.a, h: h * t.d }; };
+      const collides = (rc: { x: number; y: number; w: number; h: number }) => drawn.current.some((o) => rc.x < o.x + o.w && rc.x + rc.w > o.x && rc.y < o.y + o.h && rc.y + rc.h > o.y);
+      let ly: number | null = null;
+      if (isFocus || node.id === hover) ly = spots[0];
+      else for (const cand of spots) if (!collides(rectAt(cand))) { ly = cand; break; }
+      if (ly !== null) {
         ctx.fillStyle = CANVAS.labelBg;
         ctx.beginPath(); roundRect(ctx, lx, ly, w, h, 4 / scale); ctx.fill();
         ctx.fillStyle = CANVAS.ink;
         ctx.fillText(label, x, ly + 3 / scale);
-        drawn.current.push(rect);
+        drawn.current.push(rectAt(ly));
       }
     }
     ctx.globalAlpha = 1;
@@ -183,7 +189,8 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   const paintArea = useCallback((node: N, color: string, ctx: CanvasRenderingContext2D, scale: number) => {
     ctx.fillStyle = color; ctx.beginPath();
     if (node.header) { ctx.font = `600 ${LABEL_PX / scale}px ui-sans-serif`; const w = ctx.measureText(narrowRef.current && node.header !== "region" ? compactHeader(node.name) : node.name).width + 18 / scale, h = (LABEL_PX + 12) / scale; roundRect(ctx, (node.x ?? 0) - w / 2, (node.y ?? 0) - h / 2, w, h, h / 2); ctx.fill(); return; }
-    ctx.arc(node.x ?? 0, node.y ?? 0, nodeSize(node.size) + 4, 0, 2 * Math.PI); ctx.fill();
+    // Hit target ≥ 14 px on screen whatever the zoom.
+    ctx.arc(node.x ?? 0, node.y ?? 0, Math.max(nodeSize(node.size) + 4, 14 / scale), 0, 2 * Math.PI); ctx.fill();
   }, []);
 
   const isLit = (l: L) => highlightEdges.has((l as GLink).id);
@@ -214,7 +221,15 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
         linkCurvature={(l) => (l.bridge ? 0.25 : 0)}
         linkHoverPrecision={6}
         onNodeHover={(n) => { setHover(n ? String(n.id) : null); if (wrap.current) wrap.current.style.cursor = n ? "pointer" : ""; }}
-        onNodeClick={(n) => onNode(n as GNode)}
+        onNodeClick={(n) => {
+          // Double-click = zoom to the node; single click = focus / open its evidence (handled by the parent).
+          const now = performance.now(), last = lastClick.current;
+          lastClick.current = { id: String(n.id), t: now };
+          if (last && last.id === String(n.id) && now - last.t < DOUBLE_CLICK_MS) {
+            fg.current?.centerAt(n.x, n.y, reduced ? 0 : 600); fg.current?.zoom(Math.max(2.2, fg.current.zoom()), reduced ? 0 : 600); return;
+          }
+          onNode(n as GNode);
+        }}
         onLinkClick={(l) => onLink({ ...(l as GLink), source: endId(l.source), target: endId(l.target) })}
         onLinkHover={(l) => onLinkHover?.(l ? (l as GLink).id : null)}
         onBackgroundClick={() => onBackground?.()}

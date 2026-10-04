@@ -94,9 +94,9 @@ export interface SearchHit {
   members?: string[]; via_definition?: boolean;
 }
 
-const TYPE_RANK: Partial<Record<EntityType, number>> = { disease: 0, gene: 1, phenotype: 2, pathway: 3, organization: 4, treatment: 5, investigator: 6, trial: 7 };
+const TYPE_RANK: Partial<Record<EntityType, number>> = { disease: 0, gene: 1, phenotype: 2, pathway: 3, mechanism: 3, organization: 4, treatment: 5, investigator: 6, trial: 7 } as Partial<Record<EntityType, number>>;
 
-export function search(q: string, l: Locale = "en", limit = 30): SearchHit[] {
+export function search(q: string, l: Locale = "en", limit = 60): SearchHit[] {
   const nq = norm(q); if (nq.length < 2) return [];
   const { snap } = atlas();
   const hits: (SearchHit & { score: number })[] = [];

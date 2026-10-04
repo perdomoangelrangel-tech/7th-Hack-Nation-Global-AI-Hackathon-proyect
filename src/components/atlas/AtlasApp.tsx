@@ -10,7 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Box, ChevronDown, ChevronRight, CircleHelp, Focus, Layers as LayersIcon, BookOpen, Orbit, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Square, Target, UserRound, type LucideIcon } from "lucide-react";
+import { Box, ChevronRight, CircleHelp, Focus, Minus, Plus, RotateCcw, Expand, Shrink, PanelRightClose, PanelRightOpen, Layers as LayersIcon, BookOpen, Orbit, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Square, Target, UserRound, type LucideIcon } from "lucide-react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { dict, type Locale } from "@/lib/i18n";
@@ -59,7 +59,8 @@ const EMPTY = new Set<string>();
 
 export function AtlasApp({ initialDisease, initialPersona, initialLocale, initialEdge = null, personas, stats, maria }: Props) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
-  const [persona, setPersona] = useState<PersonaId>(initialPersona);
+  // The role is chosen on the home (or the Lovable app) — the atlas only shows it (WAVE 6).
+  const [persona] = useState<PersonaId>(initialPersona);
   const [focus, setFocus] = useState<string | null>(initialDisease);
   const [view, setView] = useState<GraphView | null>(null);
   const [journey, setJourney] = useState<Journey | null>(null);
@@ -74,12 +75,25 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [layers, setLayers] = useState<Set<Layer>>(() => new Set(LAYERS));
   const [expanded, setExpanded] = useState<Set<Sector>>(() => new Set());
   const [showLegend, setShowLegend] = useState(true);
+  // Route panel (right): 480 px default, drag handle 360–720 px, "Expand" = 60 % of the window, collapsible (mode=free).
+  const [panelW, setPanelW] = useState(480);
+  const [panelMode, setPanelMode] = useState<"normal" | "expanded" | "closed">("normal");
   const [railTab, setRailTab] = useState<RailTab | null>(defaultRailTab(initialPersona));
   const [command, setCommand] = useState<GraphCommand | null>(null);
   // Spotlight: nodes to keep lit + framed (a cluster picked in the table). Unlike hover, the pointer does not clear it.
   const [spotlight, setSpotlight] = useState<string[]>([]);
   const center: "map" | "table" = viewMode === "table" ? "table" : "map";
   const cmd = (kind: GraphCommand["kind"]) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 }));
+  // Keyboard zoom: + / − / 0 (fit) when not typing.
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey || el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el?.isContentEditable) return;
+      const kind = e.key === "+" || e.key === "=" ? "zoomIn" : e.key === "-" || e.key === "_" ? "zoomOut" : e.key === "0" ? "fit" : null;
+      if (kind) { e.preventDefault(); setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 })); }
+    };
+    window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
+  }, []);
   const pendingNarration = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   const firstInspect = useRef(true);
@@ -159,7 +173,13 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const firstSearch = useRef(typeof window !== "undefined" ? window.location.search : "");
   useEffect(() => {
     const sp = new URLSearchParams(firstSearch.current);
-    const c = sp.get("c"), e = sp.get("e");
+    const c = sp.get("c"), e = sp.get("e"), mode = sp.get("mode");
+    // mode=challenge → Maria's route (step 1, stepper); mode=free → route panel closed, Constellation 2D, search focused.
+    if (mode === "challenge" && !focus) requestAnimationFrame(() => { setFocus(maria); setViewMode("route"); });
+    if (mode === "free") requestAnimationFrame(() => {
+      setPanelMode("closed"); setViewMode("constellation"); graph.setMode("2d");
+      (document.querySelector('input[role="combobox"]') as HTMLInputElement | null)?.focus();
+    });
     if (!c && !(e && !initialEdge)) return;
     const id = requestAnimationFrame(() => {
       if (c) { setClusterFilter(c); setRailTab("clusters"); }
@@ -208,7 +228,6 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (l) setInspect(l.id);
   };
   const onLink = (l: GLink) => setInspect(l.kind === "proposed" ? String(l.source) : l.id);
-  const switchPersona = (p: PersonaId) => { setPersona(p); setRailTab(defaultRailTab(p)); setViewMode(p === "priya" ? "table" : focus ? "route" : "constellation"); if (focus && (n.state === "playing" || n.state === "paused")) void n.start(focus, p, locale); };
   const switchLocale = (l: Locale) => { n.stop(); setLocale(l); };
   const toggleKind = (k: LinkKind) => setHiddenKinds((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
   const onRailHover = useCallback((nodes: string[], edges: string[]) => setHover({ nodes, edges }), []);
@@ -248,7 +267,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             <span className="font-semibold tracking-tight text-brand-ink hidden sm:inline">{site.name}</span>
           </Link>}
           <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} persona={persona} onPick={onPick} autoFocus={!initialDisease && !embed} /></div>
-          <RolePill t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} />
+          {/* Embedded: the host (Lovable) already shows the role. */}
+          {!embed && <RolePill t={t} personas={personas[locale]} persona={persona} locale={locale} embed={embed} />}
           {/* Help → the 3-step tour (mvp-builder's Tour listens to `nedamex:tour`). */}
           <button type="button" onClick={() => window.dispatchEvent(new Event("nedamex:tour"))} aria-label={t.help} title={t.help}
             className="grid place-items-center w-9 h-9 shrink-0 rounded-full border border-line text-ink-2 hover:bg-brand-soft hover:text-ink">
@@ -260,7 +280,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         {/* Modes below xl (always visible on mobile) */}
       </header>
 
-      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[auto_1fr_420px]">
+      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[auto_1fr_var(--panel-w)]"
+        style={{ ["--panel-w" as string]: panelMode === "closed" ? "0px" : panelMode === "expanded" ? "60vw" : `${panelW}px` }}>
         {/* Left icon rail: Clusters · How to read · Community */}
         <LeftRail {...railProps} tab={railTab} onTab={setRailTab} />
 
@@ -273,7 +294,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); }} />}
 
           {/* Floating controls: 2D/3D · Focus/All · zoom · fit · rotate (3D) */}
-          <div className="absolute left-3 right-3 top-3 z-20 flex flex-wrap items-center gap-2">
+          <div className="absolute left-3 right-3 lg:right-24 top-3 z-20 flex flex-wrap items-center gap-2">
             <Segmented label={t.ctrl.center} value={viewMode} onChange={(v) => { setViewMode(v as typeof viewMode); setSpotlight([]); }}
               options={[{ v: "route", label: t.ctrl.route, icon: Focus, disabled: !focus, title: t.ctrl.route_hint }, { v: "constellation", label: t.ctrl.constellation, icon: Orbit, title: t.ctrl.constellation_hint }, { v: "table", label: t.ctrl.table, icon: Table2 }]} />
             {center === "map" && <>
@@ -281,7 +302,6 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
               <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => graph.setMode(m as "2d" | "3d")}
                 options={[{ v: "2d", label: t.view_2d, icon: Square }, { v: "3d", label: t.view_3d, icon: Box, disabled: !graph.webgl }]} />
               <div className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
-                <IconBtn icon={Maximize2} label={t.ctrl.fit} onClick={() => cmd("fit")} />
                 <IconBtn icon={BookOpen} label={t.ctrl.legend} pressed={showLegend} onClick={() => setShowLegend((x) => !x)} />
               </div>
               {graph.mode === "2d" && graph.reason && <span className="hidden sm:inline rounded-full bg-paper/90 px-2 py-0.5 text-[11px] text-ink-3">{t.fallback_reason[graph.reason]}</span>}
@@ -300,7 +320,28 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
                 onFocusDisease={(d) => { setViewMode("route"); goTo(d); }} />
             </div>
           )}
-          {center === "map" && showLegend && <div className="absolute right-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>}
+          {center === "map" && showLegend && <div className="absolute left-3 bottom-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>}
+          {/* Route panel size: Expand (60 %) / Hide — on the canvas edge so it never covers the panel's own header. */}
+          {panelMode !== "closed" && (
+            <div className="hidden lg:flex absolute right-3 top-3 z-20 rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
+              <IconBtn icon={panelMode === "expanded" ? Shrink : Expand} label={panelMode === "expanded" ? t.panel.shrink : t.panel.expand} onClick={() => setPanelMode((m) => (m === "expanded" ? "normal" : "expanded"))} />
+              <IconBtn icon={PanelRightClose} label={t.panel.close} onClick={() => setPanelMode("closed")} />
+            </div>
+          )}
+          {panelMode === "closed" && (
+            <button type="button" onClick={() => setPanelMode("normal")} className="hidden lg:flex absolute right-3 top-3 z-20 items-center gap-1.5 rounded-full border border-line bg-paper/95 px-3 py-1.5 text-xs font-medium text-ink-2 shadow-sm hover:bg-brand-soft">
+              <PanelRightOpen aria-hidden size={14} strokeWidth={1.75} />{t.panel.open}
+            </button>
+          )}
+          {/* Zoom control (WAVE 6): + / − / Fit / Reset, 44 px targets; keys + − 0. */}
+          {center === "map" && (
+            <div role="group" aria-label={t.ctrl.zoom} className="absolute right-3 bottom-3 z-20 flex flex-col overflow-hidden rounded-2xl border border-line bg-paper/95 shadow-md">
+              <ZoomBtn icon={Plus} label={`${t.ctrl.zoom_in} (+)`} onClick={() => cmd("zoomIn")} />
+              <ZoomBtn icon={Minus} label={`${t.ctrl.zoom_out} (−)`} onClick={() => cmd("zoomOut")} />
+              <ZoomBtn icon={Maximize2} label={`${t.ctrl.fit} (0)`} onClick={() => cmd("fit")} />
+              <ZoomBtn icon={RotateCcw} label={t.ctrl.reset} onClick={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); setClusterFilter(null); setExpanded(new Set()); cmd("reset"); }} />
+            </div>
+          )}
 
           {/* Breadcrumb: what the map is highlighting, in words. */}
           {focus && center === "map" && (
@@ -317,6 +358,20 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           {fullView && fullView.links.length > 0 && (
             <nav aria-label={t.explore_more} className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:right-3 focus-within:top-24 focus-within:z-20 focus-within:max-h-[60%] focus-within:w-72 focus-within:overflow-auto focus-within:rounded-xl focus-within:border focus-within:border-line focus-within:bg-paper focus-within:p-2 focus-within:shadow-lg">
               <p className="px-2 py-1 text-xs uppercase tracking-widest text-ink-3">{t.explore_more}</p>
+              {/* Route sectors as real buttons (the canvas "+N more" pills are not reachable by keyboard / screen readers). */}
+              {laid?.sectors.length ? (
+                <ul aria-label={t.sector.list} className="mb-1 border-b border-line pb-1">
+                  {laid.sectors.map((x) => (
+                    <li key={x.sector}>
+                      <button type="button" aria-expanded={x.expanded} disabled={x.total <= x.shown && !x.expanded}
+                        onClick={() => setExpanded((e) => { const y = new Set(e); if (y.has(x.sector)) y.delete(x.sector); else y.add(x.sector); return y; })}
+                        className="w-full rounded-lg px-2 py-1 text-left text-xs text-ink-2 hover:bg-brand-soft focus:bg-brand-soft disabled:opacity-60">
+                        {t.sector[x.sector]}: {t.sector.shown.replace("{a}", String(x.shown)).replace("{b}", String(x.total))}{x.total > x.shown ? ` — ${t.sector.show_all}` : x.expanded ? ` — ${t.sector.fewer}` : ""}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <ul>
                 {fullView.links.slice(0, 60).map((l) => {
                   const name = (v: unknown) => { const id = typeof v === "object" && v ? (v as GNode).id : String(v); return fullView.nodes.find((x) => x.id === id)?.name ?? id; };
@@ -363,7 +418,17 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         </details>
 
         {/* Right panel: the journey */}
-        <aside ref={panelRef} className="relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh] pb-20 lg:overflow-hidden" aria-label={shownJourney?.disease.name ?? t.q1}>
+        <aside ref={panelRef} className={`relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh] pb-20 lg:overflow-hidden text-base ${panelMode === "closed" ? "lg:hidden" : ""}`} aria-label={shownJourney?.disease.name ?? t.q1}>
+          {/* Resize: drag the left edge (360–720 px), keyboard ← → on the handle; Expand = 60 %; close. */}
+          <div role="separator" aria-orientation="vertical" aria-label={t.panel.resize} aria-valuemin={360} aria-valuemax={720} aria-valuenow={panelW} tabIndex={0}
+            onPointerDown={(e) => {
+              const startX = e.clientX, startW = panelW; setPanelMode("normal"); (e.target as HTMLElement).setPointerCapture(e.pointerId);
+              const move = (ev: PointerEvent) => setPanelW(Math.min(720, Math.max(360, startW + (startX - ev.clientX))));
+              const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+              window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+            }}
+            onKeyDown={(e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setPanelMode("normal"); setPanelW((w) => Math.min(720, Math.max(360, w + (e.key === "ArrowLeft" ? 24 : -24)))); } }}
+            className="hidden lg:block absolute left-0 top-0 bottom-0 z-40 w-1.5 -translate-x-1/2 cursor-col-resize hover:bg-brand/40 focus-visible:bg-brand/60" />
           {/* Cross-lane mount points (voice lane, action lane). Keep them. */}
           <VoiceDock persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
           <CoCreate persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} edgeIds={inspect && !isDraftId(inspect) ? [inspect] : undefined} />
@@ -403,37 +468,23 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   );
 }
 
-/** Header role pill (WAVE 5B): only the current role, opening a small chooser. */
-function RolePill({ t, personas, persona, onPick }: { t: Dict; personas: PersonaOption[]; persona: PersonaId; onPick: (p: PersonaId) => void }) {
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    window.addEventListener("mousedown", away); window.addEventListener("keydown", esc);
-    return () => { window.removeEventListener("mousedown", away); window.removeEventListener("keydown", esc); };
-  }, [open]);
+/** WAVE 6: no persona switcher inside the atlas — a static "You're here as: <role>" pill + "Change role".
+ *  Embedded (Lovable) → the host app's role chooser; standalone → the home (role selection). */
+const ROLE_LABEL: Partial<Record<PersonaId, { en: string; es: string }>> = { osei: { en: "Researcher & clinician", es: "Investigador y clínico" } };
+function RolePill({ t, personas, persona, locale, embed }: { t: Dict; personas: PersonaOption[]; persona: PersonaId; locale: Locale; embed: boolean }) {
   const cur = personas.find((p) => p.id === persona)!;
+  const label = ROLE_LABEL[persona]?.[locale] ?? cur.mode;
+  const change = (e: React.MouseEvent) => {
+    if (!embed) return; // plain link to "/"
+    e.preventDefault();
+    try { window.top!.location.href = `${site.appUrl}/?role=change`; } catch { window.open(`${site.appUrl}/?role=change`, "_top"); }
+  };
   return (
-    <div ref={box} className="relative shrink-0">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={`${t.mode}: ${cur.mode}`}
-        className="flex items-center gap-1.5 rounded-full border border-line bg-brand-soft h-9 px-3 text-xs font-semibold text-brand-ink hover:bg-brand-mist">
-        <ModeIcon id={persona} /><span className="hidden sm:inline">{cur.mode}</span><ChevronDown aria-hidden size={14} strokeWidth={1.75} />
-      </button>
-      {open && (
-        <ul role="menu" aria-label={t.mode} className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-line bg-paper p-1.5 shadow-xl shadow-ink/10">
-          {personas.map((p) => (
-            <li key={p.id} role="none">
-              <button type="button" role="menuitemradio" aria-checked={p.id === persona} onClick={() => { onPick(p.id); setOpen(false); }}
-                className={`flex w-full items-start gap-2.5 rounded-xl px-3 py-2 text-left ${p.id === persona ? "bg-brand-soft" : "hover:bg-brand-mist"}`}>
-                <span className="mt-0.5 text-brand-deep"><ModeIcon id={p.id} /></span>
-                <span><span className="block text-sm font-medium text-ink">{p.mode}</span><span className="block text-xs text-ink-3">{p.name} · {p.role}</span></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="flex shrink-0 items-center gap-2">
+      <span className="flex items-center gap-1.5 rounded-full border border-line bg-brand-soft h-9 px-3 text-xs text-brand-ink" title={`${cur.name} · ${cur.role}`}>
+        <ModeIcon id={persona} /><span className="hidden lg:inline text-ink-3">{t.here_as}</span><span className="font-semibold">{label}</span>
+      </span>
+      <a href={embed ? `${site.appUrl}/?role=change` : "/"} onClick={change} className="hidden sm:inline text-xs font-medium text-brand-deep underline-offset-2 hover:underline">{t.change_role}</a>
     </div>
   );
 }
@@ -480,6 +531,15 @@ function Segmented({ label, value, onChange, options }: { label: string; value: 
         </button>
       ))}
     </div>
+  );
+}
+
+function ZoomBtn({ icon: I, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label}
+      className="grid place-items-center w-11 h-11 border-b border-line last:border-b-0 text-ink-2 hover:bg-brand-soft hover:text-ink focus-visible:bg-brand-soft">
+      <I aria-hidden size={18} strokeWidth={1.75} />
+    </button>
   );
 }
 

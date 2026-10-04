@@ -107,6 +107,7 @@ export function routeLayout(view: GraphView, focus: string, opts: {
       const row = Math.floor(i / perRow), inRow = Math.min(perRow, shown.length - row * perRow), k = i % perRow;
       const a = inRow === 1 ? c : c - span / 2 + (span * k) / (inRow - 1);
       out.push(place(byId.get(id)!, a, RING[3] + row * 70, 3, { size: 8 }));
+      if (expanded) labelIds.add(id); // an opened sector shows its items' names (collision-avoided)
     });
     const rows = Math.max(1, Math.ceil(shown.length / perRow));
     const more = all.length - shown.length;

@@ -15,7 +15,7 @@ import * as THREE from "three";
 import SpriteText from "three-spritetext";
 import type { GLink, GNode } from "@/lib/atlas/store";
 import { CANVAS, KIND_STYLE, TYPE_COLOR, kindOf } from "./colors";
-import { endId, nodeSize, trim, type GraphCanvasProps } from "./graphProps";
+import { DOUBLE_CLICK_MS, endId, nodeSize, trim, type GraphCanvasProps } from "./graphProps";
 import { useGlyphGeometries } from "@/components/three/glyphs";
 
 type N = NodeObject<GNode>;
@@ -233,10 +233,17 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
     return () => clearTimeout(tm);
   }, [data, still]);
   useEffect(() => { frameRef.current(0); }, [size.w, size.h]);
+  // Zoom control: + / − dolly toward the orbit target (300 ms); Fit / Reset re-frame the layout (600 ms).
   useEffect(() => {
-    if (command?.kind === "fit") frame(still ? 0 : 600);
+    const g = fg.current; if (!g || !command) return;
+    if (command.kind === "fit" || command.kind === "reset") { frame(still ? 0 : 600); return; }
+    const cam = g.camera(); const ctl = g.controls() as { target?: THREE.Vector3 };
+    const target = ctl.target ?? new THREE.Vector3();
+    const p = cam.position.clone().sub(target).multiplyScalar(command.kind === "zoomIn" ? 0.74 : 1.35).add(target);
+    g.cameraPosition({ x: p.x, y: p.y, z: p.z }, { x: target.x, y: target.y, z: target.z }, still ? 0 : 300);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command]);
+  const lastClick = useRef<{ id: string; t: number } | null>(null);
 
   // Zoom limits; never auto-rotate.
   useEffect(() => {
@@ -268,7 +275,14 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
         linkPositionUpdate={linkPositionUpdate}
         linkHoverPrecision={2}
         onNodeHover={(n) => { setHover(n ? String(n.id) : null); if (wrap.current) wrap.current.style.cursor = n ? "pointer" : ""; }}
-        onNodeClick={(n) => onNode(n as GNode)}
+        onNodeClick={(n) => {
+          const now = performance.now(), last = lastClick.current;
+          lastClick.current = { id: String(n.id), t: now };
+          if (last && last.id === String(n.id) && now - last.t < DOUBLE_CLICK_MS) {
+            const { x = 0, y = 0, z = 0 } = n; fg.current?.cameraPosition({ x, y, z: z + 180 }, { x, y, z }, still ? 0 : 600); return;
+          }
+          onNode(n as GNode);
+        }}
         onLinkClick={(l) => onLink({ ...(l as GLink), source: endId(l.source), target: endId(l.target) })}
         onLinkHover={(l) => { onLinkHover?.(l ? (l as GLink).id : null); if (wrap.current) wrap.current.style.cursor = l ? "pointer" : ""; }}
         onBackgroundClick={() => onBackground?.()}
