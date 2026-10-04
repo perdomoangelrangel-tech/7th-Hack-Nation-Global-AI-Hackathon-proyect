@@ -69,6 +69,26 @@ describe("analyze()", () => {
     }
   });
 
+  it("adds inferred mechanism nodes (loss vs gain/altered function) that cite the variant evidence, idempotently", () => {
+    const s = withAnalytics(fixture());
+    const mech = s.edges.filter((e) => e.relation === "has_mechanism");
+    expect(mech.map((e) => [e.from, e.to]).sort()).toEqual([
+      ["disease:ORPHA:1", "mechanism:LOSS_OF_FUNCTION"],
+      ["disease:ORPHA:2", "mechanism:MISSENSE_UNRESOLVED"],
+    ]);
+    for (const e of mech) {
+      expect(e.kind).toBe("inferred");
+      expect(e.evidence[0].source).toBe("nexmed_analysis");
+      expect(e.evidence.some((x) => x.external_id === "c1" || x.external_id === "c2")).toBe(true);
+    }
+    // ORPHA:3 has no variant profile -> no mechanism claim
+    expect(mech.some((e) => e.from === "disease:ORPHA:3")).toBe(false);
+    // re-running on its own output does not duplicate nodes or edges
+    const again = withAnalytics(s);
+    expect(again.entities.filter((e) => e.type === "mechanism")).toHaveLength(2);
+    expect(again.edges.filter((e) => e.relation === "has_mechanism")).toHaveLength(2);
+  });
+
   it("names every cluster with a label basis", () => {
     for (const c of analyze(bundled()).clusters) {
       expect(c.label.length).toBeGreaterThan(0);

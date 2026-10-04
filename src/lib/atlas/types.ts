@@ -5,7 +5,8 @@
  */
 export type EntityType =
   | "disease" | "gene" | "phenotype" | "variant" | "trial" | "study" | "treatment"
-  | "organization" | "pathway" | "investigator";
+  | "organization" | "pathway" | "investigator"
+  | "mechanism";       // INFERRED variant-effect class (loss vs gain/altered function), computed by analyze()
 
 export type Relation =
   | "causes"           // gene -> disease
@@ -17,7 +18,8 @@ export type Relation =
   | "researches"       // organization|investigator -> disease
   | "participates_in"  // gene -> pathway (Reactome)
   | "is_a"             // phenotype -> phenotype (HPO hierarchy)
-  | "similar_to";      // disease <-> disease (INFERRED by the analysis, never observed)
+  | "similar_to"       // disease <-> disease (INFERRED by the analysis, never observed)
+  | "has_mechanism";   // disease -> mechanism (INFERRED from the disease's ClinVar variant profile)
 
 export type SourceId =
   | "orphanet" | "hpo" | "monarch" | "clinvar" | "ctgov" | "opentargets" | "reactome"

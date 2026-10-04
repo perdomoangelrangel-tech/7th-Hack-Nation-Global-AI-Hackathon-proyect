@@ -47,9 +47,9 @@ export function analyze(snapshot: AtlasSnapshot): Analytics {
  */
 export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   const now = snapshot.generated_at;
-  const entityList: Entity[] = snapshot.entities.map((e) => ({ ...e, props: { ...e.props } }));
+  const entityList: Entity[] = snapshot.entities.filter((e) => e.type !== "mechanism").map((e) => ({ ...e, props: { ...e.props } }));
   const entities = new Map(entityList.map((e) => [e.id, e]));
-  const edges = snapshot.edges.filter((e) => !(e.kind === "inferred" && e.relation === "similar_to"));
+  const edges = snapshot.edges.filter((e) => !(e.kind === "inferred" && (e.relation === "similar_to" || e.relation === "has_mechanism")));
   const byEdgeId = new Map(edges.map((e) => [e.id, e]));
   const outIdx = new Map<string, Edge[]>(); const inIdx = new Map<string, Edge[]>();
   for (const e of edges) {
@@ -397,7 +397,38 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     });
   }
 
-  /* 11. Assemble -------------------------------------------------------- */
+  /* 11. Mechanism nodes (inferred): loss vs gain/altered function -------- */
+  // One node per variant-effect class; disease -[has_mechanism]-> class when the disease's own ClinVar profile (or an
+  // Orphanet declaration) supports it. Gain of function only when Orphanet declares it: missense-dominance alone is
+  // "unresolved", never "gain". "Mixed" profiles get no edge: inconclusive is shown as a gap, not a claim.
+  const MECH = {
+    lof: { cid: "LOSS_OF_FUNCTION", name: "Loss of function", aliases: ["loss-of-function", "LoF", "truncating variants"], description: "Most pathogenic variants are truncating (nonsense, frameshift, splice) or Orphanet declares loss of function: the protein is missing or does not work." },
+    gof: { cid: "GAIN_OF_FUNCTION", name: "Gain of function", aliases: ["gain-of-function", "GoF"], description: "Orphanet declares gain of function: the protein is made and overactive or behaves abnormally." },
+    missense: { cid: "MISSENSE_UNRESOLVED", name: "Missense-dominant (mechanism unresolved)", aliases: ["missense-dominant", "altered function", "dominant negative"], description: "Most pathogenic variants are missense: the protein is made but altered — it may lose function, gain function or act dominant-negative. Needs functional validation before choosing a therapy strategy." },
+  } as const;
+  const mechEntities = new Map<string, Entity>();
+  for (const d of diseases) {
+    const v = variantEffect[d.id]; const cls = effectClass(d.id);
+    const key = cls === "lof" || cls === "gof" || cls === "missense" ? cls : null;
+    if (!v || !key) continue;
+    const m = MECH[key]; const mid = `mechanism:${m.cid}`;
+    if (!mechEntities.has(mid)) mechEntities.set(mid, { id: mid, type: "mechanism", canonical_id: m.cid, name: m.name, props: { kind: "variant_effect", description: m.description, inferred: true }, aliases: m.aliases.map((alias) => ({ alias, lang: "en" })) });
+    const declared = /declared/.test(v.call);
+    const id = `edge:${shortHash(`${d.id}|has_mechanism|${mid}`)}`;
+    const variantEdge = byEdgeId.get(v.edge);
+    inferred.push({
+      id, from: d.id, to: mid, relation: "has_mechanism", kind: "inferred",
+      confidence: round(declared ? 0.9 : key === "lof" ? v.lof_fraction : v.missense_fraction), confidence_basis: `${ANALYSIS_VERSION}:variant_effect`,
+      props: { gene: v.gene, lof_fraction: v.lof_fraction, missense_fraction: v.missense_fraction, n: v.n, call: v.call, basis: v.basis, variant_edge: v.edge },
+      evidence: [
+        { id: `ev:${shortHash(`${id}|analysis`)}`, source: "nexmed_analysis", external_id: `${ANALYSIS_VERSION}:variant_effect`, url: ANALYSIS_URL,
+          quote: `Inferred by Nedamex from ${v.gene} (${v.basis}, n=${v.n}: ${Math.round(v.lof_fraction * 100)}% truncating, ${Math.round(v.missense_fraction * 100)}% missense): ${v.call}`, published_on: null, retrieved_at: now },
+        ...(variantEdge?.evidence ?? []).filter((x) => x.source === "clinvar" || x.source === "orphanet").slice(0, 2),
+      ],
+    });
+  }
+
+  /* 12. Assemble -------------------------------------------------------- */
   for (const d of diseases) { d.props.cluster = diseaseCluster[d.id]; d.props.centrality = centrality[d.id]; }
   const analytics: Analytics = {
     generated_at: now,
@@ -405,7 +436,7 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     phenotype_ic_reference: { total_diseases: totalHpo || diseases.length, source: totalHpo ? "HPO annotations (ontology.jax.org)" : "frequency inside the atlas (HPO counts not loaded)" },
     clusters, disease_cluster: diseaseCluster, centrality, variant_effect: variantEffect, similarity, bridges, gaps, counterexamples,
   };
-  return { ...snapshot, entities: entityList, edges: [...edges, ...inferred], analytics };
+  return { ...snapshot, entities: [...entityList, ...mechEntities.values()], edges: [...edges, ...inferred], analytics };
 }
 
 /** Primary causal genes: flagged `primary`, else the highest-confidence causal edges (>= 0.9). */
