@@ -19,6 +19,8 @@ const W = { phenotype: 0.55, pathway: 0.35, gene: 0.1 } as const;
 const MIN_EDGE = 0.06;      // below this the connection is not drawn (simGIC scores are low in absolute value)
 const TOP_K = 3;            // max inferred neighbors per disease
 const MIN_ANCESTOR_IC = 0.25; // ancestors nearly every disease has carry no signal
+const LOUVAIN_RESOLUTION = 1.6; // community granularity: 1.0 merged unrelated groups once the slice grew to 32 diseases
+const GENERIC_PATHWAY_SHARE = 0.2; // a pathway shared by > 20% of atlas diseases is an umbrella, never a cluster name (Neutrophil degranulation: 8 of 32; mechanism pathways: <= 4)
 const LABEL_SLACK = 0.15;     // cluster naming: pathways this close to the most specific one compete on narrowness
 // Data-viz palette (the one place raw hex is allowed): logo blues first, then distinct accessible hues.
 const PALETTE = ["#3a86bf", "#0f766e", "#b45309", "#7c3aed", "#be185d", "#4d7c0f", "#0e7490", "#9a3412"];
@@ -45,7 +47,7 @@ export function analyze(snapshot: AtlasSnapshot): Analytics {
  * Returns a NEW snapshot: previous inferred `similar_to` edges replaced by fresh ones, derived props
  * (phenotype ic, disease cluster / centrality / variant_effect) set on cloned entities, and `analytics`.
  */
-export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
+export function withAnalytics(snapshot: AtlasSnapshot, louvainResolution = LOUVAIN_RESOLUTION): AtlasSnapshot {
   const now = snapshot.generated_at;
   const entityList: Entity[] = snapshot.entities.filter((e) => e.type !== "mechanism").map((e) => ({ ...e, props: { ...e.props } }));
   const entities = new Map(entityList.map((e) => [e.id, e]));
@@ -246,7 +248,7 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   for (const d of diseases) G.addNode(d.id);
   for (const p of pairs) if (p.s.score >= MIN_EDGE * 0.8) G.addEdge(p.a, p.b, { weight: p.s.score });
   const communities: Record<string, number> = diseases.length
-    ? (louvain(G, { getEdgeWeight: "weight", resolution: 1, rng: seeded(7) }) as Record<string, number>)
+    ? (louvain(G, { getEdgeWeight: "weight", resolution: louvainResolution, rng: seeded(7) }) as Record<string, number>)
     : {};
   const groups = new Map<number, string[]>();
   for (const d of diseases) { const c = communities[d.id] ?? -1; groups.set(c, [...(groups.get(c) ?? []), d.id]); }
@@ -259,6 +261,9 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   const pathwayGenes = new Map<string, number>();
   for (const e of edges) if (e.relation === "participates_in") pathwayGenes.set(e.to, (pathwayGenes.get(e.to) ?? 0) + 1);
   const genesIn = (pathway: string) => pathwayGenes.get(pathway) ?? 0;
+  const pathwayDiseaseCount = new Map<string, number>();
+  for (const d of diseases) for (const p of profiles.get(d.id)!.leaf) pathwayDiseaseCount.set(p, (pathwayDiseaseCount.get(p) ?? 0) + 1);
+  const pathwayDiseases = (pathway: string) => pathwayDiseaseCount.get(pathway) ?? 0;
 
   const clusters: Cluster[] = [...groups.values()]
     .map((m) => m.sort())
@@ -284,9 +289,12 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     // Among near-best pathways (specificity within LABEL_SLACK of the best), name the cluster after the NARROWEST one —
     // fewest atlas genes participate in it — so a broad umbrella pathway (e.g. "Neutrophil degranulation", which
     // contains many lysosomal hydrolases) does not hide the mechanism (e.g. "Glycosphingolipid catabolism").
-    const best = shared_pathways[0];
+    // A pathway that more than GENERIC_PATHWAY_SHARE of all atlas diseases take part in (e.g. "Neutrophil degranulation")
+    // is an umbrella, not a mechanism: it can be listed as shared, never used as the cluster's name.
+    const naming = shared_pathways.filter((x) => pathwayDiseases(x.id) <= Math.max(2, GENERIC_PATHWAY_SHARE * diseases.length));
+    const best = naming[0];
     const pw = best && best.spec > 0
-      ? shared_pathways.filter((x) => x.spec > 0 && x.spec >= best.spec - LABEL_SLACK)
+      ? naming.filter((x) => x.spec > 0 && x.spec >= best.spec - LABEL_SLACK)
         .sort((a, b) => genesIn(a.id) - genesIn(b.id) || b.spec - a.spec || a.id.localeCompare(b.id))[0]
       : best;
     const ph = shared_phenotypes[0];
@@ -307,12 +315,18 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
     const f1 = (g: { orpha: string; n: number }) => { const pr = g.n / Math.max(1, groupAtlasSize(g.orpha)), rc = g.n / members.length; return (2 * pr * rc) / (pr + rc); };
     const grp = !byPathway ? [...orphanet_groups].sort((a, b) => f1(b) - f1(a) || b.n - a.n || a.name.localeCompare(b.name))[0] : undefined;
     const only = members.length === 1 ? entities.get(members[0]) : undefined;
-    const label = only ? `${String(only.props.short_name ?? only.name)} (no close neighbor)` : byPathway ? pw.name : grp?.name ?? ph?.name ?? "Cluster";
+    // Without a specific pathway or class the cluster is symptom-based, and its name says so (no mechanism implied).
+    // If not even a symptom is shared by half of the members, the group is only "similar overall" and says so.
+    const mixed = !only && !byPathway && !grp && (!ph || ph.diseases < members.length / 2);
+    const label = only ? `${String(only.props.short_name ?? only.name)} (no close neighbor)` : byPathway ? pw.name : grp?.name
+      ?? (mixed ? "Mixed group (no shared mechanism)" : `Shared symptoms: ${ph!.name}`);
     const label_basis = only
       ? "Only member: no other atlas disease passes the similarity threshold, so no shared mechanism is claimed"
       : byPathway
       ? `Shared Reactome pathway: ${pw.diseases} of ${members.length} member diseases participate in it vs ${Math.round(specificity(pw.id, "leaf") * 100)}% outside the cluster${pw !== best ? ` (chosen over the broader "${best.name}", ${best.diseases} of ${members.length}, because fewer atlas genes take part in it: ${genesIn(pw.id)} vs ${genesIn(best.id)})` : ""}`
-      : grp
+      : mixed
+        ? `No Reactome pathway, Orphanet class or symptom is shared by half of the ${members.length} members${ph ? ` (most informative shared symptom: ${ph.name}, ${ph.diseases} of ${members.length})` : ""}: grouped by overall similarity only, no mechanism is claimed`
+        : grp
         ? `Orphanet classification group ${grp.orpha}: ${grp.n} of ${members.length} member diseases belong to it, ${groupAtlasSize(grp.orpha) - grp.n} atlas disease(s) outside the cluster${pw && pw.spec > 0 ? `; the most specific shared Reactome pathway ("${pw.name}") covers only ${pw.diseases} of ${members.length}` : ""}`
         : ph
           ? `Most informative shared phenotype (IC ${ph.ic}): present in ${ph.diseases} of ${members.length} member diseases; no member-specific Reactome pathway or Orphanet class`
@@ -376,9 +390,13 @@ export function withAnalytics(snapshot: AtlasSnapshot): AtlasSnapshot {
   /* 10. Counterexamples ------------------------------------------------ */
   // (a) same symptoms, different mechanism: phenotype similarity above the median, no shared Reactome pathway, different clusters.
   const phenMedian = median(pairs.map((p) => p.s.phenotype_score));
-  const counterexamples: Counterexample[] = pairs
+  // Each disease keeps its own strongest counterexample (a global top-N would leave most journeys without one).
+  const candidates = pairs
     .filter((p) => p.s.phenotype_score > 0 && p.s.phenotype_score >= phenMedian && p.s.pathway_score === 0 && p.s.shared_genes.length === 0 && diseaseCluster[p.a] !== diseaseCluster[p.b])
-    .sort((x, y) => y.s.phenotype_score - x.s.phenotype_score || `${x.a}|${x.b}`.localeCompare(`${y.a}|${y.b}`)).slice(0, 4)
+    .sort((x, y) => y.s.phenotype_score - x.s.phenotype_score || `${x.a}|${x.b}`.localeCompare(`${y.a}|${y.b}`));
+  const chosen = new Set<(typeof pairs)[number]>();
+  for (const d of diseases) { const best = candidates.find((p) => p.a === d.id || p.b === d.id); if (best) chosen.add(best); }
+  const counterexamples: Counterexample[] = candidates.filter((p) => chosen.has(p))
     .map((p) => ({
       a: p.a, b: p.b, kind: "same_symptoms_different_mechanism" as const, shared_phenotypes: p.s.shared_phenotypes.slice(0, 4).map((x) => x.name),
       why: `They share symptoms (phenotype similarity ${p.s.phenotype_score}) but no Reactome pathway: they likely need different therapeutic strategies.`,

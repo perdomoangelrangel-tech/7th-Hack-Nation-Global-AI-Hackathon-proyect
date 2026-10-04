@@ -39,5 +39,6 @@ select distinct e.id, btrim(a.alias), 'en'
  where e.type = 'disease' and char_length(btrim(a.alias)) between 3 and 300
 on conflict (entity_id, alias, lang) do nothing;
 `;
-writeFileSync("supabase/migrations/0013_orphanet_group_aliases.sql", sql);
-console.log(`✔ 0013_orphanet_group_aliases.sql (${(sql.length / 1024).toFixed(1)} kB): ${Object.keys(groups).length} diseases, ${Object.values(slim).flat().length} disease→group links`);
+const outPath = process.argv[2] ?? "supabase/migrations/0013_orphanet_group_aliases.sql"; // applied migrations are never rewritten: pass a new file
+writeFileSync(outPath, sql);
+console.log(`✔ ${outPath} (${(sql.length / 1024).toFixed(1)} kB): ${Object.keys(groups).length} diseases, ${Object.values(slim).flat().length} disease→group links`);

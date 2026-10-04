@@ -47,7 +47,7 @@ select e.id, v.alias, 'en'
   join public.entities e on e.type = 'gene' and e.canonical_id = v.hgnc
 on conflict (entity_id, alias, lang) do nothing;
 `;
-  writeFileSync("supabase/migrations/0014_gene_aliases.sql", sql);
+  writeFileSync(process.argv[2] ?? "supabase/migrations/0014_gene_aliases.sql", sql); // applied migrations are never rewritten: pass a new file
 
   // Bundled snapshot: genes keyed by symbol.
   let added = 0;
