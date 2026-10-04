@@ -29,7 +29,7 @@ interface SectionProps {
 }
 
 const LEGEND_KIND_KEY: Record<LinkKind, keyof Dict> = { observed: "legend_observed", inferred: "legend_inferred", extracted: "legend_extracted", proposed: "legend_proposed" };
-const SHAPES = ["gene", "pathway", "phenotype", "organization", "trial", "investigator"] as const;
+const SHAPES = ["gene", "pathway", "mechanism", "phenotype", "organization", "trial", "investigator"] as const;
 const TABS: { id: RailTab; icon: LucideIcon }[] = [{ id: "clusters", icon: Orbit }, { id: "legend", icon: BookOpen }, { id: "community", icon: HandHeart }];
 
 export const defaultRailTab = (p: PersonaId): RailTab | null => (p === "osei" || p === "priya" ? "clusters" : null);

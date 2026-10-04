@@ -211,6 +211,12 @@ export function graphView(focus: string, l: Locale): GraphView | null {
     .sort((a, b) => b.confidence * Number(byId.get(b.to)?.props.ic ?? 0) - a.confidence * Number(byId.get(a.to)?.props.ic ?? 0));
   for (const e of phen.slice(0, 7)) { addNode(e.to, 3); addLink(e); }
   for (const n of neighbors) for (const e of (atlas().out.get(n) ?? []).filter((x) => x.relation === "has_phenotype" && nodes.has(x.to))) addLink(e);
+  // Mechanism (variant-effect class, INFERRED by the data lane): focus + neighbours, then every on-screen disease that
+  // shares one of those mechanisms — "same symptoms, opposite mechanism" becomes visible. String compare: the relation is
+  // added to the data model additively.
+  const isMech = (e: Edge) => String(e.relation) === "has_mechanism";
+  for (const d of [focus, ...neighbors]) for (const e of (atlas().out.get(d) ?? []).filter(isMech)) { addNode(e.to, 5); addLink(e); }
+  for (const d of diseases()) for (const e of (atlas().out.get(d.id) ?? []).filter(isMech)) addLink(e);
   // Comunidad: grupos de pacientes de la enfermedad foco y de las vecinas.
   for (const d of [focus, ...neighbors]) for (const e of (atlas().in.get(d) ?? []).filter((x) => x.relation === "supports" || (x.relation === "researches" && byId.get(x.from)?.type === "organization"))) {
     if (byId.get(e.from)?.props.kind === "umbrella") continue;

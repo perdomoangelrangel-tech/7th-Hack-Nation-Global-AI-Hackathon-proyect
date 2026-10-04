@@ -147,8 +147,8 @@ const en = {
   kinds: { natural_history: "Natural history", registry: "Registry", biomarker_study: "Biomarker / endpoint", observational_cohort: "Observational cohort", interventional_trial: "Trial" } as Record<string, string>,
   collab_kinds: { patient_org: "Patient group", research_org: "Research foundation", investigator: "Researcher", sponsor: "Sponsor / institution" } as Record<string, string>,
   status: { observed: "observed", inferred: "inferred", extracted: "AI-extracted", proposed: "community draft", gap: "gap" } as Record<string, string>,
-  relations: { causes: "causes", has_phenotype: "has symptom", has_variant: "has variant", studies: "studies", treats: "treats", supports: "supports", researches: "researches", participates_in: "participates in", is_a: "is a", similar_to: "is similar to" } as Record<string, string>,
-  types: { disease: "Disease", gene: "Gene", phenotype: "Symptom", pathway: "Pathway", organization: "Patient group", trial: "Study / asset", investigator: "Researcher", treatment: "Treatment", study: "Paper", variant: "Variant" } as Record<string, string>,
+  relations: { has_mechanism: "acts by", causes: "causes", has_phenotype: "has symptom", has_variant: "has variant", studies: "studies", treats: "treats", supports: "supports", researches: "researches", participates_in: "participates in", is_a: "is a", similar_to: "is similar to" } as Record<string, string>,
+  types: { mechanism: "Mechanism (variant effect)", disease: "Disease", gene: "Gene", phenotype: "Symptom", pathway: "Pathway", organization: "Patient group", trial: "Study / asset", investigator: "Researcher", treatment: "Treatment", study: "Paper", variant: "Variant" } as Record<string, string>,
 };
 
 const es: typeof en = {
@@ -297,8 +297,8 @@ const es: typeof en = {
   kinds: { natural_history: "Historia natural", registry: "Registro", biomarker_study: "Biomarcador / endpoint", observational_cohort: "Cohorte observacional", interventional_trial: "Ensayo" },
   collab_kinds: { patient_org: "Grupo de pacientes", research_org: "Fundación de investigación", investigator: "Investigador/a", sponsor: "Patrocinador / institución" },
   status: { observed: "observado", inferred: "inferido", extracted: "extraído por IA", proposed: "borrador comunitario", gap: "hueco" },
-  relations: { causes: "causa", has_phenotype: "tiene el síntoma", has_variant: "tiene la variante", studies: "estudia", treats: "trata", supports: "apoya", researches: "investiga", participates_in: "participa en", is_a: "es un", similar_to: "se parece a" },
-  types: { disease: "Enfermedad", gene: "Gen", phenotype: "Síntoma", pathway: "Vía", organization: "Grupo de pacientes", trial: "Estudio / activo", investigator: "Investigador/a", treatment: "Tratamiento", study: "Artículo", variant: "Variante" },
+  relations: { has_mechanism: "actúa por", causes: "causa", has_phenotype: "tiene el síntoma", has_variant: "tiene la variante", studies: "estudia", treats: "trata", supports: "apoya", researches: "investiga", participates_in: "participa en", is_a: "es un", similar_to: "se parece a" },
+  types: { mechanism: "Mecanismo (efecto de variante)", disease: "Enfermedad", gene: "Gen", phenotype: "Síntoma", pathway: "Vía", organization: "Grupo de pacientes", trial: "Estudio / activo", investigator: "Investigador/a", treatment: "Tratamiento", study: "Artículo", variant: "Variante" },
 };
 
 export const dict = { en, es };

@@ -75,3 +75,14 @@ describe("evidence drawer labels", () => {
     expect(uncertainReasons({ kind: "observed", confidence: 0.9, evidence: [1] }, null)).toEqual(["u_single"]);
   });
 });
+
+describe("focus view keeps mechanisms", () => {
+  it("adds the mechanism node of every kept disease", () => {
+    const n = (id: string, type: "disease" | "gene" = "disease") => ({ id, type, name: id, cluster: null, color: null, size: 8 });
+    const l = (id: string, source: string, target: string, relation: string) => ({ id, source, target, relation, kind: "inferred" as const, confidence: 0.5 });
+    const v = { focus: "A", clusters: [], nodes: [n("A"), n("B"), n("Z"), n("mechanism:lof", "gene"), n("mechanism:gof", "gene")],
+      links: [l("s", "A", "B", "similar_to"), l("m1", "A", "mechanism:lof", "has_mechanism"), l("m2", "B", "mechanism:gof", "has_mechanism"), l("m3", "Z", "mechanism:lof", "has_mechanism")] };
+    const out = focusView(v, "A", new Set());
+    expect(out.nodes.map((x) => x.id).sort()).toEqual(["A", "B", "mechanism:gof", "mechanism:lof"]);
+  });
+});

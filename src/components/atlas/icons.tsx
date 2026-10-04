@@ -4,12 +4,12 @@
  */
 import {
   Asterisk, BadgeCheck, CircleDot, ClipboardList, Dna, Droplet, FileText, FlaskConical, GraduationCap, Landmark, Link2,
-  Orbit, PencilLine, Pill, Sigma, Sparkles, TriangleAlert, Users, Waypoints, type LucideIcon,
+  Activity, Orbit, PencilLine, Pill, Sigma, Sparkles, TriangleAlert, Users, Waypoints, type LucideIcon,
 } from "lucide-react";
 import { TYPE_COLOR, type LinkKind } from "./colors";
 
 export const TYPE_ICON: Record<string, LucideIcon> = {
-  disease: CircleDot, gene: Dna, variant: Asterisk, pathway: Waypoints, cluster: Orbit, phenotype: Droplet,
+  disease: CircleDot, gene: Dna, variant: Asterisk, pathway: Waypoints, mechanism: Activity, cluster: Orbit, phenotype: Droplet,
   trial: FlaskConical, registry: ClipboardList, study: FileText, organization: Users, investigator: GraduationCap,
   treatment: Pill, funding: Landmark,
 };

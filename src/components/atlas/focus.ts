@@ -26,6 +26,8 @@ export function focusView(view: GraphView, focus: string, route: Set<string>): G
     if (b === focus) keep.add(a);
     if (route.has(l.id)) { keep.add(a); keep.add(b); }
   }
+  // Mechanism of every kept disease (variant-effect class: loss vs gain/altered function).
+  for (const l of view.links) if (l.relation === "has_mechanism" && keep.has(end(l.source))) keep.add(end(l.target));
   const nodes = view.nodes.filter((n) => keep.has(n.id));
   const links: GLink[] = view.links.filter((l) => keep.has(end(l.source)) && keep.has(end(l.target)));
   return { ...view, nodes, links };
@@ -38,6 +40,7 @@ export function labelSet(view: GraphView, focus: string, route: Set<string>): Se
     const a = end(l.source), b = end(l.target);
     if (route.has(l.id)) { ids.add(a); ids.add(b); }
     if (l.relation === "similar_to" && (a === focus || b === focus)) { ids.add(a); ids.add(b); }
+    if (l.relation === "has_mechanism") ids.add(b);
   }
   return ids;
 }
