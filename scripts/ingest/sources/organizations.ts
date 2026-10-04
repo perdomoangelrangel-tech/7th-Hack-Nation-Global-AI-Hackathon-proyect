@@ -12,7 +12,7 @@ export async function ingestOrganizations(g: GraphWriter, orgs: SeedOrganization
     // Si el sitio no responde desde la red de la ingesta, la organización entra marcada y con menos confianza:
     // la UI lo dice en vez de esconderla o de afirmar algo que no comprobamos.
     const alive = await reachable(o.url);
-    if (!alive) console.warn(`    ⚠ ${o.name}: ${o.url} no respondió; se marca como no verificada`);
+    if (!alive) console.warn(`    ⚠ ${o.name}: ${o.url} did not respond; marked as not verified`);
     for (const code of o.diseases) {
       const d = byOrpha.get(code); if (!d) continue;
       await g.upsertEdge({
@@ -21,7 +21,7 @@ export async function ingestOrganizations(g: GraphWriter, orgs: SeedOrganization
         relation: o.kind === "research" ? "researches" : "supports",
         confidence: (o.kind === "umbrella" ? 0.5 : 0.9) * (alive ? 1 : 0.7), confidenceBasis: alive ? "curated_official_site" : "curated_site_unverified",
         props: { kind: o.kind },
-        evidence: [{ source: "patient_orgs", externalId: slug(o.name), url: o.url, publishedOn: today(), quote: `${o.name} · ${o.country} · ${alive ? "site verified" : "site not verified at ingest"} ${today()}` }],
+        evidence: [{ source: "patient_orgs", externalId: slug(o.name), url: o.disease_urls?.[code] ?? o.url, publishedOn: today(), quote: `${o.name} · ${o.country} · ${alive ? "site verified" : "site not verified at ingest"} ${today()}` }],
       });
     }
   }

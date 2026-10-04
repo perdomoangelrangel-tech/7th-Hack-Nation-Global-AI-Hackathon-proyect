@@ -36,7 +36,7 @@ flowchart LR
 | NIH RePORTER (`nih_reporter`) | Funded projects (last 4 fiscal years) and their PIs (`profile_id`, institution) | `POST https://api.reporter.nih.gov/v2/projects/search` | No | Public domain |
 | FDA (`fda`) | Curated approvals with the official FDA page (`supabase/seed/approvals.json`) | fda.gov pages | — | Public domain |
 | Patient organizations (`patient_orgs`) | Name, country, official site, diseases, registry URL when published (`supabase/seed/organizations.json`) | curated | — | Public data of each organization |
-| Nexmed analysis (`nexmed_analysis`) | Evidence row of **inferred** `similar_to` edges (method + score), always followed by the observed evidence behind it | `src/lib/atlas/analyze.ts` | — | MIT |
+| Nedamex analysis (`nexmed_analysis`) | Evidence row of **inferred** `similar_to` edges (method + score), always followed by the observed evidence behind it | `src/lib/atlas/analyze.ts` | — | MIT |
 | OpenAI extraction (`openai_extraction`) | Claims extracted from a cited paper (`extractions` table); rendered as **extracted** edges with a PubMed evidence row, "needs expert review" | `POST /api/extract` | `OPENAI_API_KEY` | Derived, cites the paper |
 | Community (`community`) | Community drafts (`proposals`): overlay only, **never evidence** | `submit_proposal()` RPC | — | User submitted |
 
@@ -45,7 +45,7 @@ flowchart LR
 | `kind` | Meaning | UI |
 | --- | --- | --- |
 | `observed` | A source states it | solid line |
-| `inferred` | Nexmed analysis computed it from observed edges (similarity) | dashed |
+| `inferred` | Nedamex analysis computed it from observed edges (similarity) | dashed |
 | `extracted` | OpenAI pulled it from a cited paper; needs expert review | dotted + badge |
 | `proposed` | Community draft; never evidence | ghost |
 

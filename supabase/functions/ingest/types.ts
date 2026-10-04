@@ -26,6 +26,8 @@ export interface SeedOrganization {
   kind: "patient_org" | "research" | "clinic" | "pharma" | "umbrella";
   diseases: string[];
   registry?: string;       // patient registry URL when the organization publishes one
+  disease_urls?: Record<string, string>; // ORPHA -> official page naming that disease (evidence url instead of the homepage)
+  verified?: string;       // how / when the official URL was checked
 }
 
 /** Curated regulatory approval tied to an official agency URL (supabase/seed/approvals.json). */

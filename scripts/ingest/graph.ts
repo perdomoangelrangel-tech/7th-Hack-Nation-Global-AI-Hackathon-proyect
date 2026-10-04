@@ -56,10 +56,10 @@ export const SOURCES: Record<SourceId, Omit<SourceInfo, "last_synced_at">> = {
   nih_reporter:      { id: "nih_reporter", name: "NIH RePORTER", license: "Public domain", url: "https://reporter.nih.gov" },
   patient_orgs:      { id: "patient_orgs", name: "Patient organizations (curated, official site)", license: "Public data", url: "supabase/seed/organizations.json" },
   fda:               { id: "fda", name: "U.S. Food and Drug Administration", license: "Public domain", url: "https://www.fda.gov" },
-  atlas_analysis:    { id: "atlas_analysis", name: "Nexmed analysis (inferred, legacy id)", license: "MIT", url: "src/lib/atlas/analyze.ts" },
-  nexmed_analysis:   { id: "nexmed_analysis", name: "Nexmed analysis (inferred)", license: "MIT", url: "src/lib/atlas/analyze.ts" },
+  atlas_analysis:    { id: "atlas_analysis", name: "Nedamex analysis (inferred, legacy id)", license: "MIT", url: "src/lib/atlas/analyze.ts" },
+  nexmed_analysis:   { id: "nexmed_analysis", name: "Nedamex analysis (inferred)", license: "MIT", url: "src/lib/atlas/analyze.ts" },
   openai_extraction: { id: "openai_extraction", name: "OpenAI extraction from a cited paper", license: "Derived from PubMed", url: "https://pubmed.ncbi.nlm.nih.gov" },
-  community:         { id: "community", name: "Nexmed community drafts (not evidence)", license: "User submitted", url: "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect" },
+  community:         { id: "community", name: "Nedamex community drafts (not evidence)", license: "User submitted", url: "https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect" },
 };
 
 const now = () => new Date().toISOString();
