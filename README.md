@@ -21,7 +21,7 @@ Nedamex is an evidence knowledge graph of rare diseases — diseases, genes and 
 
 The flow is **website → "Open Nedamex" → platform home (who are you?) → your route in the atlas**. The Lovable platform embeds the same atlas engine (`?embed=1`) and reads the same Supabase graph, so both deliverables show one atlas.
 
-Videos: pitch · demo · functionality — `[links added when recorded]`.
+Videos: **pitch** — on the website ([`public/videos/nedamex-pitch.mp4`](public/videos/nedamex-pitch.mp4)) · demo and tech videos — `[links added when published]`.
 
 ## How to use it
 
@@ -139,7 +139,7 @@ Every evidence row stores `source`, `external_id`, `url` and `retrieved_at`. Cod
 ## Security & privacy
 
 - Secrets live only in server-side environment variables; `.env*` is git-ignored and the git history was scanned for key patterns (none found). `npm audit --omit=dev`: 0 vulnerabilities at release.
-- Row-Level Security on every Supabase table; public writes only through validated, rate-limited `SECURITY DEFINER` RPCs; contact details encrypted at rest (pgcrypto + Vault, migration `0016`).
+- Row-Level Security on every Supabase table; public writes only through validated, rate-limited `SECURITY DEFINER` RPCs; per-IP rate limits and input-size limits on the AI, voice and submission APIs (429 with `Retry-After`); contact details encrypted at rest (pgcrypto + Vault, migration `0016`).
 - Security headers on every response (HSTS, nosniff, Referrer-Policy, Permissions-Policy, CSP `frame-ancestors` so only the Nedamex platform can embed the atlas; full CSP in report-only), CORS limited to exact origins.
 - Voice agents keep no audio recordings; transcripts are kept 30 days.
 - Report vulnerabilities privately: see [`SECURITY.md`](SECURITY.md).
