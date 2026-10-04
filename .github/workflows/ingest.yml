@@ -11,7 +11,7 @@ jobs:
   ingest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Invoke Edge Function per disease
         env:
           INGEST_KEY: ${{ secrets.INGEST_KEY }}
