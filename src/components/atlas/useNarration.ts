@@ -14,7 +14,7 @@ import { usePrefs } from "@/lib/prefs";
 import { fetchSpeech, playUrl, speakBrowser, type VoiceProvider } from "@/lib/voice/client";
 import { VOICE_LIVE_EVENT } from "@/lib/voice/events";
 
-export type NarrationState = "idle" | "loading" | "playing" | "paused" | "done" | "error";
+export type NarrationState = "idle" | "loading" | "ready" | "playing" | "paused" | "done" | "error";
 
 export function useNarration() {
   const { prefs } = usePrefs();
@@ -70,23 +70,61 @@ export function useNarration() {
   const stop = useCallback(() => {
     run.current++;
     halt(); clearCache();
-    setIndex(-1); setState("idle");
+    setIndex(-1); setNarration(null); setState("idle");
   }, [halt, clearCache]);
+
+  /** Fetch the verified narration for (disease, persona, locale); reuses the loaded one when it matches. */
+  const loaded = useRef<{ key: string; n: Narration } | null>(null);
+  const fetchNarration = useCallback(async (disease: string, persona: PersonaId, locale: Locale): Promise<Narration> => {
+    const key = `${disease}|${persona}|${locale}|${simple.current ? 1 : 0}`;
+    if (loaded.current?.key === key) return loaded.current.n;
+    const r = await fetch("/api/narrate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ disease, persona, locale, simple: simple.current }) });
+    if (!r.ok) throw new Error(String(r.status));
+    const n = (await r.json()) as Narration;
+    loaded.current = { key, n };
+    return n;
+  }, []);
 
   const start = useCallback(async (disease: string, persona: PersonaId, locale: Locale) => {
     stop();
     const id = ++run.current;
     ctx.current = { persona, locale };
-    setState("loading"); setNarration(null);
+    setState("loading");
     try {
-      const r = await fetch("/api/narrate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ disease, persona, locale, simple: simple.current }) });
-      if (!r.ok) throw new Error(String(r.status));
-      const n = (await r.json()) as Narration;
+      const n = await fetchNarration(disease, persona, locale);
       if (run.current !== id) return;
       setNarration(n); setState("playing");
       await playFrom(n, 0, id);
     } catch { if (run.current === id) setState("error"); }
-  }, [playFrom, stop]);
+  }, [playFrom, stop, fetchNarration]);
+
+  /** Load the narration text WITHOUT playing (Transcript tab: written sentences + sources, no audio). */
+  const prepare = useCallback(async (disease: string, persona: PersonaId, locale: Locale) => {
+    if (state === "playing" || state === "paused" || state === "loading") return;
+    const id = ++run.current;
+    ctx.current = { persona, locale };
+    setState("loading");
+    try {
+      const n = await fetchNarration(disease, persona, locale);
+      if (run.current !== id) return;
+      setNarration(n); setIndex(-1); setState("ready");
+    } catch { if (run.current === id) setState("error"); }
+  }, [state, fetchNarration]);
+
+  /** Highlight claim i on the map without any audio (stops playback if any). */
+  const select = useCallback((i: number) => {
+    if (!narration || i < 0 || i >= narration.claims.length) return;
+    run.current++; halt();
+    setIndex(i); setState("ready");
+  }, [narration, halt]);
+
+  /** Play the already-loaded narration from claim i (Talk tab). */
+  const playLoaded = useCallback((i = 0) => {
+    if (!narration) return;
+    run.current++; halt();
+    const id = run.current; setState("playing");
+    void playFrom(narration, Math.max(0, i), id);
+  }, [narration, playFrom, halt]);
 
   const pause = useCallback(() => {
     audio.current?.pause();
@@ -117,5 +155,5 @@ export function useNarration() {
   }, [stop]);
 
   const current = narration && index >= 0 ? narration.claims[index] : null;
-  return { state, narration, index, current, voice, start, stop, pause, resume, jump, next, prev };
+  return { state, narration, index, current, voice, start, stop, pause, resume, jump, next, prev, prepare, select, playLoaded };
 }

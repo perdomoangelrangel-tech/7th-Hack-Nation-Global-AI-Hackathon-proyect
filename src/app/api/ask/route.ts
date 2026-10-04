@@ -1,7 +1,8 @@
 /**
- * POST /api/ask { question, persona, locale, focus?, simple? }
+ * POST /api/ask { question, persona, locale, focus?, simple?, history?: [{ role: "user"|"assistant", text }] }  (chat: last 10 turns used)
  * → { claims:[{ text, evidence_ids[], evidence[], status, nodes[], edges[] }], dropped, mode, disease, resolved_via, notice, spoken, disclaimer, … }
- * Strict disease resolution (focus entity id → exact/alias/normalized mention; never stray words), then the
+ * Strict disease resolution (disease/gene named in the question → focus entity id → last turn of history that named one;
+ * exact/alias/normalized mentions only, never stray words), then the
  * verified, persona-ordered narration focused on what was asked. Unknown → honest "not in the atlas", 0 claims.
  * Legacy fields accepted: `disease` (= focus), `audience` (family→devon, clinical→osei, research→priya).
  */
@@ -25,7 +26,11 @@ const Body = z.object({
   focus: z.string().max(200).optional(),
   disease: z.string().max(200).optional(),
   simple: z.boolean().optional(),
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4000) })).max(50).optional(),
 });
+
+/** Chat answers stay short: at most this many verified claims per turn. */
+const MAX_CHAT_CLAIMS = 6;
 
 export async function POST(req: NextRequest) {
   await loadAtlas();
@@ -36,10 +41,11 @@ export async function POST(req: NextRequest) {
   const simple = !!parsed.data.simple;
   const idx = atlas();
 
-  const resolved = resolveQuestion(idx, question, parsed.data.focus ?? parsed.data.disease);
+  const history = (parsed.data.history ?? []).slice(-10);
+  const resolved = resolveQuestion(idx, question, parsed.data.focus ?? parsed.data.disease, history);
   if (!resolved) return NextResponse.json(notFound(idx, question, persona, locale, simple));
 
-  const n = await narrate(resolved.disease, persona, locale, { simple, question });
+  const n = await narrate(resolved.disease, persona, locale, { simple, question, history, maxClaims: MAX_CHAT_CLAIMS });
   if (!n) return NextResponse.json(notFound(idx, question, persona, locale, simple));
 
   const flags = safetyFlags(question);
