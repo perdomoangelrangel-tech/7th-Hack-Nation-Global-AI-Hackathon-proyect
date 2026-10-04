@@ -63,6 +63,61 @@ describe("medicine · openai (mocked)", () => {
       CLINICIAN_LINE.en,
     ]);
     expect(r.dropped.map((d) => d.reason).sort()).toEqual(["advice_without_fact", "efficacy_claim", "unsafe_dose"]);
-    expect(calls[0].system).toMatch(/Never give doses, efficacy figures/);
+    expect(calls[0].system).toMatch(/Never give doses, amounts, efficacy figures/);
+  });
+});
+
+const extras = {
+  label_use: "1 INDICATIONS AND USAGE Drugamab is indicated for the treatment of seizures associated with Beta disease in patients 2 years of age and older. Limitations of use apply.",
+  label_url: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=abc", rx_status: "Prescription", routes: ["ORAL"],
+  regulatory: { fda: { application_number: "NDA000001" }, ema: { status: "Authorised", url: "https://www.ema.europa.eu/en/medicines/human/EPAR/drugamab" } },
+  papers: [{ pmid: "111", title: "Efficacy of Drugamab in Beta disease: a randomized trial", journal: "J Test", year: 2024, pub_type: "Randomized Controlled Trial", disease_id: "disease:ORPHA:2" }],
+};
+
+describe("medicine · 0015 fields (label use, Rx, routes, EMA, papers)", () => {
+  it("adds cited label, Rx/route, EMA and papers facts; evidence objects are returned; titles stay in citations", async () => {
+    setLlmClient(null);
+    const r = (await medicineSummary(idx, { id: "CHEMBL1", persona: "osei", locale: "en" }, extras))!;
+    const all = (await import("./medicine")).medicineFacts(idx, idx.byId.get("treatment:CHEMBL1")!, "en", extras);
+    const texts = all.facts.map((f) => f.text).join("\n");
+    expect(texts).toMatch(/official FDA label \(DailyMed\) describes its use as: "Drugamab is indicated for the treatment of seizures associated with Beta disease in patients 2 years of age and older\./);
+    expect(texts).toMatch(/In the US it is a prescription medicine and is given by the oral route \(openFDA\)/);
+    expect(texts).toMatch(/European Medicines Agency \(EMA\) lists its status as "Authorised"/);
+    expect(texts).toMatch(/PubMed indexes 1 clinical paper\(s\) on this medicine in Beta disease \(randomized controlled trial\)/);
+    expect(texts).not.toMatch(/Efficacy of Drugamab/); // the title lives in the citation only
+    expect(all.evidence.map((e) => e.id).sort()).toEqual(["ema:CHEMBL1", "label:CHEMBL1", "pmid:111"]);
+    for (const s of r.sentences.slice(0, -1)) for (const id of s.evidence_ids) expect(r.evidence.some((e) => e.id === id)).toBe(true);
+    expect(r.sentences.at(-1)?.text).toBe(CLINICIAN_LINE.en);
+  });
+});
+
+describe("medicine · answers on the medicine page (/api/ask focus treatment)", () => {
+  it("answers about the medicine with cited claims; drops efficacy and doses", async () => {
+    const { medicineAnswer, medicineFacts } = await import("./medicine");
+    const t = idx.byId.get("treatment:CHEMBL1")!;
+    const ids = medicineFacts(idx, t, "en", extras).facts.map((f) => `${f.id}:${f.text.slice(0, 30)}`);
+    const label = ids.find((x) => x.includes("official FDA label"))!.split(":")[0];
+    setLlmClient(fakeLlm({ sentences: [
+      { text: "Its label says it is indicated for seizures associated with Beta disease.", fact_ids: [label] },
+      { text: "In the trial it cut seizures by 50%.", fact_ids: [label] },
+      { text: "Take 5 mg per day.", fact_ids: [label] },
+    ] }).client);
+    const a = await medicineAnswer(idx, t, { question: "What is it approved for?", persona: "devon", locale: "en" }, extras);
+    expect(a.claims.map((c) => c.text)).toEqual(["Its label says it is indicated for seizures associated with Beta disease."]);
+    expect(a.claims[0].evidence[0]).toMatchObject({ id: "label:CHEMBL1", source: "fda", url: extras.label_url });
+    expect(a.dropped.map((d) => d.reason).sort()).toEqual(["efficacy_claim", "unsafe_dose"]);
+    expect(a.closing).toBe(CLINICIAN_LINE.en);
+  });
+});
+
+describe("medicine names in text", () => {
+  it("salt forms resolve ('testamine' → Testamine hydrochloride) and questions name medicines", async () => {
+    const { fixtureSnapshot: snapFn, fixtureIndex: idxFn } = await import("./fixtures.test-util");
+    const snap = snapFn();
+    snap.entities.push({ id: "treatment:CHEMBL7", type: "treatment", canonical_id: "CHEMBL7", name: "Testamine hydrochloride", props: {}, aliases: [] });
+    const i2 = idxFn(snap);
+    const { findTreatmentInText } = await import("./reconcile");
+    expect(findTreatmentInText(i2, "How does testamine work?")?.entity_id).toBe("treatment:CHEMBL7");
+    expect(findTreatmentInText(i2, "How does it work for the disease?")).toBeNull();
   });
 });

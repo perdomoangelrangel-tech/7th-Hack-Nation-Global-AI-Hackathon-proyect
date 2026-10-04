@@ -8,10 +8,12 @@ import type { Fact, FactStatus } from "./draft";
 
 type L = "en" | "es";
 
-export const SOURCE_LABEL: Record<SourceId, string> = {
+/** Every SourceId plus the regulatory sources of migration 0015 (ema, openfda, dailymed) — keyed by string so new ids degrade gracefully. */
+export const SOURCE_LABEL: Record<SourceId | "ema" | "openfda" | "dailymed", string> & Record<string, string | undefined> = {
   orphanet: "Orphanet", hpo: "the Human Phenotype Ontology", monarch: "Monarch", clinvar: "ClinVar", ctgov: "ClinicalTrials.gov",
   opentargets: "Open Targets", reactome: "Reactome", pubmed: "PubMed", nih_reporter: "NIH RePORTER", patient_orgs: "the organization's own website",
   fda: "the FDA", atlas_analysis: "Nedamex analysis", nexmed_analysis: "Nedamex analysis", openai_extraction: "an OpenAI extraction", community: "a community draft",
+  ema: "the European Medicines Agency (EMA)", openfda: "openFDA", dailymed: "DailyMed (NLM)",
 };
 
 const short = (e: Entity | undefined, l: L) => {
