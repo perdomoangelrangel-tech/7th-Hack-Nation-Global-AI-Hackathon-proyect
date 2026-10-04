@@ -3,28 +3,31 @@
  * "Who are you?" (WAVE 5B): pick YOUR role → the other three collapse (≤ 250 ms; instant under reduced motion via
  * MotionConfig) and yours expands: "You're here as …", what you get, an example question, "Continue as …" and
  * "Change role". The picked card and the panel share a layoutId, so the card grows into the panel.
- * Focus follows the user: to "Continue as …" after a pick, back to the card after "Change role".
+ * WAVE 6: the panel offers the two ways to start — "Start with the challenge" (Maria's STXBP1 route,
+ * mode=challenge) or "Explore freely" (mode=free). `initialChoosing` (/atlas?role=change) opens on the picker.
+ * Focus follows the user: to the first start option after a pick, back to the card after "Change role".
  */
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { ArrowLeftRight, Check, ChevronRight, HeartHandshake, Microscope, Target, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronRight, Compass, Footprints, HeartHandshake, Microscope, Target, UserRound, type LucideIcon } from "lucide-react";
 import type { PersonaId } from "@/lib/agents/profiles";
 import type { Locale } from "@/lib/i18n";
 import { motionTokens } from "@/lib/motion";
 import { ROLE_ORDER, homeCopy } from "./copy";
-import { atlasHref } from "./memory";
+import { atlasHref, type StartMode } from "./memory";
 import { PendingHint } from "./Pending";
+import { playSfx } from "@/lib/sfx";
 
 const ROLE_ICON: Record<PersonaId, LucideIcon> = { devon: UserRound, maria: HeartHandshake, osei: Microscope, priya: Target };
 /** ≤ 250 ms (WAVE 5B). MotionConfig reducedMotion turns the layout morph into an instant swap. */
 const COLLAPSE = { duration: 0.22, ease: motionTokens.easing.smooth };
 
-interface Props { locale: Locale; role: PersonaId | null; onPick: (p: PersonaId) => void; onContinue?: () => void }
+interface Props { locale: Locale; role: PersonaId | null; onPick: (p: PersonaId) => void; onStart?: (mode: StartMode) => void; maria: string; initialChoosing?: boolean }
 
-export function RoleChooser({ locale, role, onPick, onContinue }: Props) {
+export function RoleChooser({ locale, role, onPick, onStart, maria, initialChoosing = false }: Props) {
   const c = homeCopy[locale];
-  const [choosing, setChoosing] = useState(false);
+  const [choosing, setChoosing] = useState(initialChoosing);
   const focusNext = useRef<"continue" | PersonaId | null>(null);
   const continueRef = useRef<HTMLAnchorElement>(null);
   const cardRefs = useRef<Partial<Record<PersonaId, HTMLButtonElement | null>>>({});
@@ -39,7 +42,7 @@ export function RoleChooser({ locale, role, onPick, onContinue }: Props) {
     return () => cancelAnimationFrame(id);
   }, [collapsed]);
 
-  const pick = (p: PersonaId) => { focusNext.current = "continue"; onPick(p); setChoosing(false); };
+  const pick = (p: PersonaId) => { focusNext.current = "continue"; onPick(p); setChoosing(false); playSfx("select"); };
   const change = () => { focusNext.current = role; setChoosing(true); };
 
   const onKey = (e: KeyboardEvent, i: number) => {
@@ -54,7 +57,7 @@ export function RoleChooser({ locale, role, onPick, onContinue }: Props) {
     <LayoutGroup>
       <AnimatePresence mode="popLayout" initial={false}>
         {collapsed ? (
-          <Expanded key="expanded" locale={locale} role={role} onChange={change} onContinue={onContinue} continueRef={continueRef} />
+          <Expanded key="expanded" locale={locale} role={role} maria={maria} onChange={change} onStart={onStart} continueRef={continueRef} />
         ) : (
           <motion.div key="picker" role="radiogroup" aria-labelledby="who-title" className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             exit={{ opacity: 0 }} transition={COLLAPSE}>
@@ -87,18 +90,21 @@ export function RoleChooser({ locale, role, onPick, onContinue }: Props) {
   );
 }
 
-function Expanded({ locale, role, onChange, onContinue, continueRef }: { locale: Locale; role: PersonaId; onChange: () => void; onContinue?: () => void; continueRef: React.RefObject<HTMLAnchorElement | null> }) {
+function Expanded({ locale, role, maria, onChange, onStart, continueRef }: { locale: Locale; role: PersonaId; maria: string; onChange: () => void; onStart?: (mode: StartMode) => void; continueRef: React.RefObject<HTMLAnchorElement | null> }) {
   const c = homeCopy[locale];
   const r = c.roles[role];
   const Icon = ROLE_ICON[role];
+  const starts: { mode: StartMode; href: string; title: string; sub: string; Icon: LucideIcon; primary: boolean }[] = [
+    { mode: "challenge", href: atlasHref({ p: role, d: maria, mode: "challenge", l: locale }), title: c.challenge, sub: c.challenge_sub, Icon: Footprints, primary: true },
+    { mode: "free", href: atlasHref({ p: role, mode: "free", l: locale }), title: c.explore, sub: c.explore_sub, Icon: Compass, primary: false },
+  ];
   return (
     <motion.section layoutId={`role-${role}`} transition={COLLAPSE} aria-labelledby="role-here"
       className="mt-5 rounded-[var(--radius)] border border-brand-deep bg-paper p-5 shadow-[var(--shadow-soft)] ring-2 ring-brand/30 sm:p-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: motionTokens.duration.fast, delay: 0.08 }}
-        className="flex flex-col gap-5 md:flex-row md:items-center">
-        <div className="flex min-w-0 flex-1 items-start gap-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: motionTokens.duration.fast, delay: 0.08 }}>
+        <div className="flex flex-wrap items-start gap-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand-deep text-paper"><Icon aria-hidden size={26} strokeWidth={1.75} /></span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm text-ink-3">{c.here_as}</p>
             <h3 id="role-here" className="text-xl font-semibold leading-snug text-ink">{r.title} <span className="text-base font-normal text-ink-3">· {r.persona}</span></h3>
             <dl className="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-6">
@@ -106,17 +112,27 @@ function Expanded({ locale, role, onChange, onContinue, continueRef }: { locale:
               <div><dt className="eyebrow">{c.you_ask}</dt><dd className="mt-1 text-[15px] italic text-ink-2">{r.example}</dd></div>
             </dl>
           </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 md:flex-col md:items-stretch">
-          <Link ref={continueRef} href={atlasHref({ p: role, l: locale })} onClick={onContinue}
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-brand-deep px-5 text-sm font-semibold text-paper hover:bg-brand-ink">
-            {c.continue_as(r.title)}<ChevronRight aria-hidden size={16} /><PendingHint label={c.opening} />
-          </Link>
           <button type="button" onClick={onChange}
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-4 text-sm font-medium text-ink-2 hover:bg-brand-soft">
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-line bg-paper px-4 text-sm font-medium text-ink-2 hover:bg-brand-soft">
             <ArrowLeftRight aria-hidden size={16} strokeWidth={1.75} />{c.change_role}
           </button>
         </div>
+        <h4 className="eyebrow mt-6">{c.how_start}</h4>
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+          {starts.map((s, i) => (
+            <li key={s.mode}>
+              <Link ref={i === 0 ? continueRef : undefined} href={s.href} onClick={() => { playSfx("start"); onStart?.(s.mode); }}
+                className={`group flex h-full min-h-[76px] items-center gap-4 rounded-2xl border px-4 py-3 transition-colors ${s.primary ? "border-brand-deep bg-brand-deep text-paper hover:bg-brand-ink" : "border-line bg-paper text-ink hover:border-brand hover:bg-brand-mist"}`}>
+                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${s.primary ? "bg-paper/15" : "bg-brand-soft text-brand-deep"}`}><s.Icon aria-hidden size={22} strokeWidth={1.75} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-semibold leading-snug">{s.title}</span>
+                  <span className={`block text-sm ${s.primary ? "text-brand-soft" : "text-ink-3"}`}>{s.sub}</span>
+                </span>
+                <ChevronRight aria-hidden size={18} className="shrink-0" /><PendingHint label={c.opening} />
+              </Link>
+            </li>
+          ))}
+        </ul>
       </motion.div>
     </motion.section>
   );

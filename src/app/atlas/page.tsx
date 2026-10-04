@@ -5,6 +5,9 @@ import { Home } from "@/components/home/Home";
 import { NoRoute, type Lead } from "@/components/home/NoRoute";
 import { Tour } from "@/components/home/Tour";
 import { atlasHref } from "@/components/home/memory";
+import { EmbedBridge } from "@/components/home/EmbedBridge";
+import { originOf } from "@/components/home/bridge";
+import { site } from "@/lib/site";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
 import { atlas, loadAtlas, nameOf, search, stats } from "@/lib/atlas/store";
 import type { Locale } from "@/lib/i18n";
@@ -24,19 +27,23 @@ export default async function AtlasPage({ searchParams }: { searchParams: Promis
   const d = one("d");
   const p = one("p");
   const embed = one("embed") === "1";
+  const mode = one("mode") === "challenge" || one("mode") === "free" ? (one("mode") as "challenge" | "free") : undefined;
+  const bridge = <EmbedBridge allowedOrigins={parentOrigins()} />;
+  // WAVE 6: the challenge is Maria's STXBP1 route — a bare ?mode=challenge opens it.
+  if (mode === "challenge" && !d) redirect(`${atlasHref({ p: p && p in PERSONAS ? (p as PersonaId) : "maria", d: MARIA, mode, l: initialLocale })}${embed ? "&embed=1" : ""}`);
   // S7: /atlas?q=<text> — a match opens its route; nothing → the honest "no supported route" page.
   const q = one("q")?.trim().slice(0, 120);
   if (q && !d) {
     const persona: PersonaId = p && p in PERSONAS ? (p as PersonaId) : "maria";
     const hit = search(q, initialLocale, 1).find((h) => h.disease);
     if (hit?.disease) redirect(atlasHref({ p: persona, d: hit.disease, l: initialLocale }));
-    return <NoRoute query={q} locale={initialLocale} persona={persona} embed={embed} sources={noRouteSources()} leads={closestLeads(q, initialLocale)} />;
+    return <>{bridge}<NoRoute query={q} locale={initialLocale} persona={persona} embed={embed} sources={noRouteSources()} leads={closestLeads(q, initialLocale)} /></>;
   }
-  // S0 Home: no disease and no role yet → "Who are you?" (UX_WAVE4 §2 S0). Any of them → the atlas.
-  if (!d && !p) {
+  // S0 Home: no disease, role or start mode yet → "Who are you?" (UX_WAVE4 S0 · WAVE 6 T8). ?role=change opens the picker.
+  if (!d && !p && !mode) {
     const s = stats();
     const diseaseNames = Object.fromEntries(atlas().snap.entities.filter((x) => x.type === "disease").map((x) => [x.id, nameOf(x, initialLocale)]));
-    return <Home initialLocale={initialLocale} stats={{ diseases: s.diseases, sources: s.sources }} maria={MARIA} diseaseNames={diseaseNames} embed={embed} />;
+    return <>{bridge}<Home initialLocale={initialLocale} stats={{ diseases: s.diseases, sources: s.sources }} maria={MARIA} diseaseNames={diseaseNames} embed={embed} changeRole={one("role") === "change"} /></>;
   }
   const initialDisease = d && atlas().byId.get(d)?.type === "disease" ? d : null;
   const initialPersona: PersonaId = p && p in PERSONAS ? (p as PersonaId) : "maria";
@@ -46,7 +53,14 @@ export default async function AtlasPage({ searchParams }: { searchParams: Promis
     en: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.en, mode: x.mode.en })),
     es: Object.values(PERSONAS).map((x) => ({ id: x.id, name: x.name, role: x.role.es, mode: x.mode.es })),
   };
-  return <><AtlasApp initialDisease={initialDisease} initialPersona={initialPersona} initialLocale={initialLocale} initialEdge={initialEdge} personas={personas} stats={stats()} maria={MARIA} /><Tour locale={initialLocale} auto={!initialDisease} /></>;
+  // Keyed by what the parent can change (nedamex:navigate) so a new disease / role / mode remounts with fresh state.
+  return <>{bridge}<AtlasApp key={`${initialDisease}|${initialPersona}|${mode ?? ""}|${initialLocale}`} initialDisease={initialDisease} initialPersona={initialPersona} initialLocale={initialLocale} initialEdge={initialEdge} personas={personas} stats={stats()} maria={MARIA} /><Tour locale={initialLocale} auto={!initialDisease} /></>;
+}
+
+/** Parents allowed to frame-talk with the engine: the platform app, the program URL, CORS extras, local dev. */
+function parentOrigins(): string[] {
+  const list = [site.appUrl, process.env.NEXT_PUBLIC_PROGRAM_URL, ...(process.env.CORS_EXTRA_ORIGINS ?? "").split(","), "http://localhost:8080", "http://localhost:5173"];
+  return [...new Set(list.map((u) => originOf(u?.trim())).filter((o): o is string => !!o))];
 }
 
 function noRouteSources() {
