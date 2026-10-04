@@ -32,6 +32,7 @@ import { useGraphMode } from "./useGraphMode";
 import { useEmbed } from "./useEmbed";
 import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
+import { FOCUS_EVIDENCE_EVENT, parseHl, type FocusEvidence } from "./focusEvidence";
 import { TypeIcon } from "./icons";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
@@ -103,6 +104,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [command, setCommand] = useState<GraphCommand | null>(null);
   // Spotlight: nodes to keep lit + framed (a cluster picked in the table). Unlike hover, the pointer does not clear it.
   const [spotlight, setSpotlight] = useState<string[]>([]);
+  // "Explore in the graph" (Guide chat, transcripts, Lovable medicine chat ?hl=): edges + entities to light and frame.
+  const [evidenceHl, setEvidenceHl] = useState<FocusEvidence | null>(null);
   const center: "map" | "table" = viewMode === "table" ? "table" : "map";
   const cmd = (kind: GraphCommand["kind"]) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 }));
   // Keyboard zoom: + / − / 0 (fit) when not typing.
@@ -183,6 +186,19 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   }, [fullView, viewMode, focus, strength, expanded, layers, t]);
   const shownView = useMemo(() => (laid ? filterView(laid.view, focus, hiddenLayers, sourceFilter) : null), [laid, focus, hiddenLayers, sourceFilter]);
   const labelIds = laid?.labelIds ?? null;
+  // Frame the highlighted evidence once its nodes are on screen (once per highlight).
+  const framedHl = useRef<FocusEvidence | null>(null);
+  useEffect(() => {
+    if (!evidenceHl || framedHl.current === evidenceHl || !shownView) return;
+    const want = new Set(evidenceHl.entityIds ?? []);
+    for (const l of shownView.links) if (evidenceHl.edgeIds?.includes(l.id)) { want.add(linkEnd(l.source)); want.add(linkEnd(l.target)); }
+    const ids = shownView.nodes.filter((n) => want.has(n.id)).map((n) => n.id);
+    if (!ids.length) return;
+    framedHl.current = evidenceHl;
+    // After the canvas' own "new layout → fit all" (30 ms) so the evidence framing wins.
+    const id = setTimeout(() => setCommand((c) => ({ kind: "focus", ids, n: (c?.n ?? 0) + 1 })), 250);
+    return () => clearTimeout(id);
+  }, [evidenceHl, shownView]);
   const hasBridges = useMemo(() => !!shownView?.links.some((l) => l.bridge), [shownView]);
   const shownKinds = useMemo(() => new Set((shownView?.links ?? []).map((l) => kindOf(l.kind))), [shownView]);
   const centrality = useMemo(() => Object.fromEntries((view?.nodes ?? []).filter((x) => x.type === "disease").map((x) => [x.id, Math.max(0, (x.size - 8) * 14)])), [view]);
@@ -190,11 +206,24 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   // Client-only URL reads: `?c=<cluster>` (Home sends it with cluster hits) highlights that cluster and opens the Clusters
   // panel; `?e=<edge>` opens the drawer even when the server page could not confirm the id (live UUID edges can exist in
   // the API's graph cache before the page's) — the drawer fetches it and says so honestly if it is missing.
+  // Evidence highlight: light + frame the edges/entities, open the drawer on the first edge, show every sector's items.
+  const applyEvidence = useCallback((hl: FocusEvidence) => {
+    if (!hl.edgeIds?.length && !hl.entityIds?.length) return;
+    setEvidenceHl(hl); setExpanded(new Set(SECTORS)); setSpotlight([]);
+    if (hl.openDrawer !== false && hl.edgeIds?.[0]) setInspect(hl.edgeIds[0]);
+  }, []);
+  useEffect(() => {
+    const on = (e: Event) => applyEvidence((e as CustomEvent<FocusEvidence>).detail ?? {});
+    window.addEventListener(FOCUS_EVIDENCE_EVENT, on); return () => window.removeEventListener(FOCUS_EVIDENCE_EVENT, on);
+  }, [applyEvidence]);
+
   // Captured at first render: the URL-sync effect below rewrites the address (and StrictMode re-runs effects).
   const firstSearch = useRef(typeof window !== "undefined" ? window.location.search : "");
   useEffect(() => {
     const sp = new URLSearchParams(firstSearch.current);
     const c = sp.get("c"), e = sp.get("e"), mode = sp.get("mode");
+    const hl = parseHl(sp.get("hl"));
+    if (hl) requestAnimationFrame(() => applyEvidence(hl));
     // mode=challenge → Maria's route (step 1, stepper); mode=free → route panel closed, Constellation 2D, search focused.
     if (mode === "challenge" && !focus) requestAnimationFrame(() => { setFocus(maria); setViewMode("route"); });
     if (mode === "free") requestAnimationFrame(() => {
@@ -227,7 +256,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 
   const { stop: stopNarration } = n;
   const goTo = useCallback((d: string, narrate = autoNarrate) => {
-    stopNarration(); setInspect(null); setClusterFilter(null); setDrafts([]); setSpotlight([]); setExpanded(new Set());
+    stopNarration(); setInspect(null); setClusterFilter(null); setDrafts([]); setSpotlight([]); setExpanded(new Set()); setEvidenceHl(null);
     setViewMode((v) => (v === "table" ? v : "route"));
     pendingNarration.current = narrate;
     setFocus(d);
@@ -254,15 +283,21 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const onRailHover = useCallback((nodes: string[], edges: string[]) => setHover({ nodes, edges }), []);
 
   const spoken = n.current;
-  const highlightEdges = useMemo(() => (spoken ? new Set(spoken.edges) : hover.edges.length ? new Set(hover.edges) : inspect ? new Set([inspect]) : EMPTY), [spoken, hover.edges, inspect]);
+  const highlightEdges = useMemo(() => {
+    if (spoken) return new Set(spoken.edges);
+    if (hover.edges.length) return new Set(hover.edges);
+    const ids = new Set<string>(evidenceHl?.edgeIds ?? []);
+    if (inspect) ids.add(inspect);
+    return ids.size ? ids : EMPTY;
+  }, [spoken, hover.edges, inspect, evidenceHl]);
   // "The map responds": a hovered / selected edge lights its two endpoints too, so the canvas dims the rest and
   // the camera frames the pair (card ↔ edge sync both ways).
   const highlightNodes = useMemo(() => {
     if (!spoken && spotlight.length) return new Set(spotlight); // a picked cluster wins until dismissed
-    const ids = new Set(spoken ? spoken.nodes : hover.nodes);
+    const ids = new Set(spoken ? spoken.nodes : hover.nodes.length ? hover.nodes : evidenceHl?.entityIds ?? []);
     for (const l of fullView?.links ?? []) if (highlightEdges.has(l.id)) { ids.add(linkEnd(l.source)); ids.add(linkEnd(l.target)); }
     return ids.size ? ids : EMPTY;
-  }, [spoken, hover.nodes, highlightEdges, fullView, spotlight]);
+  }, [spoken, hover.nodes, highlightEdges, fullView, spotlight, evidenceHl]);
   // Breadcrumb: what the map is showing, in words.
   const crumb = useMemo(() => {
     const id = hover.edges[0] ?? inspect; if (!id || !fullView) return null;
@@ -312,7 +347,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           {(!graph.ready || !shownView || (focus && shownView.focus !== focus)) && !loadError && <Loading />}
           {graph.ready && <Canvas view={shownView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={mobileInset} hiddenKinds={hiddenKinds} still={reduce}
             labelIds={labelIds} command={command} onNode={onNode} onLink={onLink}
-            onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); }} />}
+            onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); setEvidenceHl(null); }} />}
 
           {/* Floating controls: 2D/3D · Focus/All · zoom · fit · rotate (3D) */}
           <div className="absolute left-3 right-3 lg:right-24 top-3 z-20 flex flex-wrap items-center gap-2">
@@ -361,7 +396,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
               <ZoomBtn icon={Plus} label={`${t.ctrl.zoom_in} (+)`} onClick={() => cmd("zoomIn")} />
               <ZoomBtn icon={Minus} label={`${t.ctrl.zoom_out} (−)`} onClick={() => cmd("zoomOut")} />
               <ZoomBtn icon={Maximize2} label={`${t.ctrl.fit} (0)`} onClick={() => cmd("fit")} />
-              <ZoomBtn icon={RotateCcw} label={t.ctrl.reset} onClick={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); setClusterFilter(null); setExpanded(new Set()); cmd("reset"); }} />
+              <ZoomBtn icon={RotateCcw} label={t.ctrl.reset} onClick={() => { setInspect(null); setHover({ nodes: [], edges: [] }); setSpotlight([]); setEvidenceHl(null); setClusterFilter(null); setExpanded(new Set()); cmd("reset"); }} />
             </div>
           )}
 
