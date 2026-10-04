@@ -4,10 +4,9 @@ import { Home } from "@/components/home/Home";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
 import { atlas, loadAtlas, stats } from "@/lib/atlas/store";
 import type { Locale } from "@/lib/i18n";
-import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: `${site.name} · Rare disease atlas`,
+  title: "Nedamex · Rare disease atlas",
   description: "Search a rare disease and follow it to a shared mechanism, an existing asset, a collaborator and a next step — every edge with its source.",
 };
 

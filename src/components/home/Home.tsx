@@ -44,12 +44,13 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
   }, []);
 
   const pickRole = (p: PersonaId) => { setRole(p); writeMemory({ role: p }); };
-  const open = (d: string) => {
+  const open = (d: string, c?: string) => {
     const p = role ?? "maria";
     writeMemory({ role: p, disease: d });
-    router.push(atlasHref({ p, d, l: locale }));
+    router.push(atlasHref({ p, d, c, l: locale }));
   };
-  const onPick = (h: SearchHit) => { if (h.disease) open(h.disease); };
+  // Every hit carries the disease that opens the graph (a mechanism cluster: its lead disease + the cluster id).
+  const onPick = (h: SearchHit) => { if (h.disease) open(h.disease, (h.type as string) === "cluster" ? h.id : undefined); };
   const tryExample = async (q: string) => {
     setExampleMiss(null);
     try {

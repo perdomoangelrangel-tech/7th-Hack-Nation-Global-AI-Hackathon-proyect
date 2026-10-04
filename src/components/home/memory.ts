@@ -18,9 +18,10 @@ export function writeMemory(patch: HomeMemory) {
 }
 
 /** The one place Home builds atlas links: the URL is the state (UX_WAVE4 §4.1). */
-export function atlasHref({ p, d, l }: { p: PersonaId; d?: string | null; l: Locale }) {
+export function atlasHref({ p, d, c, l }: { p: PersonaId; d?: string | null; c?: string; l: Locale }) {
   const u = new URLSearchParams({ p });
   if (d) u.set("d", d);
+  if (c) u.set("c", c); // mechanism cluster picked in search (explorer may highlight it)
   u.set("l", l);
   return `/atlas?${u.toString()}`;
 }
