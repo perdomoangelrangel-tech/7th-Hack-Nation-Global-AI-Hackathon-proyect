@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
-/* Nexmed palette — taken from the logo (cyanotype blue #3A86BF on white).
+/* Nexmed palette — taken from the logo (cyanotype blue #3A86BF on white). OWNER: brand lane (DESIGN.md).
    Brand blues carry meaning: solid = sourced evidence. Amber is reserved for "no evidence / gap". */
 :root {
   --brand: #3a86bf;        /* logo blue */
   --brand-deep: #1f5f94;   /* hover / pressed, text-safe on white (AA) */
   --brand-ink: #0e2c47;    /* headings, dark surfaces */
+  --brand-light: #8dbde3;  /* secondary strokes, inferred links, 3D foliage */
   --brand-soft: #e4f0f9;   /* tinted panels */
   --brand-mist: #f3f8fc;   /* page wash */
   --paper: #ffffff;
@@ -22,34 +23,63 @@
   --navy: #0e2c47;
   --navy-2: #163d61;
   --radius: 14px;
+  --focus: #1f5f94;
+  --shadow-soft: 0 1px 2px rgb(14 44 71 / 6%), 0 8px 24px -12px rgb(14 44 71 / 18%);
 }
 /* Light only by design: medical context, calm and bright. No dark theme. */
 :root { color-scheme: light; }
-[data-contrast="high"] { --ink: #061a2c; --ink-2: #102f4b; --ink-3: #23445f; --line: #8fb3cf; --brand-deep: #0f4a7a; }
+[data-contrast="high"] {
+  --ink: #061a2c; --ink-2: #102f4b; --ink-3: #23445f; --line: #8fb3cf;
+  --brand: #1f6aa5; --brand-deep: #0f4a7a; --brand-light: #5f9ccc; --focus: #061a2c;
+}
 @theme inline {
-  --color-brand: var(--brand); --color-brand-deep: var(--brand-deep); --color-brand-ink: var(--brand-ink); --color-brand-soft: var(--brand-soft); --color-brand-mist: var(--brand-mist);
+  --color-brand: var(--brand); --color-brand-deep: var(--brand-deep); --color-brand-ink: var(--brand-ink); --color-brand-light: var(--brand-light); --color-brand-soft: var(--brand-soft); --color-brand-mist: var(--brand-mist);
   --color-paper: var(--paper); --color-paper-2: var(--paper-2);
   --color-ink: var(--ink); --color-ink-2: var(--ink-2); --color-ink-3: var(--ink-3);
   --color-line: var(--line);
   --color-teal: var(--teal); --color-teal-2: var(--teal-2); --color-teal-soft: var(--teal-soft);
   --color-amber: var(--amber); --color-amber-soft: var(--amber-soft);
   --color-navy: var(--navy); --color-navy-2: var(--navy-2);
-  --font-sans: ui-sans-serif, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* next/font variables are set on <html> in layout.tsx; system stacks are the fallback. */
+  --font-sans: var(--font-atkinson), ui-sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-mono: var(--font-atkinson-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 html { scroll-behavior: smooth; }
 body { background: var(--paper); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { letter-spacing: -0.015em; }
-.serif { font-family: var(--font-serif); }
+.serif, .display { font-family: var(--font-display); font-optical-sizing: auto; }
+.mono, code, kbd { font-family: var(--font-mono); }
 .card { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius); }
 .chip { display: inline-flex; align-items: center; gap: .4rem; padding: .25rem .6rem; border-radius: 999px; font-size: .78rem; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); }
 .evidence { border-left: 3px solid var(--teal); }
 .no-evidence { border-left: 3px solid var(--amber); background: var(--amber-soft); }
 .grid-bg { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 32px 32px; mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%); }
+.eyebrow { font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+
+/* Focus: always visible, brand-deep, never removed. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+/* Evidence-kind strokes (legend + inline samples). */
+.kind-observed { border-top: 3px solid var(--brand-deep); }
+.kind-inferred { border-top: 3px dashed var(--brand); }
+.kind-extracted { border-top: 3px dotted var(--brand); }
+.kind-proposed { border-top: 3px dashed var(--line); }
+
 @media (prefers-reduced-motion: no-preference) {
   .pulse { animation: pulse 2.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
   .flow-dash { stroke-dasharray: 6 6; animation: dash 1.6s linear infinite; }
   @keyframes dash { to { stroke-dashoffset: -24; } }
+  .float-y { animation: float-y 6s ease-in-out infinite; }
+  @keyframes float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
+  .helix-spin { animation: helix-spin var(--helix-speed, 2.4s) linear infinite; }
+  @keyframes helix-spin { to { transform: rotateY(360deg); } }
 }
+/* In-app "reduce motion" preference (usePrefs → <html data-motion="reduce">) and the OS setting: stop everything. */
+[data-motion="reduce"] *, [data-motion="reduce"] *::before, [data-motion="reduce"] *::after {
+  animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;
+}
+[data-motion="reduce"] { scroll-behavior: auto; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
