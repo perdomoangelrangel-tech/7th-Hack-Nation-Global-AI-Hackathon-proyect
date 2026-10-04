@@ -4,7 +4,7 @@
  * Voice lane reads voiceRate/autoRead/voiceStyle; AI lane receives `simpleLanguage` from the client.
  * Persisted per viewer in localStorage (wrapped in try/catch).
  */
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export interface Prefs {
   textScale: 1 | 1.15 | 1.3;      // root font scaling
@@ -22,15 +22,18 @@ const KEY = "nexmed.prefs.v1";
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, set] = useState<Prefs>(DEFAULT_PREFS);
+  const hydrated = useRef(false);
   useEffect(() => {
     // Hydrate after mount (server renders defaults); deferred so it is not a synchronous setState in the effect.
     const id = requestAnimationFrame(() => {
       try { const raw = localStorage.getItem(KEY); if (raw) set({ ...DEFAULT_PREFS, ...JSON.parse(raw) }); } catch { /* storage unavailable */ }
+      hydrated.current = true;
     });
     return () => cancelAnimationFrame(id);
   }, []);
   useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch { /* storage unavailable */ }
+    // Never persist the server defaults over the viewer's saved prefs before they were read back.
+    if (hydrated.current) { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch { /* storage unavailable */ } }
     const root = document.documentElement;
     root.style.fontSize = `${prefs.textScale * 100}%`;
     root.dataset.contrast = prefs.highContrast ? "high" : "normal";
