@@ -10,7 +10,7 @@
  *   Contradicting  contradicting / weakening evidence, or "none found in our sources"
  * Footer: Copy citation · Flag as wrong (stored as a community note, never evidence) · Propose a link.
  */
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, Copy, ExternalLink, Flag, Lightbulb } from "lucide-react";
 import type { edgeDetail } from "@/lib/atlas/store";
@@ -276,6 +276,12 @@ export function DraftInspector({ draft, t, onClose }: { draft: Draft; t: Dict; o
 }
 
 function Shell({ t, onClose, reduce, children }: { t: Dict; onClose: () => void; reduce: boolean; children: React.ReactNode }) {
+  // Focus "Back to route" on open — programmatically, and not inside a cross-origin iframe (blocked + logged there).
+  const back = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    let framed = true; try { framed = window.self !== window.top; } catch { /* cross-origin → framed */ }
+    if (!framed) back.current?.focus();
+  }, []);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
@@ -286,7 +292,7 @@ function Shell({ t, onClose, reduce, children }: { t: Dict; onClose: () => void;
       transition={springs.snappy}
       className="absolute inset-0 z-30 bg-paper flex flex-col lg:pb-20" role="dialog" aria-label={t.rail_evidence}>
       <header className="flex items-center gap-2 px-3 h-12 border-b border-line bg-brand-mist">
-        <button type="button" onClick={onClose} autoFocus className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-ink-2 hover:bg-brand-soft hover:text-ink">
+        <button ref={back} type="button" onClick={onClose} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-ink-2 hover:bg-brand-soft hover:text-ink">
           <ChevronLeft aria-hidden size={18} strokeWidth={1.75} />{t.drawer.back}
         </button>
         <p className="ml-auto pr-2 text-xs uppercase tracking-widest text-ink-3">{t.rail_evidence}</p>
