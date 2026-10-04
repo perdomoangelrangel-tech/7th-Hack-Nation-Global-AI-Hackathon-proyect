@@ -136,3 +136,14 @@ describe("extract · typographic characters from PubMed", () => {
     expect(r.claims[0]).toMatchObject({ polarity: "contradicts" });
   });
 });
+
+describe("extract · dictionary pass finds aliases in running text (QA-28)", () => {
+  it("reports the alias with the paper's own spelling, alongside the symbol", async () => {
+    setLlmClient(null);
+    const r = await extract(idx, { text: "We studied munc-1 (GENE1) carriers. Variants in munc-1 cause Testing syndrome type A in most cases." });
+    const genes = r.entities.filter((e) => e.type === "gene");
+    expect(genes.map((e) => e.mention).sort()).toEqual(["GENE1", "munc-1"]);
+    expect(genes.every((e) => e.entity_id === "gene:HGNC:1")).toBe(true);
+    expect(r.claims.find((c) => c.subject === "munc-1")).toMatchObject({ relation: "causes", entity_ids: ["gene:HGNC:1", "disease:ORPHA:1"] });
+  });
+});

@@ -60,17 +60,27 @@ const NEGATION = /\b(not|no evidence|did not|does not|lack(?:ed)? of|absence of|
 
 function dictionaryEntities(idx: AtlasIndex, text: string): { mention: string; type: ExtractType }[] {
   const hay = ` ${norm(text)} `;
-  const seen = new Map<string, { mention: string; type: ExtractType }>();
+  const out: { mention: string; type: ExtractType }[] = [];
+  const perEntity = new Map<string, number>();
   const usedKeys = new Set<string>(); // one mention text → one type ("STXBP1" is the gene, not the disease alias)
   const order: ExtractType[] = ["gene", "disease", "phenotype", "pathway", "treatment"];
   const keys = entityKeys(idx, order).sort((a, b) => order.indexOf(a.entity.type as ExtractType) - order.indexOf(b.entity.type as ExtractType));
   for (const k of keys) {
-    if (k.key.length < 4 || seen.has(k.entity.id) || usedKeys.has(k.key)) continue;
-    if (hay.includes(` ${k.key} `)) { seen.set(k.entity.id, { mention: k.raw, type: k.entity.type as ExtractType }); usedKeys.add(k.key); }
+    // Every distinct name an entity appears under counts (gene symbol AND an alias like "Munc18-1"), up to 3.
+    if (k.key.length < 4 || usedKeys.has(k.key) || (perEntity.get(k.entity.id) ?? 0) >= 3) continue;
+    if (!hay.includes(` ${k.key} `)) continue;
+    usedKeys.add(k.key);
+    perEntity.set(k.entity.id, (perEntity.get(k.entity.id) ?? 0) + 1);
+    out.push({ mention: spanInText(text, k.key) ?? k.raw, type: k.entity.type as ExtractType });
   }
-  const out = [...seen.values()];
   for (const v of new Set(text.match(VARIANT_RE) ?? [])) out.push({ mention: v, type: "variant" });
   return out;
+}
+
+/** The text's own spelling of a normalized key ("munc18 1" → "Munc18-1"), so mentions are copied from the paper. */
+function spanInText(text: string, key: string): string | null {
+  const pattern = key.split(" ").map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^a-z0-9]+");
+  return text.match(new RegExp(`(?<![a-z0-9])${pattern}(?![a-z0-9])`, "i"))?.[0] ?? null;
 }
 
 function sentences(text: string) {
