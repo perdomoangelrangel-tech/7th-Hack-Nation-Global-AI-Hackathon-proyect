@@ -145,7 +145,9 @@ export function questionKinds(q: string): FactKind[] {
   return kinds;
 }
 
-export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale, opts: { simple?: boolean; question?: string } = {}): Promise<Narration | null> {
+export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale, opts: { simple?: boolean; question?: string; history?: { role: "user" | "assistant"; text: string }[]; maxClaims?: number } = {}): Promise<Narration | null> {
+  const maxClaims = Math.min(opts.maxClaims ?? 99, PERSONAS[personaId].maxClaims);
+  const convo = (opts.history ?? []).slice(-10).map((h) => `${h.role === "user" ? "USER" : "NEDAMEX"}: ${h.text.slice(0, 600)}`).join("\n");
   const j = journey(diseaseId, l); if (!j) return null;
   const persona = PERSONAS[personaId];
   const simple = !!opts.simple;
@@ -160,12 +162,12 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
   const ordered = [...facts].sort((a, b) => score(a) - score(b));
 
   const task = l === "es"
-    ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${persona.maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
-    : `TASK: ${opts.question ? `answer the user's question about ${j.disease.name} using only the FACTS` : `narrate the journey for ${j.disease.name}`} for ${persona.name} in at most ${persona.maxClaims} claims, in the order most useful to them. End with the concrete next step if there is one.`;
+    ? `TAREA: ${opts.question ? `responde la pregunta del usuario sobre ${j.disease.name} usando solo los HECHOS` : `narra el recorrido de ${j.disease.name}`} para ${persona.name} en un máximo de ${maxClaims} afirmaciones, en el orden que más le sirva. Termina con el siguiente paso concreto si hay uno.`
+    : `TASK: ${opts.question ? `answer the user's question about ${j.disease.name} using only the FACTS` : `narrate the journey for ${j.disease.name}`} for ${persona.name} in at most ${maxClaims} claims, in the order most useful to them. End with the concrete next step if there is one.`;
   const llm = await structured({
     name: "nedamex_narration",
     system: systemPrompt({ persona: personaId, locale: l, task, simple }),
-    input: [factsBlock(ordered, l), opts.question ? untrusted("question", opts.question, 1000) : ""].filter(Boolean).join("\n\n"),
+    input: [factsBlock(ordered, l), convo ? untrusted("conversation so far (context only, never facts)", convo, 4000) : "", opts.question ? untrusted("question", opts.question, 1000) : ""].filter(Boolean).join("\n\n"),
     schema: DraftSchema,
   });
 
@@ -173,13 +175,13 @@ export async function narrate(diseaseId: string, personaId: PersonaId, l: Locale
   const QUOTA: Partial<Record<FactKind, number>> = { disease: 1, gene: 1, variant_effect: 1, neighbor: 1, pathway: 1, counterexample: 1, asset: 2, treatment: 1, collaborator: personaId === "devon" || asked.includes("collaborator") ? 2 : 1, step: 2, gap: 1 };
   const used = new Map<FactKind, number>();
   const template = ordered.filter((f) => { const n = used.get(f.kind) ?? 0; if (n >= (QUOTA[f.kind] ?? 1)) return false; used.set(f.kind, n + 1); return true; })
-    .slice(0, persona.maxClaims)
+    .slice(0, maxClaims)
     .sort((a, b) => Number(a.kind === "step") - Number(b.kind === "step")) // the next step always last
     .map((f) => ({ text: simple && f.simple ? f.simple : f.text, fact_ids: [f.id] }));
 
   const allowNames = [...new Set(facts.flatMap((f) => f.nodes).map((n) => atlas().byId.get(n)?.name).filter((x): x is string => !!x))];
   let mode: Narration["mode"] = llm.mode;
-  let v = verifyDraft(llm.mode === "openai" ? llm.data.sentences.slice(0, persona.maxClaims + 1) : template, facts, l, { allowNames });
+  let v = verifyDraft(llm.mode === "openai" ? llm.data.sentences.slice(0, maxClaims) : template, facts, l, { allowNames });
   if (llm.mode === "openai" && !v.sentences.length) { v = verifyDraft(template, facts, l, { allowNames }); mode = "deterministic"; }
 
   const evidenceById = new Map([...atlas().evidenceById, [coverage.id, coverage]]);
