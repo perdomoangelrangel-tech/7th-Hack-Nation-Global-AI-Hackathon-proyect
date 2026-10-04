@@ -21,6 +21,7 @@ import { SearchBox } from "@/components/atlas/SearchBox";
 import { api } from "@/components/atlas/api";
 import { EXAMPLES, ROLE_ORDER, homeCopy } from "./copy";
 import { atlasHref, readMemory, writeMemory, type HomeMemory } from "./memory";
+import { HelpButton, Tour } from "./Tour";
 
 const ROLE_ICON: Record<PersonaId, LucideIcon> = { devon: UserRound, maria: HeartHandshake, osei: Microscope, priya: Target };
 const STEP_ICON: LucideIcon[] = [Search, Footprints, BadgeCheck];
@@ -72,6 +73,7 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
         <header className="relative z-10 mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Link href="/" className="rounded-lg" aria-label={`${homeLabel(locale)}`}><Logo size="sm" /></Link>
           <span className="flex-1" />
+          <HelpButton label={c.help} />
           <button type="button" onClick={() => setLocale(locale === "en" ? "es" : "en")} aria-label={c.lang_aria}
             className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-paper/80 px-3 text-sm font-medium text-ink-2 hover:bg-brand-soft">
             <Languages aria-hidden size={18} strokeWidth={1.75} />{locale === "en" ? "ES" : "EN"}
@@ -162,6 +164,7 @@ export function Home({ initialLocale, stats, maria, diseaseNames }: Props) {
             <Info aria-hidden size={14} strokeWidth={1.75} />{c.footer(stats.diseases, stats.sources)}
           </p>
         </main>
+        <Tour locale={locale} />
       </div>
     </MotionConfig>
   );

@@ -73,3 +73,57 @@ export const homeCopy: Record<Locale, HomeCopy> = {
     },
   },
 };
+
+/** S7 · no supported route (UX_WAVE4 §2 S7): what we searched, what is missing, closest leads, how to help. */
+export const noRouteCopy = {
+  en: {
+    title: (q: string) => `We don't have a supported route for “${q}” yet.`,
+    searched: "What we searched", searched_tail: (n: number) => `${n} open sources · 0 links for this search`,
+    missing: "What's missing",
+    missing_items: (q: string) => [`No disease, gene, symptom or patient group in the atlas matches “${q}”`, "No gene–disease link", "No verified patient group"],
+    leads: "Closest leads", leads_note: "Matched by name only — a starting point, not evidence of shared biology.",
+    lead_label: "Weak lead", lead_line: (word: string, hit: string, disease: string) => hit === disease ? `“${word}” matches ${disease}` : `“${word}” matches ${hit} · in ${disease}`,
+    open_lead: "Open this route", no_leads: "No partial matches either.",
+    change: "What would change it",
+    add_evidence: "Add missing evidence", tell_group: "Tell us about your patient group", opens_github: "opens GitHub in a new tab",
+    back: "Back to search", synced: "Read on",
+    issue_evidence: (q: string) => ({ title: `Missing evidence: ${q}`, body: `What I searched: ${q}\n\nSource (Orphanet / OMIM / PubMed / ClinicalTrials.gov id or URL):\n\nWhat it shows:\n` }),
+    issue_group: (q: string) => ({ title: `Patient group: ${q}`, body: `Disease: ${q}\n\nPatient group name:\n\nOfficial website:\n` }),
+  },
+  es: {
+    title: (q: string) => `Aún no tenemos una ruta respaldada para «${q}».`,
+    searched: "Qué buscamos", searched_tail: (n: number) => `${n} fuentes abiertas · 0 enlaces para esta búsqueda`,
+    missing: "Qué falta",
+    missing_items: (q: string) => [`Ninguna enfermedad, gen, síntoma o grupo de pacientes del atlas coincide con «${q}»`, "Sin enlace gen–enfermedad", "Sin grupo de pacientes verificado"],
+    leads: "Pistas más cercanas", leads_note: "Coinciden solo por nombre — un punto de partida, no evidencia de biología compartida.",
+    lead_label: "Pista débil", lead_line: (word: string, hit: string, disease: string) => hit === disease ? `«${word}» coincide con ${disease}` : `«${word}» coincide con ${hit} · en ${disease}`,
+    open_lead: "Abrir esta ruta", no_leads: "Tampoco hay coincidencias parciales.",
+    change: "Qué lo cambiaría",
+    add_evidence: "Agregar evidencia que falta", tell_group: "Cuéntanos de tu grupo de pacientes", opens_github: "abre GitHub en una pestaña nueva",
+    back: "Volver a buscar", synced: "Leído el",
+    issue_evidence: (q: string) => ({ title: `Evidencia faltante: ${q}`, body: `Lo que busqué: ${q}\n\nFuente (id o URL de Orphanet / OMIM / PubMed / ClinicalTrials.gov):\n\nQué muestra:\n` }),
+    issue_group: (q: string) => ({ title: `Grupo de pacientes: ${q}`, body: `Enfermedad: ${q}\n\nNombre del grupo:\n\nSitio oficial:\n` }),
+  },
+} satisfies Record<Locale, unknown>;
+
+/** 3-stop tour (UX_WAVE4 §4.6): Next / Skip, reopened from Help, "?" or the `nedamex:tour` event. */
+export const tourCopy = {
+  en: {
+    label: "Quick tour", of: (i: number, n: number) => `${i} of ${n}`, next: "Next", back: "Back", skip: "Skip", done: "Got it",
+    stops: [
+      { title: "This is your route — one question at a time.", body: "Four questions take you from your disease to a next step: who shares its biology, what already exists, who could help, what to do together." },
+      { title: "The map shows why.", body: "Solid = a source says it. Dashed = our analysis — a hypothesis for experts to check." },
+      { title: "Tap any line to see its sources.", body: "Every link opens its evidence: the source, the date we read it and how sure we are." },
+    ],
+    observed: "Observed · a source states it", inferred: "Inferred · needs expert review", sources: "Sources",
+  },
+  es: {
+    label: "Recorrido rápido", of: (i: number, n: number) => `${i} de ${n}`, next: "Siguiente", back: "Atrás", skip: "Saltar", done: "Entendido",
+    stops: [
+      { title: "Esta es tu ruta — una pregunta a la vez.", body: "Cuatro preguntas te llevan de tu enfermedad a un siguiente paso: quién comparte su biología, qué existe ya, quién podría ayudar y qué hacer juntos." },
+      { title: "El mapa muestra por qué.", body: "Sólida = lo dice una fuente. Rayada = nuestro análisis — una hipótesis que un experto debe revisar." },
+      { title: "Toca cualquier línea para ver sus fuentes.", body: "Cada enlace abre su evidencia: la fuente, la fecha en que la leímos y qué tan seguros estamos." },
+    ],
+    observed: "Observada · lo dice una fuente", inferred: "Inferida · requiere revisión experta", sources: "Fuentes",
+  },
+} satisfies Record<Locale, unknown>;
