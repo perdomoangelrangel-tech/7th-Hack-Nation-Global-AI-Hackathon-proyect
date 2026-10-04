@@ -5,7 +5,7 @@ import { atlas, loadAtlas, stats } from "@/lib/atlas/store";
 import type { Locale } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: "Nexmed · Rare disease atlas",
+  title: "Nedamex · Rare disease atlas",
   description: "Search a rare disease and follow it to a shared mechanism, an existing asset, a collaborator and a next step — every edge with its source.",
 };
 

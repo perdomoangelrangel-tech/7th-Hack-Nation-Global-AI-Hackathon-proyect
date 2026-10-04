@@ -1,14 +1,15 @@
 "use client";
 /**
- * The atlas experience: search -> the graph reorganizes around the disease -> the voice walks the path
- * (connection, asset, collaborator, next step) while lighting each cited edge.
- * Layout (challenge concept): cluster rail left · graph center (3D first, 2D fallback) · selected disease right.
+ * The atlas experience — "one route, not a map" (UX_WAVE4): search → the graph shows the disease, its direct neighbours
+ * and the route only → the right panel answers one question at a time, and the map responds (card ↔ edge sync,
+ * camera flies, the rest dims). Layout: icon rail left · graph center (2D/3D, floating controls) · route right · footer.
  */
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { Box, ChevronRight, Focus, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Network, Rotate3d, Square, Target, UserRound, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { dict, type Locale } from "@/lib/i18n";
@@ -20,7 +21,9 @@ import { JourneyPanel } from "./JourneyPanel";
 import { EdgeInspector, DraftInspector } from "./EdgeInspector";
 import { NarrationBar } from "./NarrationBar";
 import { useNarration } from "./useNarration";
-import { AtlasRail } from "./AtlasRail";
+import { LeftRail, MiniLegend, RailSection, defaultRailTab, type RailTab } from "./AtlasRail";
+import { focusView, labelSet, linkEnd, routeEdges } from "./focus";
+import type { GraphCommand } from "./graphProps";
 import { PrefsPanel } from "./PrefsPanel";
 import { useGraphMode } from "./useGraphMode";
 import { kindOf, type LinkKind } from "./colors";
@@ -37,7 +40,7 @@ export interface PersonaOption { id: PersonaId; name: string; role: string; mode
 interface Props {
   initialDisease: string | null; initialPersona: PersonaId; initialLocale: Locale; initialEdge?: string | null;
   personas: Record<Locale, PersonaOption[]>;
-  stats: { diseases: number; evidence: number; sources: number; edges: number; inferred: number };
+  stats: { diseases: number; evidence: number; sources: number; edges: number; inferred: number; generated_at?: string };
   maria: string; // demo case disease
 }
 
@@ -55,13 +58,18 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const [clusterFilter, setClusterFilter] = useState<string | null>(null);
   const [hiddenKinds, setHiddenKinds] = useState<Set<string>>(EMPTY);
   const [loadError, setLoadError] = useState(false);
+  const [focusMode, setFocusMode] = useState(true);
+  const [railTab, setRailTab] = useState<RailTab | null>(defaultRailTab(initialPersona));
+  const [command, setCommand] = useState<GraphCommand | null>(null);
+  const [spin, setSpin] = useState(false);
+  const cmd = (kind: GraphCommand["kind"]) => setCommand((c) => ({ kind, n: (c?.n ?? 0) + 1 }));
   const pendingNarration = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   const firstInspect = useRef(true);
   const n = useNarration();
   const { prefs, setPrefs } = usePrefs();
   const autoNarrate = prefs.autoRead;
-  const graph = useGraphMode();
+  const graph = useGraphMode(persona);
   // Real height of the narration bar: the graph frames what is said above it.
   const [barH, setBarH] = useState(0);
   const barObserver = useRef<ResizeObserver | null>(null);
@@ -107,6 +115,12 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   }, [focus]);
   const fullView = useMemo(() => (view && focus && view.focus === focus ? withDrafts(view, drafts) : view), [view, drafts, focus]);
   const presentKinds = useMemo(() => new Set((fullView?.links ?? []).map((l) => kindOf(l.kind))), [fullView]);
+  // Focus (default): the disease, its direct neighbours and the route edges. "All" shows the whole view.
+  const route = useMemo(() => routeEdges(shownJourney), [shownJourney]);
+  const shownView = useMemo(() => (fullView && focus && focusMode && fullView.focus === focus ? focusView(fullView, focus, route) : fullView), [fullView, focus, focusMode, route]);
+  const labelIds = useMemo(() => (shownView && focus && shownView.focus === focus ? labelSet(shownView, focus, route) : null), [shownView, focus, route]);
+  const hasBridges = useMemo(() => !!shownView?.links.some((l) => l.bridge), [shownView]);
+  const shownKinds = useMemo(() => new Set((shownView?.links ?? []).map((l) => kindOf(l.kind))), [shownView]);
   const centrality = useMemo(() => Object.fromEntries((view?.nodes ?? []).filter((x) => x.type === "disease").map((x) => [x.id, Math.max(0, (x.size - 8) * 14)])), [view]);
 
   // Shareable URL state (?d=…&p=maria&l=en).
@@ -131,7 +145,11 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     setFocus(d);
   }, [autoNarrate, stopNarration]);
 
-  const onPick = (h: SearchHit) => { if (h.disease) goTo(h.disease); };
+  const onPick = (h: SearchHit) => {
+    // A mechanism cluster opens the constellation with that cluster highlighted and the Clusters panel open.
+    if (h.type === "cluster") { stopNarration(); setInspect(null); setFocus(null); setClusterFilter(h.id); setRailTab("clusters"); return; }
+    if (h.disease) goTo(h.disease);
+  };
   const onNode = (node: GNode) => {
     if (node.draft) { setInspect(node.id); return; }
     if (node.type === "disease") { if (node.id !== focus) goTo(node.id); return; }
@@ -140,22 +158,32 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (l) setInspect(l.id);
   };
   const onLink = (l: GLink) => setInspect(l.kind === "proposed" ? String(l.source) : l.id);
-  const switchPersona = (p: PersonaId) => { setPersona(p); if (focus && (n.state === "playing" || n.state === "paused")) void n.start(focus, p, locale); };
+  const switchPersona = (p: PersonaId) => { setPersona(p); setRailTab(defaultRailTab(p)); if (focus && (n.state === "playing" || n.state === "paused")) void n.start(focus, p, locale); };
   const switchLocale = (l: Locale) => { n.stop(); setLocale(l); };
   const toggleKind = (k: LinkKind) => setHiddenKinds((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
   const onRailHover = useCallback((nodes: string[], edges: string[]) => setHover({ nodes, edges }), []);
 
   const spoken = n.current;
-  const highlightNodes = useMemo(() => (spoken ? new Set(spoken.nodes) : hover.nodes.length ? new Set(hover.nodes) : EMPTY), [spoken, hover.nodes]);
   const highlightEdges = useMemo(() => (spoken ? new Set(spoken.edges) : hover.edges.length ? new Set(hover.edges) : inspect ? new Set([inspect]) : EMPTY), [spoken, hover.edges, inspect]);
+  // "The map responds": a hovered / selected edge lights its two endpoints too, so the canvas dims the rest and
+  // the camera frames the pair (card ↔ edge sync both ways).
+  const highlightNodes = useMemo(() => {
+    const ids = new Set(spoken ? spoken.nodes : hover.nodes);
+    for (const l of fullView?.links ?? []) if (highlightEdges.has(l.id)) { ids.add(linkEnd(l.source)); ids.add(linkEnd(l.target)); }
+    return ids.size ? ids : EMPTY;
+  }, [spoken, hover.nodes, highlightEdges, fullView]);
+  // Breadcrumb: what the map is showing, in words.
+  const crumb = useMemo(() => {
+    const id = hover.edges[0] ?? inspect; if (!id || !fullView) return null;
+    const l = fullView.links.find((x) => x.id === id); if (!l) return null;
+    const name = (v: unknown) => fullView.nodes.find((x) => x.id === linkEnd(v))?.name ?? linkEnd(v);
+    return { from: name(l.source), rel: t.relations[l.relation] ?? l.relation.replace(/_/g, " "), to: name(l.target), kind: kindOf(l.kind) };
+  }, [hover.edges, inspect, fullView, t]);
   const personaInfo = personas[locale].find((p) => p.id === persona)!;
   const Canvas = graph.mode === "3d" ? GraphCanvas3D : GraphCanvas;
   const draft = inspect && isDraftId(inspect) ? drafts.find((d) => `draft:${d.id}` === inspect) ?? null : null;
 
-  const rail = (
-    <AtlasRail t={t} persona={persona} view={view} journey={shownJourney} clusterFilter={clusterFilter} onCluster={setClusterFilter}
-      hiddenKinds={hiddenKinds} onToggleKind={toggleKind} onHover={onRailHover} presentKinds={presentKinds} centrality={centrality} onInspect={setInspect} />
-  );
+  const railProps = { t, persona, view: shownView, clusterFilter, onCluster: setClusterFilter, hiddenKinds, onToggleKind: toggleKind, onHover: onRailHover, presentKinds, centrality, onInspect: setInspect };
 
   return (
     <MotionConfig reducedMotion={prefs.reduceMotion ? "always" : "user"}>
@@ -171,48 +199,52 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           <div className="flex-1 min-w-0 max-w-2xl"><SearchBox t={t} locale={locale} onPick={onPick} autoFocus={!initialDisease} /></div>
           <ModeSelector className="hidden xl:flex" t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} />
           <PrefsPanel t={t} />
-          <button type="button" onClick={() => switchLocale(locale === "en" ? "es" : "en")} className="shrink-0 rounded-full border border-line w-9 h-9 text-xs font-medium text-ink-2 hover:bg-brand-soft" aria-label={locale === "en" ? "Cambiar a español" : "Switch to English"}>{locale === "en" ? "ES" : "EN"}</button>
+          <button type="button" onClick={() => switchLocale(locale === "en" ? "es" : "en")} className="shrink-0 flex items-center gap-1 rounded-full border border-line h-9 px-2.5 text-xs font-medium text-ink-2 hover:bg-brand-soft" aria-label={locale === "en" ? "Cambiar a español" : "Switch to English"}><Languages aria-hidden size={16} strokeWidth={1.75} />{locale === "en" ? "ES" : "EN"}</button>
         </div>
         {/* Modes below xl (always visible on mobile) */}
         <ModeSelector className="xl:hidden flex px-3 sm:px-4 pb-2 overflow-x-auto" t={t} personas={personas[locale]} persona={persona} onPick={switchPersona} compact />
       </header>
 
-      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[260px_1fr_420px]">
-        {/* Left rail */}
-        <aside className="hidden lg:flex flex-col gap-6 border-r border-line bg-paper p-4 overflow-y-auto" aria-label={t.clusters}>
-          {rail}
-          <label className="flex items-center gap-2 text-xs text-ink-2 cursor-pointer">
-            <input type="checkbox" checked={autoNarrate} onChange={(e) => setPrefs({ autoRead: e.target.checked })} className="accent-[var(--brand-deep)]" />
-            {t.narrate_on_pick}
-          </label>
-          <p className="mt-auto text-[11px] text-ink-3 leading-relaxed">
-            {t.stats_line.replace("{d}", String(stats.diseases)).replace("{e}", stats.edges.toLocaleString("en-US")).replace("{v}", stats.evidence.toLocaleString("en-US")).replace("{s}", String(stats.sources))}
-          </p>
-        </aside>
+      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[auto_1fr_420px]">
+        {/* Left icon rail: Clusters · How to read · Community */}
+        <LeftRail {...railProps} tab={railTab} onTab={setRailTab} />
 
         {/* Center: the graph */}
         <main id="atlas-main" className="relative h-[62vh] min-h-[380px] lg:h-auto lg:min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_30%_20%,var(--paper)_0%,var(--brand-mist)_55%,var(--brand-soft)_100%)]">
-          {graph.ready && <Canvas view={fullView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={focus ? barH : 0} hiddenKinds={hiddenKinds} still={reduce} onNode={onNode} onLink={onLink} />}
+          {graph.ready && <Canvas view={shownView} highlightNodes={highlightNodes} highlightEdges={highlightEdges} selected={focus} clusterFilter={clusterFilter} bottomInset={focus ? barH : 0} hiddenKinds={hiddenKinds} still={reduce}
+            labelIds={labelIds} command={command} spin={spin} onNode={onNode} onLink={onLink}
+            onLinkHover={(id) => setHover(id ? { nodes: [], edges: [id] } : { nodes: [], edges: [] })} onBackground={() => { setInspect(null); setHover({ nodes: [], edges: [] }); }} />}
 
-          {/* 3D / 2D toggle */}
-          <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
-            <div role="radiogroup" aria-label={t.view_label} className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
-              {(["3d", "2d"] as const).map((m) => (
-                <button key={m} type="button" role="radio" aria-checked={graph.mode === m} disabled={m === "3d" && !graph.webgl} onClick={() => graph.setMode(m)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${graph.mode === m ? "bg-brand-deep text-paper" : "text-ink-2 hover:bg-brand-soft"}`}>
-                  {m === "3d" ? t.view_3d : t.view_2d}
-                </button>
-              ))}
+          {/* Floating controls: 2D/3D · Focus/All · zoom · fit · rotate (3D) */}
+          <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-2">
+            <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => graph.setMode(m as "2d" | "3d")}
+              options={[{ v: "2d", label: t.view_2d, icon: Square }, { v: "3d", label: t.view_3d, icon: Box, disabled: !graph.webgl }]} />
+            {focus && <Segmented label={t.ctrl.focus} value={focusMode ? "focus" : "all"} onChange={(v) => { setFocusMode(v === "focus"); cmd("fit"); }}
+              options={[{ v: "focus", label: t.ctrl.focus, icon: Focus, title: t.ctrl.focus_hint }, { v: "all", label: t.ctrl.all, icon: Network, title: t.ctrl.all_hint }]} />}
+            <div className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
+              <IconBtn icon={ZoomOut} label={t.ctrl.zoom_out} onClick={() => cmd("zoomOut")} />
+              <IconBtn icon={ZoomIn} label={t.ctrl.zoom_in} onClick={() => cmd("zoomIn")} />
+              <IconBtn icon={Maximize2} label={t.ctrl.fit} onClick={() => cmd("fit")} />
+              {graph.mode === "3d" && <IconBtn icon={Rotate3d} label={spin ? t.ctrl.stop_rotate : t.ctrl.rotate} pressed={spin} onClick={() => setSpin((x) => !x)} disabled={reduce} />}
             </div>
             {graph.mode === "2d" && graph.reason && <span className="hidden sm:inline rounded-full bg-paper/90 px-2 py-0.5 text-[11px] text-ink-3">{t.fallback_reason[graph.reason]}</span>}
           </div>
+          <div className="absolute right-3 top-3 z-10 hidden md:block"><MiniLegend t={t} presentKinds={shownKinds} hasBridges={hasBridges} /></div>
+
+          {/* Breadcrumb: what the map is highlighting, in words. */}
+          {focus && (
+            <p aria-live="polite" className="absolute left-3 right-3 top-14 z-10 truncate text-xs text-ink-2 md:right-auto md:max-w-[70%]">
+              {crumb ? <span className="rounded-full bg-paper/90 px-2.5 py-1 shadow-sm"><b className="font-semibold text-ink">{crumb.from}</b> <ChevronRight aria-hidden size={12} className="inline -mt-0.5" /> {crumb.rel} <ChevronRight aria-hidden size={12} className="inline -mt-0.5" /> <b className="font-semibold text-ink">{crumb.to}</b> · {t.status[crumb.kind]}</span>
+                : <span className="rounded-full bg-paper/80 px-2.5 py-1 text-ink-3">{t.breadcrumb_hint}</span>}
+            </p>
+          )}
 
           {/* Graph tooltips (float-tooltip) in the light theme. */}
           <style>{`.float-tooltip-kap{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font:500 12px var(--font-sans);box-shadow:0 4px 14px rgb(14 44 71 / .12)}`}</style>
 
           {/* Keyboard / screen-reader path through the graph: appears when focused. */}
           {fullView && fullView.links.length > 0 && (
-            <nav aria-label={t.explore_more} className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:right-3 focus-within:top-14 focus-within:z-20 focus-within:max-h-[60%] focus-within:w-72 focus-within:overflow-auto focus-within:rounded-xl focus-within:border focus-within:border-line focus-within:bg-paper focus-within:p-2 focus-within:shadow-lg">
+            <nav aria-label={t.explore_more} className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:right-3 focus-within:top-24 focus-within:z-20 focus-within:max-h-[60%] focus-within:w-72 focus-within:overflow-auto focus-within:rounded-xl focus-within:border focus-within:border-line focus-within:bg-paper focus-within:p-2 focus-within:shadow-lg">
               <p className="px-2 py-1 text-xs uppercase tracking-widest text-ink-3">{t.explore_more}</p>
               <ul>
                 {fullView.links.slice(0, 60).map((l) => {
@@ -225,14 +257,14 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 
           {/* Honest "no supported route": say what is unknown and what would change the answer. */}
           {shownJourney?.honest_gap && !inspect && (
-            <div role="status" className="absolute left-3 right-3 top-14 z-10 mx-auto max-w-md rounded-2xl border border-dashed border-amber/50 bg-paper/95 p-4 shadow-sm">
+            <div role="status" className="absolute left-3 right-3 top-24 z-10 mx-auto max-w-md rounded-2xl border border-dashed border-amber/50 bg-paper/95 p-4 shadow-sm">
               <p className="text-sm font-semibold text-amber">{shownJourney.honest_gap.title}</p>
               <p className="mt-1 text-sm text-ink-2">{shownJourney.honest_gap.detail}</p>
               <p className="mt-2 text-sm text-ink">{shownJourney.honest_gap.next_question}</p>
             </div>
           )}
 
-          {loadError && <p role="status" className="absolute left-3 right-3 top-14 z-10 mx-auto max-w-md rounded-xl border border-amber/40 bg-amber-soft px-3 py-2 text-sm text-amber">{t.load_error}</p>}
+          {loadError && <p role="status" className="absolute left-3 right-3 top-24 z-10 mx-auto max-w-md rounded-xl border border-amber/40 bg-amber-soft px-3 py-2 text-sm text-amber">{t.load_error}</p>}
 
           <AnimatePresence>
             {!focus && (
@@ -255,8 +287,8 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 
         {/* Mobile: rail content under the graph */}
         <details className="lg:hidden border-t border-line bg-paper px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-ink-2">{t.legend} · {t.clusters}</summary>
-          <div className="mt-4 flex flex-col gap-6">{rail}</div>
+          <summary className="cursor-pointer text-sm font-medium text-ink-2">{t.rail.legend.title} · {t.rail.clusters.title} · {t.rail.community.title}</summary>
+          <div className="mt-4 flex flex-col gap-6">{(["community", "clusters", "legend"] as const).map((k) => <RailSection key={k} tab={k} {...railProps} />)}</div>
         </details>
 
         {/* Right panel: the journey */}
@@ -284,6 +316,17 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           </AnimatePresence>
         </aside>
       </div>
+
+      {/* Footer: disclaimer · snapshot date · counts (live from the graph) · narrate on pick */}
+      <footer className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-paper px-4 py-2 text-[11px] text-ink-3">
+        <span className="flex items-center gap-1.5"><Info aria-hidden size={14} strokeWidth={1.75} />{t.footer_disclaimer}</span>
+        {stats.generated_at && <span className="flex items-center gap-1.5"><History aria-hidden size={14} strokeWidth={1.75} />{t.snapshot.replace("{d}", stats.generated_at.slice(0, 10))}</span>}
+        <span className="hidden md:inline">{t.stats_line.replace("{d}", String(stats.diseases)).replace("{e}", stats.edges.toLocaleString("en-US")).replace("{v}", stats.evidence.toLocaleString("en-US")).replace("{s}", String(stats.sources))}</span>
+        <label className="ml-auto flex items-center gap-2 text-ink-2 cursor-pointer">
+          <input type="checkbox" checked={autoNarrate} onChange={(e) => setPrefs({ autoRead: e.target.checked })} className="accent-[var(--brand-deep)]" />
+          {t.narrate_on_pick}
+        </label>
+      </footer>
     </div>
     </MotionConfig>
   );
@@ -307,12 +350,37 @@ function ModeSelector({ t, personas, persona, onPick, className = "", compact }:
           <button key={p.id} data-mode={p.id} type="button" role="radio" aria-checked={on} tabIndex={on ? 0 : -1} onClick={() => onPick(p.id)} onKeyDown={(e) => onKey(e, i)} title={p.role}
             className={`relative shrink-0 rounded-xl px-3 ${compact ? "py-1" : "py-1 min-w-[92px]"} text-left transition-colors ${on ? "text-paper" : "text-ink-2 hover:bg-brand-soft"}`}>
             {on && <motion.span layoutId={`mode-pill${compact ? "-m" : ""}`} className="absolute inset-0 rounded-xl bg-brand-deep" transition={springs.snappy} />}
-            <span className="relative block text-xs font-semibold leading-tight whitespace-nowrap">{p.mode}</span>
+            <span className="relative flex items-center gap-1.5 text-xs font-semibold leading-tight whitespace-nowrap"><ModeIcon id={p.id} />{p.mode}</span>
             <span className={`relative block text-[11px] leading-tight whitespace-nowrap ${on ? "text-brand-soft" : "text-ink-3"}`}>{p.name}</span>
           </button>
         );
       })}
     </div>
+  );
+}
+
+const MODE_ICON: Record<PersonaId, LucideIcon> = { devon: UserRound, maria: HeartHandshake, osei: Microscope, priya: Target };
+function ModeIcon({ id }: { id: PersonaId }) { const I = MODE_ICON[id]; return <I aria-hidden size={14} strokeWidth={1.75} />; }
+
+function Segmented({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { v: string; label: string; icon: LucideIcon; disabled?: boolean; title?: string }[] }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
+      {options.map(({ v, label: l, icon: I, disabled, title }) => (
+        <button key={v} type="button" role="radio" aria-checked={value === v} disabled={disabled} onClick={() => onChange(v)} title={title ?? l}
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${value === v ? "bg-brand-deep text-paper" : "text-ink-2 hover:bg-brand-soft"}`}>
+          <I aria-hidden size={14} strokeWidth={1.75} />{l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function IconBtn({ icon: I, label, onClick, pressed, disabled }: { icon: LucideIcon; label: string; onClick: () => void; pressed?: boolean; disabled?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label} aria-pressed={pressed} disabled={disabled}
+      className={`grid place-items-center w-8 h-7 rounded-full transition-colors disabled:opacity-40 ${pressed ? "bg-brand-deep text-paper" : "text-ink-2 hover:bg-brand-soft"}`}>
+      <I aria-hidden size={15} strokeWidth={1.75} />
+    </button>
   );
 }
 

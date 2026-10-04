@@ -12,7 +12,7 @@ import ForceGraph2D, { type ForceGraphMethods, type LinkObject, type NodeObject 
 import type { GLink, GNode } from "@/lib/atlas/store";
 import { prefersReducedMotion } from "@/lib/motion";
 import { CANVAS, KIND_STYLE, TYPE_COLOR, hexA, kindOf } from "./colors";
-import { endId, trim, type GraphCanvasProps } from "./graphProps";
+import { endId, nodeSize, trim, type GraphCanvasProps } from "./graphProps";
 
 type N = NodeObject<GNode>;
 type L = LinkObject<GNode, GLink>;
@@ -20,7 +20,7 @@ type L = LinkObject<GNode, GLink>;
 /** Positions between focuses live outside React (one canvas per page). */
 const positions = new Map<string, { x: number; y: number }>();
 
-export default function GraphCanvas({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, hiddenKinds, still, onNode, onLink }: GraphCanvasProps) {
+export default function GraphCanvas({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset, hiddenKinds, still, labelIds = null, command = null, onNode, onLink, onLinkHover, onBackground }: GraphCanvasProps) {
   const fg = useRef<ForceGraphMethods<N, L> | undefined>(undefined);
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
@@ -77,6 +77,14 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightNodes, reduced]);
 
+  // Floating controls: zoom in / out / fit.
+  useEffect(() => {
+    const g = fg.current; if (!g || !command) return;
+    if (command.kind === "fit") fitTo(null, reduced ? 0 : 500);
+    else g.zoom(g.zoom() * (command.kind === "zoomIn" ? 1.3 : 0.77), reduced ? 0 : 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [command]);
+
   const narrating = highlightNodes.size > 0;
   const dimmed = useCallback((n: N) => {
     if (narrating) return !highlightNodes.has(n.id);
@@ -90,7 +98,7 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     const lit = highlightNodes.has(node.id) || node.id === selected || node.id === hover;
     const dim = dimmed(node);
     const color = isDisease ? node.color ?? CANVAS.fallbackDisease : TYPE_COLOR[node.type] ?? TYPE_COLOR.study;
-    const r = node.size;
+    const r = nodeSize(node.size);
     const time = performance.now() / 1000;
     ctx.globalAlpha = dim ? CANVAS.dimAlpha : node.draft ? 0.45 : 1;
     const shape = () => (node.draft ? ctx.stroke() : ctx.fill());
@@ -120,7 +128,7 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     if (node.bridge) { ctx.beginPath(); ctx.arc(x, y, r + 2, 0, 2 * Math.PI); ctx.strokeStyle = CANVAS.bridge; ctx.lineWidth = 1.4 / scale; ctx.setLineDash([2 / scale, 2 / scale]); ctx.stroke(); ctx.setLineDash([]); }
 
     // Labels: diseases always; the rest when zoomed in, lit or hovered.
-    if (isDisease || lit || scale > 2.2) {
+    if (lit || (labelIds ? labelIds.has(node.id) : isDisease) || scale > 2.6) {
       const fs = (isDisease ? 12 : 10) / scale;
       ctx.font = `${isDisease ? 600 : 500} ${fs}px ui-sans-serif, system-ui, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "top";
@@ -132,10 +140,10 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
       ctx.fillText(label, x, y + r + 5.5 / scale);
     }
     ctx.globalAlpha = 1;
-  }, [highlightNodes, selected, hover, dimmed, reduced]);
+  }, [highlightNodes, selected, hover, dimmed, reduced, labelIds]);
 
   const paintArea = useCallback((node: N, color: string, ctx: CanvasRenderingContext2D) => {
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(node.x ?? 0, node.y ?? 0, node.size + 4, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(node.x ?? 0, node.y ?? 0, nodeSize(node.size) + 4, 0, 2 * Math.PI); ctx.fill();
   }, []);
 
   const isLit = (l: L) => highlightEdges.has((l as GLink).id);
@@ -170,6 +178,8 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
         onNodeHover={(n) => setHover(n ? String(n.id) : null)}
         onNodeClick={(n) => onNode(n as GNode)}
         onLinkClick={(l) => onLink({ ...(l as GLink), source: endId(l.source), target: endId(l.target) })}
+        onLinkHover={(l) => onLinkHover?.(l ? (l as GLink).id : null)}
+        onBackgroundClick={() => onBackground?.()}
         cooldownTicks={reduced ? 60 : 220}
         d3VelocityDecay={0.32}
         autoPauseRedraw={false}
