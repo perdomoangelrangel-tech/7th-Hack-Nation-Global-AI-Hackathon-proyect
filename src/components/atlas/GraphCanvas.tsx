@@ -27,7 +27,7 @@ const compactHeader = (name: string) => {
 };
 const BASE_EDGE_ALPHA = 0.35;
 
-export default function GraphCanvas({ view, highlightNodes, highlightEdges, selected, clusterFilter, hiddenKinds, still, labelIds = null, command = null, onNode, onLink, onLinkHover, onBackground }: GraphCanvasProps) {
+export default function GraphCanvas({ view, highlightNodes, highlightEdges, selected, clusterFilter, bottomInset = 0, hiddenKinds, still, labelIds = null, command = null, onNode, onLink, onLinkHover, onBackground }: GraphCanvasProps) {
   const fg = useRef<ForceGraphMethods<N, L> | undefined>(undefined);
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
@@ -36,6 +36,7 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   const [hover, setHover] = useState<string | null>(null);
   const reduced = useMemo(() => !!still || prefersReducedMotion(), [still]);
   const narrow = size.w < 600;
+  const insetRef = useRef(bottomInset);
   const lastClick = useRef<{ id: string; t: number } | null>(null);
   const narrowRef = useRef(narrow);
   useEffect(() => { narrowRef.current = narrow; }, [narrow]);
@@ -66,7 +67,7 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     if (!ns.length) return;
     // Header pills have a fixed on-screen width (13 px text): half ≈ (7 px per char + 18) / 2, in graph units = px / zoom.
     // Two passes: estimate the zoom, then include the pills at that zoom.
-    const padX = 20, padTop = 100, padBottom = 44; // clear of the toolbar + breadcrumb (top) and the legend (bottom)
+    const padX = 20, padTop = 100, padBottom = 44 + insetRef.current; // clear of the toolbar + breadcrumb (top), legend / bottom sheet (bottom)
     const ys = ns.map((n) => n.y!);
     const [minY, maxY] = [Math.min(...ys) - 12, Math.max(...ys) + 24];
     const halfPx = (n: N) => (n.header ? ((size.w < 600 && n.header !== "region" ? compactHeader(n.name) : n.name).length * 7 + 18) / 2 : 0);
@@ -87,6 +88,8 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
     const t = setTimeout(() => fitRef.current(reduced ? 0 : 500), 30);
     return () => clearTimeout(t);
   }, [data, reduced]);
+  // Bottom sheet resized (phones) → re-frame above it.
+  useEffect(() => { insetRef.current = bottomInset; fitRef.current(reduced ? 0 : 300); }, [bottomInset, reduced]);
   // Resize → re-frame without animation (never reheats).
   useEffect(() => { fitRef.current(0); }, [size.w, size.h]);
   // Zoom control: + / − (300 ms), Fit / Reset (re-frame the whole layout).
