@@ -1,6 +1,7 @@
 // Edge Function `ingest`: pulls open sources into the evidence graph.
 // Auth: header `x-ingest-key` must equal public.app_secrets('ingest_key') (verify_jwt is off).
-// Body: { orpha?: "ORPHA:33069", step?: "orphanet"|"ctgov"|"pubmed"|"clinvar"|"opentargets"|"hpo"|"orgs"|"community"|"approvals"|"all", dry?: boolean }
+// Body: { orpha?: "ORPHA:33069", step?: "orphanet"|"ctgov"|"pubmed"|"clinvar"|"variants"|"opentargets"|"reactome"|"reporter"|"hpo"|"orgs"|"community"|"approvals"|"all", dry?: boolean }
+// reactome / reporter need migration 0011 (pathway + investigator entity types).
 // Curated regulatory approvals (seed/approvals.json) are re-applied at the end of EVERY non-dry call.
 // Invoked from SQL with pg_net (see private.invoke_ingest) and scheduled with pg_cron.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -16,19 +17,23 @@ import { clinvar } from "./sources/clinvar.ts";
 import { orgs } from "./sources/orgs.ts";
 import { hpo } from "./sources/hpo.ts";
 import { approvals } from "./sources/approvals.ts";
+import { reactome } from "./sources/reactome.ts";
+import { reporter } from "./sources/reporter.ts";
+import { variants } from "./sources/variants.ts";
 
-type DiseaseStep = "orphanet" | "opentargets" | "ctgov" | "pubmed" | "community" | "clinvar" | "orgs";
+type DiseaseStep = "orphanet" | "opentargets" | "ctgov" | "pubmed" | "community" | "clinvar" | "variants" | "reactome" | "reporter" | "orgs";
 type Step = DiseaseStep | "hpo" | "approvals" | "all";
 
 // Order matters: orphanet creates the disease + gene nodes, opentargets the ChEMBL treatments that
 // ctgov interventions are matched to, pubmed the papers that community reads.
-const DISEASE_STEPS: DiseaseStep[] = ["orphanet", "opentargets", "ctgov", "pubmed", "community", "clinvar", "orgs"];
+const DISEASE_STEPS: DiseaseStep[] = ["orphanet", "opentargets", "ctgov", "pubmed", "community", "clinvar", "variants", "reactome", "reporter", "orgs"];
 const RUNNERS: Record<DiseaseStep, (ctx: Ctx, d: SeedDisease) => Promise<void>> = {
-  orphanet, opentargets, ctgov, pubmed, community, clinvar, orgs,
+  orphanet, opentargets, ctgov, pubmed, community, clinvar, variants, reactome, reporter, orgs,
 };
 const SOURCE_OF: Record<DiseaseStep | "hpo" | "approvals", SourceId> = {
   orphanet: "orphanet", opentargets: "opentargets", ctgov: "ctgov", pubmed: "pubmed",
-  community: "pubmed", clinvar: "clinvar", orgs: "patient_orgs", hpo: "hpo", approvals: "fda",
+  community: "pubmed", clinvar: "clinvar", variants: "clinvar", reactome: "reactome", reporter: "nih_reporter",
+  orgs: "patient_orgs", hpo: "hpo", approvals: "fda",
 };
 const BUDGET_MS = 125_000;
 

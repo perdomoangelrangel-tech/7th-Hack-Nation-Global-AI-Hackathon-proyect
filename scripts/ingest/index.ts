@@ -3,7 +3,7 @@
  *   npm run ingest                         -> todas las fuentes, todas las enfermedades del seed -> data/atlas.json
  *   npm run ingest -- --only=orphanet      -> una fuente (orphanet|ctgov|pubmed|clinvar|opentargets|reporter|pathways|hpo|orgs)
  *   npm run ingest -- --orpha=ORPHA:33069  -> una enfermedad
- *   npm run ingest -- --target=supabase    -> escribe en Supabase en vez del snapshot local
+ *   (--target=supabase is disabled: the live graph is written by the Edge Function `ingest`)
  *   npm run ingest -- --fresh              -> reconstruye el snapshot desde cero
  * Después: `npm run analyze` calcula clusters, similitud, puentes y huecos.
  * Para escalar: sustituir supabase/seed/diseases.json por la salida de Orphadata rd-classification.
@@ -30,6 +30,11 @@ const run = (name: string) => !only || only === name;
 const failures: string[] = [];
 
 async function main() {
+  if (args.target === "supabase" && args.legacy !== "true") {
+    // The live graph keys genes by HGNC id and merges props server-side (ingest_upsert); this local writer keys genes
+    // by SYMBOL and overwrites props, so it would create duplicates. Use the Edge Function instead.
+    throw new Error("--target=supabase is disabled: ingest the live graph with the Edge Function `ingest` (pg_net / .github/workflows/ingest.yml), then `npm run snapshot`.");
+  }
   const g: GraphWriter = args.target === "supabase" ? new SupabaseGraph() : new FileGraph("data/atlas.json", args.fresh === "true");
   const t0 = Date.now();
   for (const d of selected) {

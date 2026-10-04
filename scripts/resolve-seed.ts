@@ -45,7 +45,7 @@ const CANDIDATES: Candidate[] = [
 ];
 
 // deno-lint-ignore no-explicit-any
-type Any = any; // eslint-disable-line @typescript-eslint/no-explicit-any
+type Any = any;
 const UA = { "user-agent": "nexmed-resolve-seed/1.0 (+https://github.com/perdomoangelrangel-tech/7th-Hack-Nation-Global-AI-Hackathon-proyect)", accept: "application/json" };
 async function getJSON(url: string): Promise<Any> {
   for (let i = 0; i < 3; i++) {
@@ -127,6 +127,36 @@ async function resolve(c: Candidate): Promise<{ ok: true; seed: SeedDisease } | 
   };
 }
 
+// Display labels for the graph and the voice (not identifiers). English + Spanish.
+const SHORT: Record<string, [string, string]> = {
+  "kcnt1-emfs": ["KCNT1 epilepsy (EIMFS)", "Epilepsia KCNT1 (EIMFS)"], "syngap1-dee": ["SYNGAP1-DEE", "SYNGAP1-DEE"],
+  cln8: ["CLN8 disease", "Enfermedad CLN8"], pompe: ["Pompe disease", "Enfermedad de Pompe"], fabry: ["Fabry disease", "Enfermedad de Fabry"],
+  gaucher: ["Gaucher disease", "Enfermedad de Gaucher"], npc: ["Niemann-Pick C", "Niemann-Pick C"], mps1: ["MPS I", "MPS I"],
+  krabbe: ["Krabbe disease", "Enfermedad de Krabbe"], mld: ["Metachromatic leukodystrophy", "Leucodistrofia metacromática"],
+  sma: ["Spinal muscular atrophy", "Atrofia muscular espinal"], duchenne: ["Duchenne muscular dystrophy", "Distrofia muscular de Duchenne"],
+};
+
+/** OMIM (exact Orphanet mapping) + the ClinVar trait name (MedGen "Disease or Syndrome" title for that MIM). */
+async function enrich(d: SeedDisease & { omim?: string; clinvar_disease?: string; short_name?: string; short_name_es?: string }) {
+  if (!d.omim) {
+    const xref = await orpha(`rd-cross-referencing/orphacodes/${d.orpha.replace("ORPHA:", "")}`);
+    const exact = arr(xref?.ExternalReference).filter((r: Any) => r?.Source === "OMIM" && String(r?.DisorderMappingRelation ?? "").startsWith("E (Exact"));
+    if (exact.length) d.omim = `OMIM:${exact[0].Reference}`;
+  }
+  if (d.omim && !d.clinvar_disease) {
+    const mim = d.omim.replace("OMIM:", "");
+    const ids = (await getJSON(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=medgen&term=${mim}%5Bmim%5D&retmode=json`))?.esearchresult?.idlist ?? [];
+    if (ids.length) {
+      const sum = (await getJSON(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=medgen&id=${ids.join(",")}&retmode=json`))?.result ?? {};
+      // Oldest "Disease or Syndrome" concept for the MIM (lowest uid) = the main OMIM entry ClinVar uses as trait name.
+      const hit = [...ids].sort((x: string, y: string) => Number(x) - Number(y)).map((i: string) => sum[i])
+        .find((x: Any) => /disease or syndrome/i.test(String(x?.semantictype?.value ?? x?.semantictype ?? "")));
+      if (hit?.title) d.clinvar_disease = hit.title;
+    }
+  }
+  if (!d.short_name && SHORT[d.slug]) [d.short_name, d.short_name_es] = SHORT[d.slug];
+}
+
 async function main() {
   const dry = process.argv.includes("--dry");
   const results = [];
@@ -139,6 +169,7 @@ async function main() {
   const existing = JSON.parse(readFileSync(path, "utf8")) as SeedDisease[];
   const byOrpha = new Map(existing.map((d) => [d.orpha, d]));
   for (const s of ok) if (!byOrpha.has(s.orpha)) byOrpha.set(s.orpha, s);
+  for (const d of byOrpha.values()) await enrich(d);
   writeFileSync(path, JSON.stringify([...byOrpha.values()], null, 2) + "\n");
   console.log(`✔ ${path}: ${byOrpha.size} diseases`);
 }

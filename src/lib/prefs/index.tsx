@@ -15,7 +15,7 @@ export interface Prefs {
   voiceRate: number;              // 0.8 .. 1.2
   captions: boolean;              // always show transcript while speaking
 }
-export const DEFAULT_PREFS: Prefs = { textScale: 1, highContrast: false, reduceMotion: false, simpleLanguage: false, autoRead: true, voiceRate: 1, captions: true };
+export const DEFAULT_PREFS: Prefs = { textScale: 1, highContrast: false, reduceMotion: false, simpleLanguage: false, autoRead: false, voiceRate: 1, captions: true };
 
 const Ctx = createContext<{ prefs: Prefs; setPrefs: (p: Partial<Prefs>) => void }>({ prefs: DEFAULT_PREFS, setPrefs: () => {} });
 const KEY = "nexmed.prefs.v1";

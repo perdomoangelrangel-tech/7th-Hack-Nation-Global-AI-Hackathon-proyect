@@ -1,14 +1,176 @@
 [
-  { "name": "Dravet Syndrome Foundation", "country": "US", "url": "https://dravetfoundation.org", "kind": "patient_org", "diseases": ["ORPHA:33069"] },
-  { "name": "Dravet Syndrome European Federation", "country": "EU", "url": "https://dravet.eu", "kind": "patient_org", "diseases": ["ORPHA:33069"] },
-  { "name": "International Rett Syndrome Foundation", "country": "US", "url": "https://www.rettsyndrome.org", "kind": "patient_org", "diseases": ["ORPHA:778"] },
-  { "name": "Rett Syndrome Research Trust", "country": "US", "url": "https://reverserett.org", "kind": "research", "diseases": ["ORPHA:778"] },
-  { "name": "International Foundation for CDKL5 Research", "country": "US", "url": "https://www.cdkl5.com", "kind": "patient_org", "diseases": ["ORPHA:505652"] },
-  { "name": "Loulou Foundation", "country": "UK", "url": "https://www.louloufoundation.org", "kind": "research", "diseases": ["ORPHA:505652"] },
-  { "name": "Angelman Syndrome Foundation", "country": "US", "url": "https://www.angelman.org", "kind": "patient_org", "diseases": ["ORPHA:72"] },
-  { "name": "Foundation for Angelman Syndrome Therapeutics (FAST)", "country": "US", "url": "https://cureangelman.org", "kind": "research", "diseases": ["ORPHA:72"] },
-  { "name": "Batten Disease Support and Research Association", "country": "US", "url": "https://bdsrafoundation.org", "kind": "patient_org", "diseases": ["ORPHA:228349"] },
-  { "name": "NORD · National Organization for Rare Disorders", "country": "US", "url": "https://rarediseases.org", "kind": "patient_org", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228349"] },
-  { "name": "EURORDIS · Rare Diseases Europe", "country": "EU", "url": "https://www.eurordis.org", "kind": "patient_org", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228349"] },
-  { "name": "Buffalo Initiative", "country": "US", "url": "https://solve.mit.edu/solutions/92088", "kind": "research", "diseases": ["ORPHA:33069", "ORPHA:778", "ORPHA:505652", "ORPHA:72", "ORPHA:228349"] }
+  {
+    "name": "Dravet Syndrome Foundation",
+    "country": "US",
+    "url": "https://dravetfoundation.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:33069"
+    ]
+  },
+  {
+    "name": "Dravet Syndrome European Federation",
+    "country": "EU",
+    "url": "https://dravet.eu",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:33069"
+    ]
+  },
+  {
+    "name": "International Rett Syndrome Foundation",
+    "country": "US",
+    "url": "https://www.rettsyndrome.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:778"
+    ]
+  },
+  {
+    "name": "Rett Syndrome Research Trust",
+    "country": "US",
+    "url": "https://reverserett.org",
+    "kind": "research",
+    "diseases": [
+      "ORPHA:778"
+    ]
+  },
+  {
+    "name": "International Foundation for CDKL5 Research",
+    "country": "US",
+    "url": "https://www.cdkl5.com",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:505652"
+    ]
+  },
+  {
+    "name": "Loulou Foundation",
+    "country": "UK",
+    "url": "https://www.louloufoundation.org",
+    "kind": "research",
+    "diseases": [
+      "ORPHA:505652"
+    ]
+  },
+  {
+    "name": "Angelman Syndrome Foundation",
+    "country": "US",
+    "url": "https://www.angelman.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:72"
+    ]
+  },
+  {
+    "name": "Foundation for Angelman Syndrome Therapeutics (FAST)",
+    "country": "US",
+    "url": "https://cureangelman.org",
+    "kind": "research",
+    "diseases": [
+      "ORPHA:72"
+    ]
+  },
+  {
+    "name": "Batten Disease Support and Research Association",
+    "country": "US",
+    "url": "https://bdsrafoundation.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:228349",
+      "ORPHA:228346"
+    ]
+  },
+  {
+    "name": "NORD · National Organization for Rare Disorders",
+    "country": "US",
+    "url": "https://rarediseases.org",
+    "kind": "umbrella",
+    "diseases": [
+      "ORPHA:33069",
+      "ORPHA:778",
+      "ORPHA:505652",
+      "ORPHA:72",
+      "ORPHA:228349",
+      "ORPHA:599373",
+      "ORPHA:439218",
+      "ORPHA:561854",
+      "ORPHA:228346"
+    ]
+  },
+  {
+    "name": "EURORDIS · Rare Diseases Europe",
+    "country": "EU",
+    "url": "https://www.eurordis.org",
+    "kind": "umbrella",
+    "diseases": [
+      "ORPHA:33069",
+      "ORPHA:778",
+      "ORPHA:505652",
+      "ORPHA:72",
+      "ORPHA:228349",
+      "ORPHA:599373",
+      "ORPHA:439218",
+      "ORPHA:561854",
+      "ORPHA:228346"
+    ]
+  },
+  {
+    "name": "Buffalo Initiative",
+    "country": "US",
+    "url": "https://solve.mit.edu/solutions/92088",
+    "kind": "research",
+    "diseases": [
+      "ORPHA:33069",
+      "ORPHA:778",
+      "ORPHA:505652",
+      "ORPHA:72",
+      "ORPHA:228349"
+    ]
+  },
+  {
+    "name": "STXBP1 Foundation",
+    "country": "US",
+    "url": "https://www.stxbp1disorders.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:599373"
+    ]
+  },
+  {
+    "name": "KCNQ2 Cure Alliance",
+    "country": "US",
+    "url": "https://www.kcnq2cure.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:439218"
+    ]
+  },
+  {
+    "name": "International FOXG1 Foundation",
+    "country": "US",
+    "url": "https://foxg1.org",
+    "kind": "patient_org",
+    "diseases": [
+      "ORPHA:561854"
+    ]
+  },
+  {
+    "name": "FOXG1 Research Foundation",
+    "country": "US",
+    "url": "https://www.foxg1research.org",
+    "kind": "research",
+    "diseases": [
+      "ORPHA:561854"
+    ]
+  },
+  {
+    "name": "Beyond Batten Disease Foundation",
+    "country": "US",
+    "url": "https://beyondbatten.org",
+    "kind": "research",
+    "diseases": [
+      "ORPHA:228346"
+    ]
+  }
 ]
