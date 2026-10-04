@@ -9,7 +9,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config();
 
-import { atlas } from "../../atlas/store";
+import { loadAtlas } from "../../atlas/store";
 import { publicClient } from "../../supabase/server";
 import { aiEnabled } from "../client";
 import { extract } from "../extract";
@@ -18,21 +18,31 @@ import { fetchPaper, normalizePmid } from "../pubmed";
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i < 0 ? undefined : process.argv[i + 1]; };
 const limit = Math.max(1, Math.min(500, Number(arg("limit") ?? 40) || 40));
 const dryRun = process.argv.includes("--dry-run");
+const PRIORITY_DISEASE = "disease:ORPHA:599373"; // STXBP1-DEE (demo route)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
   if (!aiEnabled()) { console.error("✗ OPENAI_API_KEY is not set: nothing to do (dictionary passes are not persisted)."); process.exit(1); }
-  const idx = atlas();
-  const pmids = new Set<string>();
-  for (const e of idx.snap.entities) if (e.type === "study") { const p = normalizePmid(e.canonical_id); if (p) pmids.add(p); }
-  for (const ev of idx.evidenceById.values()) if (ev.source === "pubmed") { const p = normalizePmid(ev.external_id); if (p) pmids.add(p); }
+  const idx = await loadAtlas(); // live graph when reachable, so ids match what the app shows
+  // Papers on the demo route first (Maria: STXBP1-DEE and its mechanism cluster), then the rest of the slice.
+  const cluster = idx.snap.analytics?.disease_cluster[PRIORITY_DISEASE];
+  const priority = new Set([PRIORITY_DISEASE, ...Object.entries(idx.snap.analytics?.disease_cluster ?? {}).filter(([, c]) => c === cluster).map(([d]) => d)]);
+  const rank = new Map<string, number>();
+  for (const e of idx.snap.edges) for (const ev of e.evidence) {
+    const p = ev.source === "pubmed" ? normalizePmid(ev.external_id) : null;
+    if (!p) continue;
+    const r = priority.has(e.to) || priority.has(e.from) ? 0 : 1;
+    rank.set(p, Math.min(rank.get(p) ?? 9, r));
+  }
+  for (const e of idx.snap.entities) if (e.type === "study") { const p = normalizePmid(e.canonical_id); if (p && !rank.has(p)) rank.set(p, 2); }
+  const pmids = [...rank.entries()].sort((a, b) => a[1] - b[1]).map(([p]) => p);
 
   const db = publicClient();
   const { data: done, error } = await db.from("extractions").select("pmid");
   if (error) console.warn(`⚠ cannot read extractions (${error.message}); continuing without the idempotency check`);
   const already = new Set((done ?? []).map((r: { pmid: string }) => r.pmid));
-  const todo = [...pmids].filter((p) => !already.has(p)).slice(0, limit);
-  console.log(`▶ ${pmids.size} PubMed papers in the graph · ${already.size} already extracted · processing ${todo.length}${dryRun ? " (dry run)" : ""}`);
+  const todo = pmids.filter((p) => !already.has(p)).slice(0, limit);
+  console.log(`▶ ${pmids.length} PubMed papers in the graph · ${already.size} already extracted · processing ${todo.length}${dryRun ? " (dry run)" : ""}`);
 
   let saved = 0, claims = 0, failed = 0;
   for (const [i, pmid] of todo.entries()) {
