@@ -59,3 +59,19 @@ describe("focus view (one route, not a map)", () => {
     expect([...labelSet(view, "A", new Set(["e3"]))].sort()).toEqual(["A", "B", "C", "D"]);
   });
 });
+
+import { strengthOf, uncertainReasons } from "./evidence";
+
+describe("evidence drawer labels", () => {
+  const ph = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `HP:${i}`, name: `p${i}`, ic: 0.4 }));
+  it("strength follows the UX_WAVE4 rule", () => {
+    expect(strengthOf({ shared_phenotypes: ph(3), shared_pathways: [{ id: "R", name: "r" }], shared_genes: [] })).toBe("strong");
+    expect(strengthOf({ shared_phenotypes: ph(8), shared_pathways: [], shared_genes: [] })).toBe("possible");
+    expect(strengthOf({ shared_phenotypes: ph(4), shared_pathways: [], shared_genes: [] })).toBe("weak");
+    expect(strengthOf({ shared_phenotypes: ph(2), shared_pathways: [], shared_genes: ["gene:X"] })).toBe("weak");
+  });
+  it("lists what could make an edge wrong", () => {
+    expect(uncertainReasons({ kind: "inferred", confidence: 0.13, evidence: [1, 2] }, { shared_pathways: [], variant_effect_match: false })).toEqual(["u_inferred", "u_low", "u_variant", "u_no_pathway"]);
+    expect(uncertainReasons({ kind: "observed", confidence: 0.9, evidence: [1] }, null)).toEqual(["u_single"]);
+  });
+});

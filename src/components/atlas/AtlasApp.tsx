@@ -292,7 +292,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
         </details>
 
         {/* Right panel: the journey */}
-        <aside ref={panelRef} className="relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh]" aria-label={shownJourney?.disease.name ?? t.q1}>
+        <aside ref={panelRef} className="relative scroll-mt-2 border-t lg:border-t-0 lg:border-l border-line lg:min-h-0 bg-paper min-h-[70vh] pb-20 lg:overflow-hidden" aria-label={shownJourney?.disease.name ?? t.q1}>
           {/* Cross-lane mount points (voice lane, action lane). Keep them. */}
           <VoiceDock persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} />
           <CoCreate persona={persona} locale={locale} disease={focus} diseaseName={shownJourney?.disease.name} edgeIds={inspect && !isDraftId(inspect) ? [inspect] : undefined} />
@@ -318,7 +318,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
       </div>
 
       {/* Footer: disclaimer · snapshot date · counts (live from the graph) · narrate on pick */}
-      <footer className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-paper px-4 py-2 text-[11px] text-ink-3">
+      <footer className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-paper px-4 py-2 pr-4 lg:pr-60 text-[11px] text-ink-3">
         <span className="flex items-center gap-1.5"><Info aria-hidden size={14} strokeWidth={1.75} />{t.footer_disclaimer}</span>
         {stats.generated_at && <span className="flex items-center gap-1.5"><History aria-hidden size={14} strokeWidth={1.75} />{t.snapshot.replace("{d}", stats.generated_at.slice(0, 10))}</span>}
         <span className="hidden md:inline">{t.stats_line.replace("{d}", String(stats.diseases)).replace("{e}", stats.edges.toLocaleString("en-US")).replace("{v}", stats.evidence.toLocaleString("en-US")).replace("{s}", String(stats.sources))}</span>
