@@ -136,3 +136,30 @@ describe("persona orb cross-fade", () => {
     expect([0, 1, 2, 3, 4].map((t) => cycledPersona("maria", t))).toEqual(["maria", "osei", "priya", "devon", "maria"]);
   });
 });
+
+import { answerToTurn, suggestions, toHistory, trimTurns, type ChatTurn } from "./chat";
+
+describe("guide chat", () => {
+  it("keeps only the last 10 turns and maps roles for /api/ask history", () => {
+    const turns: ChatTurn[] = Array.from({ length: 14 }, (_, i) => ({ id: i, role: i % 2 ? "guide" : "user", text: `m${i}` }));
+    expect(trimTurns(turns)).toHaveLength(10);
+    expect(trimTurns(turns)[0].text).toBe("m4");
+    const h = toHistory([...turns, { id: 99, role: "guide", text: "oops", error: true }]);
+    expect(h.every((x) => x.role === "user" || x.role === "assistant")).toBe(true);
+    expect(h.some((x) => x.content === "oops")).toBe(false);
+  });
+
+  it("three suggestions per mode in both languages", () => {
+    for (const p of ["devon", "maria", "osei", "priya"] as const) {
+      expect(suggestions(p, "en")).toHaveLength(3);
+      expect(suggestions(p, "es")).toHaveLength(3);
+    }
+  });
+
+  it("an answer without claims becomes the honest not-found turn", () => {
+    const base = { question: "q", persona: "maria" as const, disease: null, disease_name: null, resolved_via: null, dropped: [], mode: "deterministic" as const, model: null, simple: false, notice: null, safety_flags: [], spoken: "", verified: true, disclaimer: "" };
+    expect(answerToTurn({ ...base, claims: [] }, 1, "I couldn't find that in the graph.")).toMatchObject({ empty: true, text: "I couldn't find that in the graph." });
+    const claim = { text: "A fact.", evidence_ids: ["e1"], evidence: [], status: "observed", nodes: [], edges: [] };
+    expect(answerToTurn({ ...base, claims: [claim] }, 2, "x")).toMatchObject({ text: "A fact.", claims: [claim] });
+  });
+});
