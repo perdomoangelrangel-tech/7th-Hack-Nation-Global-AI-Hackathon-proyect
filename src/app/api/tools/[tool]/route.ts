@@ -15,6 +15,7 @@
  * `q` accepts a disease name, synonym, ORPHA/MONDO id, entity id or gene symbol (strict resolver).
  */
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/ai/guard";
 import { loadAtlas } from "@/lib/atlas/store";
 import { isPersonaId } from "@/lib/agents/profiles";
 import { clusterFor, communitiesFor, diseaseProfile, explainPath, gapsFor, literatureFor, neighborsFor, phenotypeMatch, resolveName, treatmentsFor, trialsFor } from "@/lib/graph";
@@ -24,6 +25,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest, ctx: { params: Promise<{ tool: string }> }) {
   const { tool } = await ctx.params;
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const limited = rateLimit(req, "tools", 60); if (limited) return limited;
   await loadAtlas();
   const sp = req.nextUrl.searchParams;
   const q = sp.get("q")?.trim().slice(0, 300) ?? "";
