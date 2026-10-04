@@ -1,5 +1,5 @@
 /**
- * Voice map: one ElevenLabs voice per Nexmed mode, plus alternates for personalization.
+ * Voice map: one ElevenLabs voice per Nedamex mode, plus alternates for personalization.
  * OWNER: voice lane. Shared by /api/speak (server) and the voice UI (client) — no secrets here.
  *
  * Voice ids come from the workspace's ElevenLabs library (listed via the ElevenLabs MCP on 2026-10-03).
