@@ -1,10 +1,13 @@
 /**
- * Herramientas del agente sobre el grafo (data/atlas.json). Solo lectura.
- * Toda función devuelve { data, evidence } y nunca texto libre: lo que no tiene evidencia no sale.
+ * Agent tools over the graph (read only). Used by ElevenLabs server tools (/api/tools/*) and the voice agents.
+ * Every function returns { data, evidence } and never free text: what has no evidence does not come out.
  */
 import "server-only";
-import { atlas, neighborsOf, search } from "./atlas/store";
+import { atlas, neighborsOf } from "./atlas/store";
 import type { Edge, Evidence } from "./atlas/types";
+import { findDiseaseInText, reconcileOne } from "./ai/reconcile";
+import { explain } from "./ai/explain";
+import type { PersonaId } from "./agents/profiles";
 
 export type { Evidence };
 export interface ToolResult<T> { data: T; evidence: Evidence[]; retrieved_at: string; note?: string }
@@ -13,13 +16,18 @@ const now = () => new Date().toISOString();
 const ev = (edges: Edge[]) => edges.flatMap((e) => e.evidence);
 const ids = (e: Edge) => e.evidence.map((x) => x.id);
 
-/** Resuelve nombre, sinónimo, código ORPHA/MONDO, gen o síntoma a una enfermedad del atlas. */
+/**
+ * Name, synonym, ORPHA/MONDO code, entity id or gene → an atlas disease. Strict (same resolver as /api/ask):
+ * unknown names return null instead of the closest-looking disease.
+ */
 export function findDisease(q: string) {
-  const { byId } = atlas();
+  const idx = atlas();
+  const { byId } = idx;
+  if (!q.trim()) return null;
   if (byId.get(q)?.type === "disease") return byId.get(q)!;
   const direct = byId.get(`disease:${q}`); if (direct) return direct;
-  const hit = search(q, "en", 1)[0];
-  return hit?.disease ? byId.get(hit.disease)! : null;
+  const hit = findDiseaseInText(idx, q);
+  return hit ? byId.get(hit.disease) ?? null : null;
 }
 const inRel = (d: string, rel: string) => (atlas().in.get(d) ?? []).filter((e) => e.relation === rel);
 const outRel = (d: string, rel: string) => (atlas().out.get(d) ?? []).filter((e) => e.relation === rel);
@@ -66,7 +74,8 @@ export async function literatureFor(q: string, limit = 15): Promise<ToolResult<u
 export async function communitiesFor(q: string): Promise<ToolResult<unknown> | null> {
   const d = findDisease(q); if (!d) return null;
   const { byId } = atlas();
-  const support = inRel(d.id, "supports"); const research = inRel(d.id, "researches");
+  const support = inRel(d.id, "supports").sort((a, b) => Number(a.props.kind === "umbrella") - Number(b.props.kind === "umbrella")); // this exact diagnosis first
+  const research = inRel(d.id, "researches");
   const map = (e: Edge) => ({ name: byId.get(e.from)?.name, type: byId.get(e.from)?.type, ...byId.get(e.from)?.props, ...e.props, evidence_ids: ids(e) });
   return { data: { patient_organizations: support.map(map), research_communities: research.slice(0, 40).map(map) }, evidence: ev([...support, ...research.slice(0, 40)]), retrieved_at: now() };
 }
@@ -93,4 +102,62 @@ export async function phenotypeMatch(hpoIds: string[], limit = 10): Promise<Tool
     score.set(d.id, s);
   }
   return { data: [...score.values()].sort((a, b) => b.score - a.score).slice(0, limit), evidence: ev(rows), retrieved_at: now() };
+}
+
+/** Diseases the atlas links to this one (INFERRED similar_to edges), strongest first, with why. */
+export async function neighborsFor(q: string, limit = 6): Promise<ToolResult<unknown> | null> {
+  const d = findDisease(q); if (!d) return null;
+  const { byId, edgeById } = atlas();
+  const ns = neighborsOf(d.id).slice(0, limit);
+  return {
+    data: {
+      disease: { id: d.id, name: d.name },
+      neighbors: ns.map((n) => ({
+        disease_id: n.disease, disease: byId.get(n.disease)?.name, score: n.score, kind: "inferred", edge_id: n.edge, same_cluster: n.same_cluster,
+        shared_phenotypes: n.explanation?.shared_phenotypes.slice(0, 5).map((p) => p.name) ?? [], shared_pathways: n.explanation?.shared_pathways.map((p) => p.name) ?? [],
+        variant_effect_match: n.explanation?.variant_effect_match ?? null, evidence_ids: edgeById.get(n.edge)?.evidence.map((x) => x.id) ?? [],
+      })),
+      wording: "Inferred by Nexmed analysis: say 'the atlas suggests' and that it needs expert review.",
+    },
+    evidence: ns.flatMap((n) => edgeById.get(n.edge)?.evidence ?? []), retrieved_at: now(),
+    note: ns.length ? undefined : "The atlas found no close neighbor for this disease; no shared mechanism is claimed.",
+  };
+}
+
+/** The mechanism cluster a disease belongs to, its members and what they share. */
+export async function clusterFor(q: string): Promise<ToolResult<unknown> | null> {
+  const d = findDisease(q); if (!d) return null;
+  const { snap, byId } = atlas();
+  const A = snap.analytics;
+  const cid = A?.disease_cluster[d.id];
+  const c = A?.clusters.find((x) => x.id === cid);
+  if (!c) return { data: { disease: { id: d.id, name: d.name }, cluster: null }, evidence: [], retrieved_at: now(), note: "This disease is not in a mechanism cluster." };
+  const members = new Set(c.diseases);
+  const inside = snap.edges.filter((e) => e.relation === "similar_to" && members.has(e.from) && members.has(e.to));
+  const counterexamples = (A?.counterexamples ?? []).filter((x) => x.a === d.id || x.b === d.id).map((x) => ({ a: byId.get(x.a)?.name, b: byId.get(x.b)?.name, why: x.why, kind: x.kind ?? "same_symptoms_different_mechanism" }));
+  const gaps = (A?.gaps ?? []).filter((g) => members.has(g.disease)).map((g) => ({ disease: byId.get(g.disease)?.name, kind: g.kind, detail: g.detail }));
+  return {
+    data: {
+      disease: { id: d.id, name: d.name },
+      cluster: { id: c.id, label: c.label, label_basis: c.label_basis, diseases: c.diseases.map((x) => ({ id: x, name: byId.get(x)?.name })), shared_pathways: c.shared_pathways.slice(0, 5), shared_phenotypes: c.shared_phenotypes.slice(0, 5).map((p) => p.name) },
+      links: inside.map((e) => ({ edge_id: e.id, a: byId.get(e.from)?.name, b: byId.get(e.to)?.name, score: e.confidence, kind: e.kind, evidence_ids: ids(e) })),
+      counterexamples, unmet_need: gaps,
+      wording: "Clusters are computed by Nexmed (inferred): present them as hypotheses that need expert review.",
+    },
+    evidence: ev(inside), retrieved_at: now(),
+  };
+}
+
+/** Plain-language, verified explanation of a list of edges (same engine as POST /api/explain). */
+export async function explainPath(edgeIds: string[], persona: PersonaId, locale: "en" | "es", simple = false): Promise<ToolResult<unknown>> {
+  const idx = atlas();
+  const r = await explain(idx, { edgeIds, persona, locale, simple });
+  const cited = new Set(r.sentences.flatMap((s) => s.evidence_ids));
+  return { data: r, evidence: [...cited].map((id) => idx.evidenceById.get(id)).filter((x): x is Evidence => !!x), retrieved_at: now() };
+}
+
+/** Resolve a free-text name to an atlas entity (deterministic reconcile, no model). */
+export async function resolveName(q: string): Promise<ToolResult<unknown>> {
+  const m = reconcileOne(atlas(), q);
+  return { data: m, evidence: [], retrieved_at: now(), note: m.entity_id ? undefined : "Not in the atlas. Do not guess an identifier." };
 }
