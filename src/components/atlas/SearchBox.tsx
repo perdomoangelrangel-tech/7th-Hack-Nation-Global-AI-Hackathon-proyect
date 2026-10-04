@@ -12,6 +12,7 @@ import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Command, FilePlus2, Link2, Search } from "lucide-react";
 import { openCoCreate } from "@/components/journey/events";
+import { playSfx } from "@/lib/sfx";
 import type { SearchHit } from "@/lib/atlas/store";
 import type { Dict, Locale } from "@/lib/i18n";
 import { motionTokens, springs } from "@/lib/motion";
@@ -105,7 +106,7 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
   const flat = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
   const synonym = shown.find((h) => h.via_synonym && !h.reconciled);
   const empty = q.trim().length >= 2 && searched === q && hits.length === 0;
-  const pick = (h: SearchHit) => { onPick(h); setOpen(false); setQ(""); input.current?.blur(); };
+  const pick = (h: SearchHit) => { playSfx("select"); onPick(h); setOpen(false); setQ(""); input.current?.blur(); };
 
   return (
     <div className="relative w-full">
@@ -118,8 +119,8 @@ export function SearchBox({ t, locale, persona, onPick, autoFocus }: { t: Dict; 
           placeholder={t.search_placeholder}
           onChange={(e) => setQ(e.target.value)} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); setActive((a) => Math.min(a + 1, flat.length - 1)); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+            if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); if (flat.length) playSfx("tick"); setActive((a) => Math.min(a + 1, flat.length - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); if (flat.length) playSfx("tick"); setActive((a) => Math.max(a - 1, 0)); }
             else if (e.key === "Enter" && flat[active]) { e.preventDefault(); pick(flat[active]); }
             else if (e.key === "Escape") { if (open) setOpen(false); else { setQ(""); input.current?.blur(); } }
           }}

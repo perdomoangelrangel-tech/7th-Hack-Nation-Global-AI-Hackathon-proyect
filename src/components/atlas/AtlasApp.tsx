@@ -10,7 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Box, ChevronRight, CircleHelp, Focus, Minus, Plus, RotateCcw, Expand, Shrink, PanelRightClose, PanelRightOpen, Layers as LayersIcon, BookOpen, Orbit, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Square, Target, UserRound, type LucideIcon } from "lucide-react";
+import { Box, ChevronRight, CircleHelp, Focus, Volume2, VolumeX, Minus, Plus, RotateCcw, Expand, Shrink, PanelRightClose, PanelRightOpen, Layers as LayersIcon, BookOpen, Orbit, Table2, HeartHandshake, History, Info, Languages, Maximize2, Microscope, Square, Target, UserRound, type LucideIcon } from "lucide-react";
 import type { GLink, GNode, GraphView, Journey, SearchHit } from "@/lib/atlas/store";
 import type { PersonaId } from "@/lib/agents/profiles";
 import { dict, type Locale } from "@/lib/i18n";
@@ -33,6 +33,8 @@ import { useEmbed } from "./useEmbed";
 import { kindOf, type LinkKind } from "./colors";
 import { isDraftId, parseDrafts, withDrafts, type Draft } from "./proposals";
 import { FOCUS_EVIDENCE_EVENT, parseHl, type FocusEvidence } from "./focusEvidence";
+import { playSfx } from "@/lib/sfx";
+import { useSfx } from "./useSfx";
 import { TypeIcon } from "./icons";
 import { VoiceDock } from "@/components/voice/VoiceDock";
 import { CoCreate } from "@/components/cocreate/CoCreate";
@@ -127,6 +129,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   const graph = useGraphMode(persona);
   // Inside the Lovable app (iframe) or ?embed=1: the host supplies the header → compact bar, no logo, no autofocus.
   const embed = useEmbed();
+  const [sounds, setSounds] = useSfx();
   // Real height of the narration bar: the graph frames what is said above it.
   const [, setBarH] = useState(0); // narration bar height (kept for the voice lane's bar; framing now uses the sheet inset)
   const barObserver = useRef<ResizeObserver | null>(null);
@@ -214,7 +217,9 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
   }, []);
   useEffect(() => {
     const on = (e: Event) => applyEvidence((e as CustomEvent<FocusEvidence>).detail ?? {});
-    window.addEventListener(FOCUS_EVIDENCE_EVENT, on); return () => window.removeEventListener(FOCUS_EVIDENCE_EVENT, on);
+    // Both names (ORDERS_WAVE6B D.3 calls it `nedamex:focus`).
+    window.addEventListener(FOCUS_EVIDENCE_EVENT, on); window.addEventListener("nedamex:focus", on);
+    return () => { window.removeEventListener(FOCUS_EVIDENCE_EVENT, on); window.removeEventListener("nedamex:focus", on); };
   }, [applyEvidence]);
 
   // Captured at first render: the URL-sync effect below rewrites the address (and StrictMode re-runs effects).
@@ -268,6 +273,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     if (h.disease) goTo(h.disease);
   };
   const onNode = (node: GNode) => {
+    playSfx(node.header ? "toggle" : "select");
     // Sector header ("+N more") expands / collapses that sector; a region header filters its cluster.
     if (node.header && (SECTORS as string[]).includes(node.header)) { const sec = node.header as Sector; setExpanded((x) => { const y = new Set(x); if (y.has(sec)) y.delete(sec); else y.add(sec); return y; }); return; }
     if (node.header === "region") { setClusterFilter((c) => (c === node.cluster ? null : node.cluster)); return; }
@@ -277,7 +283,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
     const l = fullView?.links.find((x) => end(x.source) === node.id || end(x.target) === node.id);
     if (l) setInspect(l.id);
   };
-  const onLink = (l: GLink) => setInspect(l.kind === "proposed" ? String(l.source) : l.id);
+  const onLink = (l: GLink) => { playSfx("open"); setInspect(l.kind === "proposed" ? String(l.source) : l.id); };
   const switchLocale = (l: Locale) => { n.stop(); setLocale(l); };
   const toggleKind = (k: LinkKind) => setHiddenKinds((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
   const onRailHover = useCallback((nodes: string[], edges: string[]) => setHover({ nodes, edges }), []);
@@ -351,15 +357,16 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
 
           {/* Floating controls: 2D/3D · Focus/All · zoom · fit · rotate (3D) */}
           <div className="absolute left-3 right-3 lg:right-24 top-3 z-20 flex flex-wrap items-center gap-2">
-            <Segmented label={t.ctrl.center} value={viewMode} onChange={(v) => { setViewMode(v as typeof viewMode); setSpotlight([]); }}
+            <Segmented label={t.ctrl.center} value={viewMode} onChange={(v) => { playSfx("toggle"); setViewMode(v as typeof viewMode); setSpotlight([]); }}
               options={[{ v: "route", label: t.ctrl.route, icon: Focus, disabled: !focus, title: t.ctrl.route_hint }, { v: "constellation", label: t.ctrl.constellation, icon: Orbit, title: t.ctrl.constellation_hint }, { v: "table", label: t.ctrl.table, icon: Table2 }]} />
             {center === "map" && <>
-              <LayersMenu t={t} hidden={hiddenLayers} onToggle={(l) => setHiddenLayers((x) => { const y = new Set(x); if (y.has(l)) y.delete(l); else y.add(l); return y; })}
-                sources={sourceList} selected={sourceFilter} onSource={(id) => setSourceFilter((x) => { const y = new Set(x); if (y.has(id)) y.delete(id); else y.add(id); return y; })} onClearSources={() => setSourceFilter(new Set())} />
-              <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => graph.setMode(m as "2d" | "3d")}
+              <LayersMenu t={t} hidden={hiddenLayers} onToggle={(l) => { playSfx("toggle"); setHiddenLayers((x) => { const y = new Set(x); if (y.has(l)) y.delete(l); else y.add(l); return y; }); }}
+                sources={sourceList} selected={sourceFilter} onSource={(id) => { playSfx("toggle"); setSourceFilter((x) => { const y = new Set(x); if (y.has(id)) y.delete(id); else y.add(id); return y; }); }} onClearSources={() => setSourceFilter(new Set())} />
+              <Segmented label={t.ctrl.view} value={graph.mode} onChange={(m) => { playSfx("toggle"); graph.setMode(m as "2d" | "3d"); }}
                 options={[{ v: "2d", label: t.view_2d, icon: Square }, { v: "3d", label: t.view_3d, icon: Box, disabled: !graph.webgl }]} />
               <div className="flex rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
-                <IconBtn icon={BookOpen} label={t.ctrl.legend} pressed={showLegend} onClick={() => setShowLegend((x) => !x)} />
+                <IconBtn icon={BookOpen} label={t.ctrl.legend} pressed={showLegend} onClick={() => { playSfx("toggle"); setShowLegend((x) => !x); }} />
+                <IconBtn icon={sounds ? Volume2 : VolumeX} label={sounds ? t.sounds_off : t.sounds_on} pressed={sounds} onClick={() => { const v = !sounds; setSounds(v); if (v) playSfx("toggle"); }} />
               </div>
               {graph.mode === "2d" && graph.reason && <span className="hidden sm:inline rounded-full bg-paper/90 px-2 py-0.5 text-[11px] text-ink-3">{t.fallback_reason[graph.reason]}</span>}
             </>}
@@ -381,12 +388,12 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           {/* Route panel size: Expand (60 %) / Hide — on the canvas edge so it never covers the panel's own header. */}
           {panelMode !== "closed" && (
             <div className="hidden lg:flex absolute right-3 top-3 z-20 rounded-full border border-line bg-paper/90 p-0.5 shadow-sm">
-              <IconBtn icon={panelMode === "expanded" ? Shrink : Expand} label={panelMode === "expanded" ? t.panel.shrink : t.panel.expand} onClick={() => setPanelMode((m) => (m === "expanded" ? "normal" : "expanded"))} />
-              <IconBtn icon={PanelRightClose} label={t.panel.close} onClick={() => setPanelMode("closed")} />
+              <IconBtn icon={panelMode === "expanded" ? Shrink : Expand} label={panelMode === "expanded" ? t.panel.shrink : t.panel.expand} onClick={() => { playSfx("toggle"); setPanelMode((m) => (m === "expanded" ? "normal" : "expanded")); }} />
+              <IconBtn icon={PanelRightClose} label={t.panel.close} onClick={() => { playSfx("close"); setPanelMode("closed"); }} />
             </div>
           )}
           {panelMode === "closed" && (
-            <button type="button" onClick={() => setPanelMode("normal")} className="hidden lg:flex absolute right-3 top-3 z-20 items-center gap-1.5 rounded-full border border-line bg-paper/95 px-3 py-1.5 text-xs font-medium text-ink-2 shadow-sm hover:bg-brand-soft">
+            <button type="button" onClick={() => { playSfx("open"); setPanelMode("normal"); }} className="hidden lg:flex absolute right-3 top-3 z-20 items-center gap-1.5 rounded-full border border-line bg-paper/95 px-3 py-1.5 text-xs font-medium text-ink-2 shadow-sm hover:bg-brand-soft">
               <PanelRightOpen aria-hidden size={14} strokeWidth={1.75} />{t.panel.open}
             </button>
           )}
@@ -526,7 +533,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           <div className="mt-4 flex flex-col gap-6">{(["community", "clusters", "legend"] as const).map((k) => <RailSection key={k} tab={k} {...railProps} />)}</div>
           </details>
           <AnimatePresence>
-            {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => setInspect(null)} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} persona={persona} onHighlight={(edges) => setHover({ nodes: [], edges: edges ?? [] })} />}
+            {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => { playSfx("close"); setInspect(null); }} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} persona={persona} onHighlight={(edges) => setHover({ nodes: [], edges: edges ?? [] })} />}
             {draft && <DraftInspector key={inspect!} draft={draft} t={t} onClose={() => setInspect(null)} />}
           </AnimatePresence>
         </aside>
