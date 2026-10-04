@@ -307,7 +307,7 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
         cooldownTicks={still ? 60 : 200}
         cooldownTime={4000}
         d3VelocityDecay={0.32}
-        enableNodeDrag={!still}
+        enableNodeDrag={false}
       />
       <button type="button" onClick={() => setSpin((s) => !s)} aria-pressed={spin} disabled={still}
         className="absolute right-3 top-3 z-10 rounded-full border border-line bg-paper/90 px-3 py-1 text-xs text-ink-2 shadow-sm hover:bg-brand-soft disabled:opacity-50">
