@@ -924,3 +924,31 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - Verified: typecheck ✓ · lint ✓ · test 139/139 ✓ · build ✓.
 - Open → **explorer: QA-45 radial Route view (WAVE 5B P0) + QA-46 390 px labels/clipping** — the biggest remaining item; explorer @61be31e (+1) has no checkpoint yet. voice: QA-47 raw source ids in Guide chips (@f2b9b5d +1, no checkpoint). action @5e6b3d3 (+1) no checkpoint (QA-32?). head-brain: QA-46 pill overlap, QA-48 Lovable listbox roles. human: QA-38 badge.
 - user-verifier: re-test on prod after this deploy (website flow + Inside-the-atlas graph, roles collapse, QA-39 speed).
+
+## 05:51 · explorer · PROGRESS — green checkpoint (WAVE 5B graph layout)
+- feat/explorer @00fdc1e: lint ✓ · test 131/131 ✓ · build ✓ · typecheck ✓.
+- **Route view (default with a focus)** — deterministic radial layout (`src/components/atlas/radial.ts`, tested): disease at the center · ring 1 gene(s) + mechanism (+2 pathways) · ring 2 neighbour diseases, same cluster first then Strong → Possible → Weak, label "Name · Possible lead" · ring 3 labelled sectors **Symptoms** (top 8 by IC) · **Studies & assets** (reusable first, then active trials) · **People** · **Treatments**, each "Sector · +N more" (click expands / "show fewer"; "none in our sources" when empty). Rings 145 / 290 / 435 apart (≥ 140), mild ellipse to fit the wide canvas. Graph API now sends up to 16 symptoms, 12 studies, 10 treatments for the focus.
+- **Constellation** — clusters as labelled regions around a circle, diseases inside, bridges as soft curves; static.
+- **Motion** — fixed coordinates (fx/fy, fz by ring in 3D): `warmupTicks` only if anything is unpositioned, `cooldownTicks={0}`, no reheat on hover/click/resize, no drag, no auto-rotate, no particles; camera moves only on a new layout or Fit (≤ 600 ms, none under reduced motion). **2D default for every role.** **Verified still for 10 s** (canvas screenshots byte-identical after 10 s): Route 2D/3D + Constellation at 1440, Route + Constellation at 390.
+- **Toolbar** — View (Route · Constellation · Table) · Layers (Mechanism · Symptoms · Studies · People · Treatments) · 2D/3D · Fit · Legend. Labels 13 px on white pills with collision avoidance (focus + rings 1–2 + hovered; sector/region headers always); base edge opacity 0.35, highlighted 1.0; zoom limits. Phones: compact sector headers ("Symptoms +8").
+- **Header role pill** — only the current role ("Family & patient group ▾" with its icon) opening a chooser.
+- **Search** — empty box on focus: quick chips + **Browse diseases** grouped by mechanism cluster with ORPHA codes; type filters on results; footer **Request a disease** / **Suggest a source** → `openCoCreate("evidence", { title: "Disease request: …" | "Source suggestion: …" })` (dialog verified).
+- Screens: `docs/qa/explorer/route-{1440,390}.png`, `constellation-k-1440.png`, `search-browse-1440.png`, `search-request-dialog-1440.png`.
+
+## 00:05 · user-verifier · PROGRESS (prod @8c02634)
+- VERIFIED brand WAVE 5B on the website: "How to use the platform" strip (Pick your role → …) ✓ · **"Inside the atlas" = ordered radial graph** (STXBP1 at the centre; labelled sectors Studies & assets · People · Similar diseases (with "Possible lead") · Mechanism · Symptoms), slow smooth turn, no jitter, readable at 1440 and 390, **static under prefers-reduced-motion** ✓ · 0 console errors · no horizontal scroll at 390 → qa/20261003-2351-prod-5b2/web-atlas-*.png
+- Lovable flow unchanged and passing (role collapse, browse 21, filter, Request/Suggest "not evidence", engine `embed=1&p=&d=`, 0 console errors).
+- Still open in the **engine**: QA-45 (radial Route view with sectors / "+N more" — the website has it, /atlas doesn't) · QA-46 (390 labels/clipping) · QA-47 (voice chips raw ids) · QA-48 (Lovable listbox roles) · QA-38 (badge, human).
+
+## 00:10 · head-brain · START WAVE 6 (last 2 build waves → then videos)
+- Orders: `ORDERS_WAVE6.md` (Wave 6 build 00:15→02:45 · Wave 7 fix+freeze 02:45→04:15) · `VIDEOS.md` (3 videos 04:15→06:15) · submit ≤ 06:30.
+- Human feedback driving this wave: Listen→**Transcript** (written + all sources, no audio) / audio only in **Talk** · no role switching inside the atlas · start: **challenge (Maria) or explore freely** · typeahead suggestions · **2D/3D graph unstable → still, clickable, zoom +/−/pinch** · bigger "Your route" · **Guide = chatbot (text + voice)** · bigger graph (more sources + diseases) · **Community (clinician/researcher only)** · **Medicines bank with regulator links**.
+- Supabase 0014 APPLIED by head-brain: `medicines_public` (286 · 31 approved for a listed disease), `community_profiles_public` (773 NIH RePORTER researchers), `profile_submissions` + RPC `submit_profile`. NEED(data): commit the SQL file, do not re-apply.
+- Lovable 3rd pass PUBLISHED-ready (research = atlas names only, role pill, footer). 4th pass running: challenge/free start, static role label on /atlas, `osei` = "Researcher & clinician", /medicines (+detail, sources), /community (gated), nav.
+- Data integrity flags for T1/T7: SMA has 0 approved medicines in the graph (expected nusinersen/risdiplam/onasemnogene) · olipudase alfa ↔ Gaucher looks like a mapping artifact · ataluren EU status changed.
+
+## 00:06 · brain · MERGED + PUSHED
+- Merged **explorer** @00fdc1e → main, pushed @90411b0: WAVE 5B radial Route view (rings + labelled sectors + "+N more"), static Constellation, fixed coordinates / no reheat, 2D default, toolbar (View · Layers · 2D/3D · Fit · Legend), header role pill, Browse diseases + Request a disease / Suggest a source. Should close **QA-45**; QA-46 (390 px) → user-verifier please check.
+- Verified: typecheck ✓ · lint ✓ · test 144/144 ✓ · build ✓ · next start: `/`, Home, Maria, Priya, graph API 200 · red-team 10/10.
+- Pending checkpoints: voice @f2b9b5d (QA-47) · action @5e6b3d3. Freeze 06:00 — **post green checkpoints by 05:30**; after 05:30 only hotfixes.
+- user-verifier: refresh and run the prod pass on the engine (QA-45/46, 10 s stillness, 390).
