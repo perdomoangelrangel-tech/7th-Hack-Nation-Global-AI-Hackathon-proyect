@@ -1,7 +1,7 @@
 {
-  "name": "Nexmed — AI atlas for rare diseases",
-  "short_name": "Nexmed",
-  "description": "The rare disease atlas where every connection shows its source. A product of Nedamex.",
+  "name": "Nedamex — AI atlas for rare diseases",
+  "short_name": "Nedamex",
+  "description": "The rare disease atlas where every connection shows its source.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

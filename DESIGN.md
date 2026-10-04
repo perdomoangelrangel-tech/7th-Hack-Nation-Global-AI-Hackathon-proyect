@@ -1,10 +1,10 @@
-# Nexmed design system
+# Nedamex design system
 
 Owner: brand lane. Source of truth for tokens: `src/app/globals.css`. 3D source of truth: `blender/*.py`.
 
 ## Thesis
 
-Nexmed is used by people who just got a hard diagnosis, by the families who organize around it, and by the researchers and companies who could help. The interface has to feel **calm, bright and trustworthy** — closer to a well-made botanical plate than to a sci-fi dashboard. The brand comes from the logo: a white DNA helix rising out of a forest inside a cyanotype-blue circle. Everything else follows from three ideas:
+Nedamex is used by people who just got a hard diagnosis, by the families who organize around it, and by the researchers and companies who could help. The interface has to feel **calm, bright and trustworthy** — closer to a well-made botanical plate than to a sci-fi dashboard. The brand comes from the logo: a white DNA helix rising out of a forest inside a cyanotype-blue circle. Everything else follows from three ideas:
 
 1. **Light, always.** White paper, logo blues, no dark sections, no neon, no gradient text.
 2. **Evidence is visible.** Line style and colour carry meaning (observed / inferred / AI-extracted / community draft), never decoration.
@@ -12,7 +12,7 @@ Nexmed is used by people who just got a hard diagnosis, by the families who orga
 
 ## Naming
 
-- **Nexmed** = the product (every UI string). **Nedamex** = the company (footer "Nexmed is a product of Nedamex", legal line, metadata `publisher`).
+- **Nedamex** is both the product and the company (WAVE 3 decision). No "Nexmed" in any user-facing string; folder/branch names (`nexmed/`, `feat/*`) are internal only.
 - Both live in `src/lib/site.ts` (`site.name`, `site.company`). Never hardcode either.
 
 ## Colour tokens
@@ -40,7 +40,7 @@ High contrast (`<html data-contrast="high">`, from `usePrefs().highContrast`) da
 | Kind | Meaning | Line | Class |
 |---|---|---|---|
 | observed | a source states it | solid `--brand-deep` | `.kind-observed` |
-| inferred | Nexmed analysis (score + basis) | dashed `--brand` | `.kind-inferred` |
+| inferred | Nedamex analysis (score + basis) | dashed `--brand` | `.kind-inferred` |
 | extracted | OpenAI pulled it from a cited paper — needs expert review | dotted `--brand` | `.kind-extracted` |
 | proposed | community draft — never evidence | ghost dashed `--line` | `.kind-proposed` |
 
@@ -95,6 +95,8 @@ Videos for the submission cuts (Cycles frames → ffmpeg H.264 over the page col
 **Fallbacks (mandatory):** `useCan3D()` returns `"static"` for OS reduced motion, the in-app reduce-motion pref, no WebGL, < 4 cores, < 4 GB memory or Save-Data. Static = the Blender poster PNG (hero, agent) or the CSS orb. `NodeOrb` and `HelixLoader` are CSS 3D (no WebGL context) so they can appear many times per page.
 
 **Clip layering (agent):** each clip drives its own layer of the hierarchy — `Appear` → `POP_*`, `Listen`/`Think`/`Speak` → `STATE_*` and `PETAL_*`, `Idle` → leaves — so states cross-fade without fighting. Live audio level multiplies the petals and core on top.
+
+Tokens for the Lovable MVP: [docs/DESIGN_TOKENS.md](docs/DESIGN_TOKENS.md).
 
 Shared components (`src/components/three/`): `Scene3D`, `Hero3D`, `AgentOrb`, `NodeOrb`, `HelixLoader`, `glyphs.ts` (`loadGlyphGeometries`, `useGlyphGeometries`), `useCan3D`, `palette.ts`.
 
