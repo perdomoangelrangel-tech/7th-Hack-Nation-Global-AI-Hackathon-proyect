@@ -107,16 +107,27 @@ async function loadDrugs(): Promise<Map<string, Drug>> {
  */
 async function openFda(names: string[], want?: RegExp) {
   const text = (l: Any) => String((l?.indications_and_usage ?? [])[0] ?? "").replace(/\s+/g, " ").trim();
+  const appl = (l: Any) => String(l?.openfda?.application_number?.[0] ?? "");
+  // Rank: label naming the target disease > NDA / BLA (originator) > ANDA (generic). OTC monographs never qualify.
+  const score = (l: Any) => (want && want.test(text(l)) ? 0 : 10) + (/^(NDA|BLA)/.test(appl(l)) ? 0 : /^ANDA/.test(appl(l)) ? 1 : 5);
+  const original = new Set(names.map((x) => x.toUpperCase()));
   for (const n of nameCandidates(names)) {
-    const term = encodeURIComponent(`openfda.generic_name:"${n.toUpperCase()}"`);
-    const labels: Any[] = (await getJSON(`https://api.fda.gov/drug/label.json?search=${term}&limit=5`))?.results ?? [];
-    const label = (want && labels.find((l) => want.test(text(l)))) || labels.find((l) => l?.set_id);
-    if (!label?.set_id) continue;
-    const app = (await getJSON(`https://api.fda.gov/drug/drugsfda.json?search=${term}&limit=1`))?.results?.[0];
+    const generic = n.toUpperCase();
+    const stripped = !original.has(generic); // salt-free form we derived: only an exact single-ingredient label may match it
+    const term = encodeURIComponent(`openfda.generic_name:"${generic}" AND openfda.product_type:"HUMAN PRESCRIPTION DRUG"`);
+    const labels: Any[] = (await getJSON(`https://api.fda.gov/drug/label.json?search=${term}&limit=20`))?.results ?? [];
+    // Prescription labels with an NDA / BLA / ANDA (never OTC monographs). Single-ingredient labels of exactly this generic
+    // first; a prescription combination that contains it (e.g. elexacaftor → Trikafta) only when no single-ingredient one exists.
+    const single = (l: Any) => (l.openfda?.generic_name ?? []).some((g: string) => g.toUpperCase() === generic);
+    // Active ingredients counted from the generic name ("elexacaftor, tezacaftor, and ivacaftor" = 3): Trikafta yes, multivitamins no.
+    const ingredients = (l: Any) => new Set(String(l.openfda?.generic_name?.[0] ?? "").toUpperCase().split(/\s*(?:,|\band\b)\s*/).map((x) => x.trim()).filter(Boolean)).size;
+    const fewIngredients = (l: Any) => Math.max(ingredients(l), (l.openfda?.substance_name ?? []).length) <= 3;
+    const ok = labels.filter((l) => l?.set_id && /^(NDA|BLA|ANDA)/.test(appl(l)) && (single(l) || (!stripped && fewIngredients(l))));
+    const label = ok.sort((a, b) => Number(!single(a)) - Number(!single(b)) || score(a) - score(b))[0];
+    if (!label) continue;
     return {
       set_id: label.set_id as string, brand: label.openfda?.brand_name?.[0] as string | undefined,
-      application: (label.openfda?.application_number?.[0] ?? app?.application_number) as string | undefined,
-      indications: text(label),
+      application: appl(label) || undefined, indications: text(label),
     };
   }
   return undefined;
@@ -264,6 +275,10 @@ function applyToFile(out: Record<string, Reg>) {
     e.props.regulatory = { fda_application: r.fda?.application ?? null, fda_brand: r.fda?.brand ?? null, ema_status: r.ema?.status ?? null, ema_conditional: r.ema?.conditional ?? null, ema_product: r.ema?.product ?? null, checked_at: r.checked_at ?? today };
   }
   for (const e of snap.edges.filter((x) => x.relation === "treats")) {
+    // Idempotent: drop what a previous run added before applying this run's result.
+    e.evidence = e.evidence.filter((v) => !v.id.startsWith("ev:reg-"));
+    if (e.props.regulatory_check === "not_confirmed_by_label") e.props.approved_for_indication = e.props.stage === "APPROVAL" || e.props.approved_for_indication;
+    delete e.props.regulatory_check;
     const t = byId.get(e.from), d = byId.get(e.to); const r = t && out[t.canonical_id]; if (!r || !d) continue;
     const cs = r.confirms.filter((c) => c.orpha === d.canonical_id);
     for (const c of cs) if (!e.evidence.some((v) => v.source === c.source && v.external_id === c.external_id))
