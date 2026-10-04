@@ -8,7 +8,7 @@
  * Reduced motion (OS or prefs): no rotation; the cross-fade stays (opacity only). AgentOrb itself handles its
  * own state cross-fades (Idle/Listen/Think/Speak) and static poster fallback.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { AgentOrb } from "@/components/three/AgentOrb";
 import { PERSONAS, type PersonaId } from "@/lib/agents/profiles";
@@ -64,11 +64,43 @@ export function PersonaOrb({ persona, state, size = 72, reduce, getLevel, cycle,
   const top = layers[layers.length - 1];
   // Reduced motion: CSS animations are stopped app-wide, so never stack layers (instant, calm swap).
   const visible = still ? [top] : layers;
+  // Audio-reactive: poll the level each frame and write it to a CSS variable (no React re-render).
+  // Speaking → scale/glow follow the voice; listening → follow the mic; idle → 4 s breathing loop (CSS).
+  const react = useRef<HTMLSpanElement>(null);
+  const live = state === "speaking" || state === "listening";
+  useEffect(() => {
+    const el = react.current;
+    if (!el) return;
+    if (still || !live || !getLevel) { el.style.setProperty("--lvl", "0"); return; }
+    let raf = 0; let smooth = 0;
+    const loop = () => {
+      const v = Math.max(0, Math.min(1, getLevel() || 0));
+      smooth += (v - smooth) * 0.35;
+      el.style.setProperty("--lvl", smooth.toFixed(3));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [still, live, getLevel]);
+
   const drop = (k: number) => setLayers((ls) => (ls.length > 1 ? ls.filter((l) => l.k !== k || l === ls[ls.length - 1]) : ls));
 
   return (
     <span className={`relative inline-flex flex-col items-center shrink-0 ${className}`} aria-hidden>
-      <span className="relative grid place-items-center" style={{ width: size, height: size }}>
+      <span ref={react} className="relative grid place-items-center"
+        style={{
+          width: size, height: size,
+          transform: still ? undefined : "scale(calc(1 + var(--lvl, 0) * 0.12))",
+          transition: "transform 80ms linear",
+          animation: still || live ? undefined : "po-breathe 4s ease-in-out infinite",
+        }}>
+        {/* voice glow: grows with the level while speaking/listening; static ring under reduced motion */}
+        <span className="absolute -inset-[6%] rounded-full pointer-events-none"
+          style={{
+            background: `radial-gradient(circle, color-mix(in srgb, ${PERSONA_TINT[top.p]} 30%, transparent) 0%, transparent 70%)`,
+            opacity: still ? (live ? 0.6 : 0) : "calc(var(--lvl, 0) * 1.4)",
+            boxShadow: still && live ? `0 0 0 2px ${PERSONA_TINT[top.p]}` : undefined,
+          }} />
         {visible.map((l) => (
           <span key={l.k} className="absolute inset-0 rounded-full"
             onAnimationEnd={(e) => { if (e.animationName === "po-out") drop(l.k); }}
@@ -99,7 +131,7 @@ export function PersonaOrb({ persona, state, size = 72, reduce, getLevel, cycle,
           ))}
         </span>
       )}
-      <style>{`@keyframes po-in{from{opacity:0}to{opacity:1}}@keyframes po-out{from{opacity:1}to{opacity:0}}@keyframes po-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes po-in{from{opacity:0}to{opacity:1}}@keyframes po-out{from{opacity:1}to{opacity:0}}@keyframes po-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes po-breathe{0%,100%{transform:scale(0.97)}50%{transform:scale(1.02)}}`}</style>
     </span>
   );
 }

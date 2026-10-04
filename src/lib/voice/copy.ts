@@ -62,6 +62,9 @@ const en = {
   talk_guide: "Talk to the guide",
   sources: "Sources",
   back_to_chat: "Back to chat",
+  new_chat: "New chat",
+  retry: "Retry",
+  explore_graph: "Explore in the graph",
   close: "Close",
   see_on_map: "Show on the map",
 };
@@ -125,6 +128,9 @@ const es: VoiceCopy = {
   talk_guide: "Hablar con la guía",
   sources: "Fuentes",
   back_to_chat: "Volver al chat",
+  new_chat: "Nuevo chat",
+  retry: "Reintentar",
+  explore_graph: "Explorar en el grafo",
   close: "Cerrar",
   see_on_map: "Ver en el mapa",
 };
