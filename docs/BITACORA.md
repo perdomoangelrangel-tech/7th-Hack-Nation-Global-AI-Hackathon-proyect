@@ -952,3 +952,22 @@ Append-only. Protocol: docs/WORKFLOW.md §4. Times in CDMX.
 - Verified: typecheck ✓ · lint ✓ · test 144/144 ✓ · build ✓ · next start: `/`, Home, Maria, Priya, graph API 200 · red-team 10/10.
 - Pending checkpoints: voice @f2b9b5d (QA-47) · action @5e6b3d3. Freeze 06:00 — **post green checkpoints by 05:30**; after 05:30 only hotfixes.
 - user-verifier: refresh and run the prod pass on the engine (QA-45/46, 10 s stillness, 390).
+
+## 00:20 · user-verifier · HANDOFF (T7 early: medicines integrity, Supabase read-only)
+- `medicines_public`: 286 medicines · 31 approved_for_listed_disease. 10 random approved medicines → every `opentargets_url` opens (200) ✓, but **`links` is `{}` for all 286**: the only source link is Open Targets (no FDA/EMA label link).
+- NEED(data): QA-49 **approval status leaks across indications** · olipudase alfa is shown `APPROVED` for **Gaucher disease** (indication source opentargets CHEMBL3707358/MONDO_0018150). Open Targets lists olipudase for acid sphingomyelinase deficiency / Niemann-Pick B (its approved use) and Gaucher only as another indication row, so the APPROVED status is being copied from the drug onto every indication. Expected: approval per (drug, indication) pair; olipudase ↔ Gaucher must not say approved · severity: **major** (wrong "approved" claim in a medicines bank)
+- NEED(data): QA-50 **SMA shows 0 approved medicines** although nusinersen, risdiplam and onasemnogene abeparvovec are in the table with max_stage APPROVAL and `approved_for_listed_disease=false` → the SMA indication isn't matched to the atlas disease (Orphanet "Proximal spinal muscular atrophy" vs Open Targets/MONDO SMA ids?) · severity: **major** (a judge will search SMA)
+- NEED(data): QA-51 ataluren is shown `APPROVED` for Duchenne from Open Targets max stage; head-brain flagged its EU status changed. Don't state "approved" without a dated regulator source: show "Approval status may have changed. Check EMA/FDA" or drop the approved flag · severity: major
+- NEED(data/action): QA-52 every medicine detail should carry at least one regulator/label link (FDA label / EMA EPAR / DailyMed) next to Open Targets; today `links` is empty for all 286 · severity: minor
+
+## 00:20 · head-brain · DONE (Lovable 4th pass PUBLISHED)
+- https://nedamex.lovable.app now has: home → role → "Start with the challenge" / "Explore freely" (forwards `mode` to the iframe) · static role label on /atlas + "Change role" · `osei` = "Researcher & clinician".
+- **/medicines** live: Approved tab = 31 medicines (from `medicines_public`), In clinical trials tab, search + disease filters, detail `/medicines/<chembl>` with Open Targets, ChEMBL, ClinicalTrials.gov and (when T1 fills `props.links`) FDA/DailyMed/EMA links; DailyMed/EMA search fallback; "Explained simply" appears as soon as T2 ships `/api/medicine`.
+- **/community** live: locked for non-clinician roles; open for "Researcher & clinician" → Researchers (773, NIH RePORTER links) · Community profiles (`submit_profile`) · Research projects (`submit_proposal` hypothesis). No test rows created.
+- NEED(explorer): engine must hide its persona tabs when `embed=1` (Lovable already shows the role) and honor `mode=challenge|free`.
+
+## 00:11 · brain · PROGRESS (WAVE 6 T0 start)
+- Brain cadence now WAVE 6: ticks at :07 / :37 until 04:00 (merge order data → ai → explorer → voice → action → **mvp** → brand), **final merge 04:10 → FREEZE 04:15 → tag `v1.0-hacknation`**. Each push: full verification + Vercel deploy confirmed READY.
+- Prod deploy READY @262ed68 (project nedamex, prj_mkeCLh9…) = main before this commit.
+- README: **Medicines bank** + **Community** sections added (from `medicines_public` / `community_profiles_public` / `submit_profile` as in 0014), plus Lovable /medicines and /community in the Live table. Worded conservatively until data fixes QA-49/50/51 (approval per pair, SMA, ataluren) and ai ships `/api/medicine`; brain updates the README when those land.
+- No merges this tick: no new green checkpoints since 00:06 (voice @f2b9b5d, action @5e6b3d3 still unannounced).
