@@ -12,6 +12,8 @@ import { motionTokens, springs } from "@/lib/motion";
 import { KIND_STYLE, kindOf, type LinkKind } from "./colors";
 import type { Draft } from "./proposals";
 import { externalUrl } from "./links";
+import type { PersonaId } from "@/lib/agents/profiles";
+import { ExplainButton } from "@/components/ai/ExplainButton";
 
 type Detail = NonNullable<ReturnType<typeof edgeDetail>>;
 
@@ -38,7 +40,7 @@ const KIND_SENTENCE: Record<LinkKind, { en: string; es: string }> = {
   proposed: { en: "A community member proposed this. It is a draft, not evidence.", es: "Lo propuso un miembro de la comunidad. Es un borrador, no evidencia." },
 };
 
-export function EdgeInspector({ edgeId, t, locale, onClose, onFocusDisease, onInspect }: { edgeId: string; t: Dict; locale: Locale; onClose: () => void; onFocusDisease: (id: string) => void; onInspect?: (edgeId: string) => void }) {
+export function EdgeInspector({ edgeId, t, locale, persona, onClose, onFocusDisease, onInspect, onHighlight }: { edgeId: string; t: Dict; locale: Locale; persona: PersonaId; onClose: () => void; onFocusDisease: (id: string) => void; onInspect?: (edgeId: string) => void; onHighlight?: (edgeIds: string[] | null) => void }) {
   const [d, setD] = useState<Detail | null>(null);
   const [missing, setMissing] = useState(false);
   const reduce = useReducedMotion();
@@ -129,7 +131,9 @@ export function EdgeInspector({ edgeId, t, locale, onClose, onFocusDisease, onIn
                 );
               })}
             </ul>
-            {/* ai lane mount point: <ExplainButton/> and, for PubMed evidence, <ExtractPanel/> from src/components/ai/ once they exist. */}
+            {/* ai lane: verified plain-language explanation of this edge (simple language follows usePrefs()). */}
+            <div className="mt-3"><ExplainButton edgeIds={[d.edge.id]} persona={persona} locale={locale} onHighlight={onHighlight} /></div>
+            {/* TODO(ai merge): <ExtractPanel pmid={ev.external_id} locale={locale} /> for PubMed evidence once it is on main. */}
           </section>
 
           <section>

@@ -266,7 +266,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
           <AnimatePresence mode="wait">
             {shownJourney ? (
               <motion.div key={shownJourney.disease.id + locale} className="lg:h-full" initial={{ opacity: 0, x: motionTokens.distance.md }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={springs.gentle}>
-                <JourneyPanel j={shownJourney} t={t} onInspect={setInspect} onHover={(nodes, edges) => setHover({ nodes, edges })} onFocusDisease={(d) => goTo(d)} />
+                <JourneyPanel j={shownJourney} t={t} persona={persona} locale={locale} onInspect={setInspect} onHover={(nodes, edges) => setHover({ nodes, edges })} onFocusDisease={(d) => goTo(d)} />
               </motion.div>
             ) : (
               <motion.div key="empty" className="p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -278,7 +278,7 @@ export function AtlasApp({ initialDisease, initialPersona, initialLocale, initia
             )}
           </AnimatePresence>
           <AnimatePresence>
-            {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => setInspect(null)} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} />}
+            {inspect && !isDraftId(inspect) && <EdgeInspector key={inspect} edgeId={inspect} t={t} locale={locale} onClose={() => setInspect(null)} onFocusDisease={(d) => goTo(d)} onInspect={setInspect} persona={persona} onHighlight={(edges) => setHover({ nodes: [], edges: edges ?? [] })} />}
             {draft && <DraftInspector key={inspect!} draft={draft} t={t} onClose={() => setInspect(null)} />}
           </AnimatePresence>
         </aside>
