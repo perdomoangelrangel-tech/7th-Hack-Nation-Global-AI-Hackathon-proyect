@@ -1,6 +1,7 @@
 "use client";
 /**
- * Patient glossary tooltips (UX_WAVE4 §3): dotted underline, definition on hover, focus or tap; Esc closes.
+ * Patient glossary tooltips (UX_WAVE4 §3) — import from "@/components/ui/GlossaryTerm" (named so it never collides
+ * case-insensitively with the data file "./glossary" on Windows/macOS): dotted underline, definition on hover, focus or tap; Esc closes.
  * OWNER: brand lane. Portable (no Next-only imports).
  *
  *   <Term k="registry">registry</Term>                       one term
