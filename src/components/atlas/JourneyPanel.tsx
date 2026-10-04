@@ -18,6 +18,7 @@ import { KindBadge, RecommendationBadge, StrengthBadge, weakestKind } from "@/co
 import { isNoRoute, useJourney, useUrlParam } from "@/components/journey/useJourney";
 import { TenXButton } from "@/components/journey/TenXButton";
 import { openCoCreate } from "@/components/journey/events";
+import { playSfx } from "@/lib/sfx";
 import { Partners } from "@/components/cocreate/Partners";
 import { PanelHeader, PanelState } from "@/components/ui/PanelHeader";
 import { PatientView } from "@/components/journey/PatientView";
@@ -92,7 +93,12 @@ export function JourneyPanel({ j, t, onInspect, onHover, onFocusDisease, persona
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, v2, mode, challenge]);
 
-  const go = useCallback((n: number) => { setDepth(false); setStep(Math.max(0, Math.min(DONE, n))); }, []);
+  // `go` only runs from user input (Next/Back, a step row, ←/→), so the step sound never plays on load.
+  const go = useCallback((n: number) => {
+    const next = Math.max(0, Math.min(DONE, n));
+    if (next !== step) playSfx("step");
+    setDepth(false); setStep(next);
+  }, [step]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;

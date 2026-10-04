@@ -160,3 +160,11 @@ describe("layers and source filter", () => {
     expect(routeLayersFor(new Set(["trial", "study"])).has("studies")).toBe(false);
   });
 });
+
+import { parseHl } from "./focusEvidence";
+describe("hl deep link", () => {
+  it("splits edges and entities and opens the drawer", () => {
+    expect(parseHl("edge:a, edge:b,disease:ORPHA:1")).toEqual({ edgeIds: ["edge:a", "edge:b"], entityIds: ["disease:ORPHA:1"], openDrawer: true });
+    expect(parseHl("")).toBeNull(); expect(parseHl(null)).toBeNull();
+  });
+});

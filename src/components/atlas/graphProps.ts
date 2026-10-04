@@ -26,7 +26,8 @@ export interface GraphCanvasProps {
   onBackground?: () => void;
 }
 
-export interface GraphCommand { kind: "zoomIn" | "zoomOut" | "fit" | "reset"; n: number }
+/** `focus` = frame only `ids` (evidence highlight); the others act on the whole layout. */
+export interface GraphCommand { kind: "zoomIn" | "zoomOut" | "fit" | "reset" | "focus"; n: number; ids?: string[] }
 
 /** Double-click detection (react-force-graph has no node double-click event). */
 export const DOUBLE_CLICK_MS = 320;

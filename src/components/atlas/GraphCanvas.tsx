@@ -59,22 +59,25 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   const unpositioned = useMemo(() => data.nodes.some((n) => n.fx == null), [data]);
 
   /** Fit everything with a bounded zoom. */
-  const fitAll = useCallback((ms: number) => {
+  const fitAll = useCallback((ms: number, only?: Set<string>) => {
     const g = fg.current; if (!g || !sized.current || !wrap.current) return;
     // Measure now (state can lag one render behind the ResizeObserver; two fits must never disagree).
     const box = wrap.current.getBoundingClientRect(), size = { w: Math.max(200, box.width), h: Math.max(240, box.height) };
-    const ns = data.nodes.filter((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
+    const all = data.nodes.filter((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
+    const sub = only ? all.filter((n) => only.has(n.id)) : all;
+    const ns = sub.length ? sub : all;
     if (!ns.length) return;
     // Header pills have a fixed on-screen width (13 px text): half ≈ (7 px per char + 18) / 2, in graph units = px / zoom.
     // Two passes: estimate the zoom, then include the pills at that zoom.
     const padX = 20, padTop = 100, padBottom = 44 + insetRef.current; // clear of the toolbar + breadcrumb (top), legend / bottom sheet (bottom)
     const ys = ns.map((n) => n.y!);
-    const [minY, maxY] = [Math.min(...ys) - 12, Math.max(...ys) + 24];
+    const extra = sub.length && only ? 90 : 0; // evidence focus: room for the labels around the lit nodes
+    const [minY, maxY] = [Math.min(...ys) - 12 - extra, Math.max(...ys) + 24 + extra];
     const halfPx = (n: N) => (n.header ? ((size.w < 600 && n.header !== "region" ? compactHeader(n.name) : n.name).length * 7 + 18) / 2 : 0);
     let k = 1, minX = 0, maxX = 0;
     for (let pass = 0; pass < 2; pass++) {
-      minX = Math.min(...ns.map((n) => n.x! - halfPx(n) / k)); maxX = Math.max(...ns.map((n) => n.x! + halfPx(n) / k));
-      k = Math.min(2.5, Math.max(0.3, Math.min((size.w - padX * 2) / Math.max(maxX - minX, 160), (size.h - padTop - padBottom) / Math.max(maxY - minY, 160))));
+      minX = Math.min(...ns.map((n) => n.x! - halfPx(n) / k)) - extra * 1.6; maxX = Math.max(...ns.map((n) => n.x! + halfPx(n) / k)) + extra * 1.6;
+      k = Math.min(extra ? 1.6 : 2.5, Math.max(0.3, Math.min((size.w - padX * 2) / Math.max(maxX - minX, 160), (size.h - padTop - padBottom) / Math.max(maxY - minY, 160))));
     }
     g.zoom(k, ms);
     g.centerAt((minX + maxX) / 2, (minY + maxY) / 2 - (padTop - padBottom) / 2 / k, ms);
@@ -95,7 +98,8 @@ export default function GraphCanvas({ view, highlightNodes, highlightEdges, sele
   // Zoom control: + / − (300 ms), Fit / Reset (re-frame the whole layout).
   useEffect(() => {
     if (!command) return;
-    if (command.kind === "fit" || command.kind === "reset") fitAll(reduced ? 0 : 500);
+    if (command.kind === "focus") fitAll(reduced ? 0 : 600, new Set(command.ids ?? []));
+    else if (command.kind === "fit" || command.kind === "reset") fitAll(reduced ? 0 : 500);
     else fg.current?.zoom(Math.min(4, Math.max(0.3, fg.current.zoom() * (command.kind === "zoomIn" ? 1.35 : 0.74))), reduced ? 0 : 300);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command]);

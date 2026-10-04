@@ -6,6 +6,8 @@ import { preload } from "react-dom";
 import { HERO_POSTER } from "@/components/three/heroPoster";
 import { Nav } from "@/components/landing/Nav";
 import { GuidePreview } from "@/components/landing/GuidePreview";
+import { SfxLink } from "@/components/landing/SfxLink";
+import { VideoGallery, type VideoItem } from "@/components/landing/VideoGallery";
 import { AtlasPreview } from "@/components/landing/AtlasPreview";
 import { StoryPlayer } from "@/components/landing/StoryPlayer";
 import { neighborhood } from "@/components/landing/neighborhood";
@@ -54,6 +56,8 @@ const BUILT = [
   { name: "OpenAI", what: "extraction from papers, grounded explanations" },
   { name: "ElevenLabs", what: "a voice for every agent" },
   { name: "Blender", what: "the 3D hero, voice guide and graph glyphs" },
+  { name: "Remotion", what: "the Tech video" },
+  { name: "Kenney", what: "sound effects (CC0)" },
 ];
 
 function fmt(n: number) {
@@ -128,11 +132,16 @@ export default async function Home() {
     { glyph: "pathway", title: "Your route", stat: "4 questions", body: `Diseases are grouped by shared biology — informative symptoms, Reactome pathways, genes — so the route finds neighbours even when names differ: who shares it, what already exists, who could help, what to do next. When there is no supported route, ${site.name} says so.` },
   ];
   // Real submission URLs from env; otherwise the storyboard drafts, labelled as drafts.
-  const videos = ([
-    ["Pitch", "Who we are, the problem and the ask", site.videos.pitch, site.draftVideos.pitch],
-    ["Demo", "Maria's case, end to end", site.videos.demo, site.draftVideos.demo],
-    ["Functionality", "Graph, evidence, verifier, agents, how it scales", site.videos.functionality, site.draftVideos.functionality],
-  ] as const).map(([title, purpose, url, draft]) => ({ title, purpose, url: url || draft.src, poster: url ? undefined : draft.poster, draft: !url }));
+  // The two submission videos: env URLs when set; otherwise the Demo storyboard draft and our Remotion Tech video.
+  const techLocal = publicFile(site.draftVideos.tech.src);
+  const toItem = (title: string, purpose: string, url: string, fallback: { src: string; poster: string }, draft: boolean): VideoItem =>
+    url
+      ? { title, purpose, url, embed: /\.mp4($|\?)/.test(url) ? undefined : toEmbed(url), draft: false }
+      : { title, purpose, url: fallback.src, poster: fallback.poster, draft };
+  const videos: VideoItem[] = [
+    toItem("Demo", "The project in action: Maria's route, evidence, guide, medicines, community", site.videos.demo, site.draftVideos.demo, true),
+    toItem("Tech", "How we built it, what worked, what didn't, key tools", site.videos.tech, techLocal ? site.draftVideos.tech : site.draftVideos.techStoryboard, !techLocal),
+  ];
   const Challenge = STEP_ICON[3];
   const Explore = NAV_ICON.search;
   const Pill = NODE_ICON.treatment;
@@ -157,7 +166,7 @@ export default async function Home() {
                 One evidence graph from a diagnosis to a shared mechanism, a reusable asset, a collaborator and a next step — every link shows its source.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href={site.appUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</Link>
+                <SfxLink href={site.appUrl} className="rounded-full bg-brand-deep px-6 py-3 font-semibold text-white shadow-sm hover:bg-brand-ink">Open {site.name}</SfxLink>
                 <a href="#videos" className="rounded-full border border-brand-light bg-paper px-6 py-3 font-semibold text-brand-ink hover:border-brand-deep">Watch the pitch</a>
               </div>
               <p className="mt-5 text-sm text-ink-3">Information with sources — not medical advice.</p>
@@ -267,13 +276,13 @@ export default async function Home() {
               <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-brand-deep text-white"><Challenge size={ICON.card} strokeWidth={ICON.stroke} /></span>
               <h3 className="mt-4 text-xl font-bold text-brand-ink">Start with the challenge</h3>
               <p className="mt-2 flex-1 text-ink-2">Follow Maria, who leads an STXBP1 family group, through four questions — from her disease to a shared mechanism, a reusable asset, a collaborator and a next step this week. Every step opens its evidence.</p>
-              <div className="mt-5"><Link href={programHref({ p: "maria", d: MARIA_DISEASE, mode: "challenge" })} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}>Start with the challenge</Link></div>
+              <div className="mt-5"><SfxLink href={programHref({ p: "maria", d: MARIA_DISEASE, mode: "challenge" })} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}>Start with the challenge</SfxLink></div>
             </article>
             <article className="flex flex-col rounded-2xl border border-line bg-paper p-6">
               <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-brand-soft text-brand-deep"><Explore size={ICON.card} strokeWidth={ICON.stroke} /></span>
               <h3 className="mt-4 text-xl font-bold text-brand-ink">Explore freely</h3>
               <p className="mt-2 flex-1 text-ink-2">Search any of the {fmt(s.diseases)} diseases by name, gene, symptom or synonym, and browse the constellation of mechanism clusters. Tap any line to see where it comes from.</p>
-              <div className="mt-5"><Link href={programHref({ mode: "free" })} className={`${btn} border border-brand-light bg-paper text-brand-ink hover:border-brand-deep`}>Explore freely</Link></div>
+              <div className="mt-5"><SfxLink href={programHref({ mode: "free" })} className={`${btn} border border-brand-light bg-paper text-brand-ink hover:border-brand-deep`}>Explore freely</SfxLink></div>
             </article>
           </div>
         </section>
@@ -288,7 +297,7 @@ export default async function Home() {
                   : <>Search medicines linked to diseases in the atlas and learn each one in depth: mechanism, targets, trial stages and the sources behind every indication.</>}
               </SectionHead>
               <p className="mt-4 text-sm text-ink-3">No doses and no recommendations — whether a medicine fits a person is a decision for their clinician.</p>
-              <div className="mt-6"><Link href={appPath("/medicines")} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}><Pill size={ICON.chip} strokeWidth={ICON.stroke} aria-hidden />Open the Medicines bank</Link></div>
+              <div className="mt-6"><SfxLink href={appPath("/medicines")} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}><Pill size={ICON.chip} strokeWidth={ICON.stroke} aria-hidden />Open the Medicines bank</SfxLink></div>
             </div>
             {teasers.medicines && teasers.medicines.examples.length > 0 && (
               <ul className="space-y-3 self-center" aria-label="Examples of approved medicines">
@@ -319,7 +328,7 @@ export default async function Home() {
                 Clinicians and researchers can add their own profile and start a research project with others who share the mechanism.
               </SectionHead>
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link href={appPath("/community")} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}><People size={ICON.chip} strokeWidth={ICON.stroke} aria-hidden />Open Community</Link>
+                <SfxLink href={appPath("/community")} className={`${btn} bg-brand-deep text-white hover:bg-brand-ink`}><People size={ICON.chip} strokeWidth={ICON.stroke} aria-hidden />Open Community</SfxLink>
                 <span className="text-sm text-ink-3">Opens in the <span className="font-semibold text-brand-ink">{MODE_COPY.osei.title}</span> role.</span>
               </div>
             </div>
@@ -333,23 +342,8 @@ export default async function Home() {
         {/* 7 · Videos */}
         <section id="videos" className="border-y border-line bg-brand-mist" aria-labelledby="videos-title">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <SectionHead id="videos-title" eyebrow="See it" title="Pitch, demo and how it works." />
-            <div className="mt-8 grid gap-5 md:grid-cols-3">
-              {videos.map((v) => (
-                <figure key={v.title} className="overflow-hidden rounded-xl border border-line bg-paper shadow-[var(--shadow-soft)]">
-                  <div className="relative aspect-video bg-brand-soft">
-                    {/\.mp4($|\?)/.test(v.url)
-                      ? <video src={v.url} poster={v.poster} controls preload="none" playsInline className="h-full w-full object-cover" aria-label={`${v.title} video${v.draft ? " (draft)" : ""}`} />
-                      : <iframe src={toEmbed(v.url)} title={v.title} className="h-full w-full" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />}
-                    {v.draft && <span className="pointer-events-none absolute left-2 top-2 rounded-full border border-line bg-paper/95 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink-3">Draft</span>}
-                  </div>
-                  <figcaption className="p-4">
-                    <p className="font-bold text-brand-ink">{v.title}</p>
-                    <p className="text-sm text-ink-3">{v.purpose}</p>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
+            <SectionHead id="videos-title" eyebrow="See it" title="The demo, and how we built it." />
+            <VideoGallery videos={videos} />
             {videos.some((v) => v.draft) && <p className="mt-3 text-xs text-ink-3">Drafts: storyboards with placeholders. Final cuts replace them before submission.</p>}
           </div>
         </section>
@@ -451,7 +445,7 @@ export default async function Home() {
             </ul>
           </div>
         </div>
-        <p className="border-t border-line py-4 text-center text-xs text-ink-3">© {new Date().getFullYear()} {site.company}. 3D assets made in Blender from the {site.name} logo.</p>
+        <p className="border-t border-line py-4 text-center text-xs text-ink-3">© {new Date().getFullYear()} {site.company}. 3D assets made in Blender from the {site.name} logo. Sound effects: Kenney (CC0).</p>
       </footer>
     </>
   );

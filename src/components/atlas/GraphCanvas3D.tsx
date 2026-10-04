@@ -208,10 +208,12 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
 
   /* ---------- Camera: only on a new layout (focus / view change), resize or "Fit" ---------- */
   /** Fit all nodes using the camera's FOV and aspect, looking straight at the layout plane. */
-  const frame = useCallback((ms: number) => {
+  const frame = useCallback((ms: number, only?: Set<string>) => {
     const g = fg.current; if (!g || !sized.current || !wrap.current) return;
     const box = wrap.current.getBoundingClientRect(), size = { w: Math.max(200, box.width), h: Math.max(240, box.height) };
-    const ns = data.nodes.filter((n) => Number.isFinite(n.x));
+    const all = data.nodes.filter((n) => Number.isFinite(n.x));
+    const sub = only ? all.filter((n) => only.has(String(n.id))) : all;
+    const ns = sub.length ? sub : all;
     if (!ns.length) return;
     const xs = ns.map((n) => n.x!), ys = ns.map((n) => n.y!), zs = ns.map((n) => n.z ?? 0);
     const [x0, x1, y0, y1, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), Math.max(...zs)];
@@ -236,6 +238,7 @@ export default function GraphCanvas3D({ view, highlightNodes, highlightEdges, se
   // Zoom control: + / − dolly toward the orbit target (300 ms); Fit / Reset re-frame the layout (600 ms).
   useEffect(() => {
     const g = fg.current; if (!g || !command) return;
+    if (command.kind === "focus") { frame(still ? 0 : 600, new Set(command.ids ?? [])); return; }
     if (command.kind === "fit" || command.kind === "reset") { frame(still ? 0 : 600); return; }
     const cam = g.camera(); const ctl = g.controls() as { target?: THREE.Vector3 };
     const target = ctl.target ?? new THREE.Vector3();
